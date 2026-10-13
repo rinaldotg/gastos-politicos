@@ -34,11 +34,11 @@ jobs:
       - name: Baixar o banco da ultima atualizacao
         run: |
           mkdir -p data
-          if gh release download dados -p gastos.db.gz -D data 2>/dev/null; then
+          if gh release download Dados -p gastos.db.gz -D data 2>/dev/null; then
             gunzip -f data/gastos.db.gz
             ls -lh data/gastos.db
           else
-            echo "Sem banco anterior: a coleta comeca do zero (pode passar do limite de tempo; suba o banco inicial na release 'dados')."
+            echo "Sem banco anterior: a coleta comeca do zero (pode passar do limite de tempo; suba o banco inicial na release 'Dados')."
           fi
 
       - name: Camara e Senado (ano passado e atual)
@@ -61,8 +61,8 @@ jobs:
       - name: Guardar o banco atualizado
         run: |
           gzip -kf data/gastos.db
-          gh release view dados >/dev/null 2>&1 || gh release create dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."
-          gh release upload dados data/gastos.db.gz --clobber
+          gh release view Dados >/dev/null 2>&1 || gh release create Dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."
+          gh release upload Dados data/gastos.db.gz --clobber
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
