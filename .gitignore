@@ -1,0 +1,5 @@
+data/
+resumo/
+__pycache__/
+*.db
+site/dist/

@@ -1,0 +1,36 @@
+"""Orquestrador: python -m pipeline.run --db data/gastos.db [--desde 2014] [--so camara senado presidencia]"""
+import argparse
+from datetime import datetime
+
+from . import camara, common as c, emendas, orcamento, presidencia, senado
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--db", default="data/gastos.db")
+    ap.add_argument("--desde", type=int, default=c.ANO_INICIAL)
+    ap.add_argument("--ate", type=int, default=datetime.now().year)
+    ap.add_argument("--so", nargs="*", choices=["camara", "senado", "presidencia", "emendas", "orcamento"])
+    ap.add_argument("--pular-cadastro", action="store_true", help="nao recarrega listas de deputados/senadores")
+    ap.add_argument("--recarregar-desde", type=int, default=None, help="anos do Portal anteriores a este e ja carregados sao pulados (padrao: ano passado)")
+    a = ap.parse_args()
+    anos = list(range(a.desde, a.ate + 1))
+    con = c.abrir_banco(a.db)
+    con.execute("DELETE FROM gasto WHERE ano < ?", (c.ANO_INICIAL,))  # lancamentos de extratos de 2014 com data anterior
+    con.commit()
+    etapas = a.so or ["camara", "senado", "presidencia", "emendas", "orcamento"]
+    if "camara" in etapas:
+        camara.rodar(con, anos, so_gastos=a.pular_cadastro)
+    if "senado" in etapas:
+        senado.rodar(con, anos, so_gastos=a.pular_cadastro)
+    if "presidencia" in etapas:
+        presidencia.rodar(con, anos, a.recarregar_desde)
+    if "orcamento" in etapas:
+        orcamento.rodar(con, anos, a.recarregar_desde)
+    if "emendas" in etapas:
+        emendas.rodar(con, a.desde)
+    print("Concluido.")
+
+
+if __name__ == "__main__":
+    main()
