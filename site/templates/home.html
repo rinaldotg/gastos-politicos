@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura">
+  <h1>Quanto cada parlamentar gastou, com o quê e com quem</h1>
+  <form class="busca" role="search" autocomplete="off" data-busca>
+    <label for="q">Buscar deputado, senador ou presidente</label>
+    <input id="q" type="search" placeholder="Digite um nome" aria-controls="resultados" aria-expanded="false">
+    <ul id="resultados" role="listbox" hidden></ul>
+  </form>
+  <p class="apoio">Deputados federais, senadores e Presidência da República, de 2014 até hoje. Dinheiro público da cota parlamentar, do cartão corporativo e das viagens oficiais.</p>
+</section>
+
+<section class="grupos" aria-label="Quem está no site">
+  {% for cargo, r in resumo.items() %}
+  <a class="grupo grupo-{{ r.cod }}" href="#ranking" data-cargo="{{ cargo }}">
+    <span class="grupo-nome">{{ r.rotulo }}</span>
+    <span class="grupo-valor">{{ r.total_ref | curto }}</span>
+    <span class="grupo-nota">em {{ ano_ref }} · {{ r.n }} {{ 'perfis' if r.n != 1 else 'perfil' }}</span>
+  </a>
+  {% endfor %}
+</section>
+
+<section id="ranking" class="ranking" data-ranking data-ano-ref="{{ ano_ref }}" data-ano-atual="{{ ano_atual }}">
+  <div class="ranking-cab">
+    <h2>Quem mais gastou</h2>
+    <div class="controles">
+      <label>Cargo
+        <select data-r-cargo>
+          <option value="deputado_federal">Deputados federais</option>
+          <option value="senador">Senadores</option>
+          <option value="presidente">Presidentes</option>
+        </select>
+      </label>
+      <label>Ano
+        <select data-r-ano>
+          {% for a in range(ano_atual, 2013, -1) %}<option value="{{ a }}" {% if a == ano_ref %}selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="tabela-rolavel">
+    <table class="tabela" data-r-tabela>
+      <thead><tr><th class="pos">#</th><th>Nome</th><th>UF</th><th>Partido</th><th class="num">Gasto no ano</th><th class="num">Meses</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="nota">Quem ocupou o cargo só parte do ano (suplentes, por exemplo) aparece com menos meses. Compare sempre olhando a coluna de meses.</p>
+</section>
+
+<section class="chamada">
+  <h2>Compare dois ou mais lado a lado</h2>
+  <p>Escolha parlamentares ou presidentes e veja cada ano e cada tipo de despesa em colunas.</p>
+  <a class="botao" href="comparar/">Abrir comparação</a>
+</section>
+{% endblock %}

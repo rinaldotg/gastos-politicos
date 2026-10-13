@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<article class="pessoa pessoa-{{ p.cod }}">
+  <header class="pessoa-cab">
+    <p class="cargo">{{ cargo_rotulo }}{% if p.uf %} · {{ p.uf }}{% endif %}{% if p.partido %} · {{ p.partido }}{% endif %}</p>
+    <h1>{{ p.nome }}</h1>
+    <p class="resumo-linha">
+      {% if linhas_ano %}<strong>{{ total_geral | brl }}</strong> {% if p.cargo == 'presidente' %}em despesas da Presidência{% else %}em despesas pagas com a cota{% endif %} desde {{ desde }}{% if ano_ref_total %}, sendo <strong>{{ ano_ref_total | brl }}</strong> em {{ ano_ref }}{% endif %}.{% else %}Sem despesas registradas na cota desde 2014.{% endif %}
+      {% if pos %}Em {{ ano_ref }}, ficou na posição {{ pos[0] }} de {{ pos[1] }} {{ 'deputados' if p.cod == 'deputado' else 'senadores' if p.cod == 'senador' else 'presidentes' }} por valor gasto.{% endif %}
+    </p>
+    <a class="botao botao-leve" href="{{ raiz }}comparar/?p={{ p.id }}">Comparar com outra pessoa</a>
+  </header>
+
+  {% if p.cargo == 'presidente' %}
+  <aside class="aviso">
+    <h2>O que isto não é</h2>
+    <p>Não é o gasto pessoal do presidente. São despesas do cartão corporativo e das viagens a serviço de órgãos da Presidência, no período em que {{ p.nome }} ocupou o cargo. Vice-Presidência, ABIN e EBC ficam fora do total. Transporte aéreo, segurança presidencial e residências oficiais não estão incluídos. <a href="{{ raiz }}sobre/">Detalhes</a>.</p>
+  </aside>
+  {% if sig and sig.cartao %}
+  <section class="bloco">
+    <h2>Sigilo no cartão corporativo</h2>
+    <p>Dos {{ sig.cartao | brl }} no cartão, <strong>{{ sig.sigilo | brl }} ({{ sig.parte | pct }})</strong> estão sob sigilo: o valor é público, mas o fornecedor não. Em viagens a serviço, foram {{ sig.viagens | brl }}.</p>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <section class="bloco">
+    <h2>Gastos por ano</h2>
+    {% if not linhas_ano %}<p>Nenhuma despesa registrada desde 2014 nas fontes oficiais para este nome.</p>{% else %}
+    <p class="dica">Toque em um ano para ver o total de cada tipo de despesa.</p>
+    <div class="anos">
+      {% for l in linhas_ano %}
+      <details class="ano">
+        <summary>
+          <span class="ano-n">{{ l.ano }}{% if l.parcial %} <small>parcial</small>{% endif %}</span>
+          <span class="ano-barra" aria-hidden="true"><i style="width: {{ l.largura | round(1) }}%"></i></span>
+          <span class="ano-v">{{ l.total | brl }}</span>
+        </summary>
+        <div class="tabela-rolavel">
+        <table class="tabela tabela-cats">
+          <thead><tr><th>Tipo de despesa</th><th class="num">Total em {{ l.ano }}</th><th class="num">% do ano</th></tr></thead>
+          <tbody>
+          {% for c, v, pc in l.cats %}<tr><td>{{ c }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ pc | pct }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% if l.fora %}<p class="nota">Fora deste total: {{ l.fora | brl }} de órgãos vinculados (Vice-Presidência, ABIN, EBC e similares).</p>{% endif %}
+        {% if p.cargo != 'presidente' %}<p class="nota">{{ l.meses }} {{ 'mês' if l.meses == 1 else 'meses' }} com despesas neste ano.</p>{% endif %}
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  {% if fornecedores %}
+  <section class="bloco">
+    <h2>Com quem mais gastou</h2>
+    <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th>Fornecedor</th><th class="num">Total desde {{ desde }}</th><th class="num">Lançamentos</th></tr></thead>
+      <tbody>{% for nome, v, n in fornecedores %}<tr><td>{{ nome }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ n | milhar }}</td></tr>{% endfor %}</tbody>
+    </table>
+    </div>
+    {% if p.cargo == 'presidente' %}<p class="nota">“Sigiloso”, “Sem informação” e “Não se aplica” indicam que o fornecedor não é divulgado.</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if emendas %}
+  <section class="bloco">
+    <h2>Emendas individuais</h2>
+    <p>Dinheiro do orçamento federal que {{ p.nome }} indicou para estados e municípios: <strong>{{ em_tot[0] | brl }}</strong> empenhados e <strong>{{ em_tot[2] | brl }}</strong> pagos desde {{ em_desde }}{% if em_pix %}, dos quais {{ em_pix | brl }} em “emendas Pix” (transferências especiais, sem convênio){% endif %}.</p>
+    <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th>Ano da emenda</th><th class="num">Empenhado</th><th class="num">Liquidado</th><th class="num">Pago</th></tr></thead>
+      <tbody>{% for ano, e in emendas %}<tr><td>{{ ano }}</td><td class="num">{{ e[0] | brl }}</td><td class="num">{{ e[1] | brl }}</td><td class="num">{{ e[2] | brl }}</td></tr>{% endfor %}</tbody>
+    </table>
+    </div>
+    {% if em_funcao %}
+    <h3>Para onde foi o dinheiro pago</h3>
+    <ul class="lista-simples">{% for fn, v in em_funcao %}<li><span>{{ fn }}</span><span class="num">{{ v | brl }}</span></li>{% endfor %}</ul>
+    {% endif %}
+    <p class="nota">Empenhado é o valor reservado; liquidado, o serviço ou obra já confirmado; pago, o que saiu do caixa. Emendas sem autor identificado na fonte não entram aqui.</p>
+  </section>
+  {% endif %}
+
+  {% if orc %}
+  <section class="bloco">
+    <h2>Para onde foi o orçamento da Presidência</h2>
+    <p class="dica">Valor pago por programa pelos órgãos da Presidência, no período deste mandato.</p>
+    <div class="anos">
+      {% for o in orc %}
+      <details class="ano">
+        <summary><span class="ano-n">{{ o.ano }}</span><span class="ano-barra" aria-hidden="true"><i style="width: {{ o.largura | round(1) }}%"></i></span><span class="ano-v">{{ o.total | brl }}</span></summary>
+        <div class="tabela-rolavel">
+        <table class="tabela tabela-cats">
+          <thead><tr><th>Programa</th><th class="num">Pago em {{ o.ano }}</th></tr></thead>
+          <tbody>{% for prog, v in o.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+        </table>
+        </div>
+        {% if o.orgaos %}<h3>Órgãos que mais pagaram</h3><ul class="lista-simples">{% for og, v in o.orgaos %}<li><span>{{ og }}</span><span class="num">{{ v | brl }}</span></li>{% endfor %}</ul>{% endif %}
+        {% if o.financeiras %}<p class="nota">Fora da soma: {{ o.financeiras | brl }} em operações financeiras e encargos especiais, como empréstimos com retorno.</p>{% endif %}
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ titulo }}{% if titulo != 'Gastos dos parlamentares e da Presidência' %} · Gastos Públicos{% endif %}</title>
+<meta name="description" content="{{ descricao | default('Gastos de deputados, senadores e da Presidência da República desde 2014.') }}">
+<meta property="og:title" content="{{ titulo }}">
+<meta property="og:description" content="{{ descricao | default('') }}">
+<meta property="og:type" content="website">
+{% if base_url %}<link rel="canonical" href="{{ base_url }}/{{ p.url if p is defined else '' }}">{% endif %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ raiz }}static/style.css">
+</head>
+<body data-raiz="{{ raiz }}">
+<a class="pular" href="#conteudo">Ir para o conteúdo</a>
+<header class="topo">
+  <a class="marca" href="{{ raiz or './' }}">Gastos Públicos</a>
+  <nav aria-label="Principal">
+    <a href="{{ raiz }}comparar/">Comparar</a>
+    <a href="{{ raiz }}sobre/">Fontes e método</a>
+  </nav>
+</header>
+<main id="conteudo">
+{% block conteudo %}{% endblock %}
+</main>
+<footer class="rodape">
+  <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}Atualizado em {{ atualizado }}; a rotina roda todo mês.{% endif %}</p>
+  <p>Gasto não é irregularidade: os valores mostram o que foi pago dentro das regras de cada cota. <a href="{{ raiz }}sobre/">Entenda o que está e o que não está nos números.</a></p>
+</footer>
+<script src="{{ raiz }}static/app.js" defer></script>
+</body>
+</html>

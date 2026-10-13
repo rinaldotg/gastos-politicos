@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Comparar gastos</h1>
+  <form class="busca" role="search" autocomplete="off" data-busca data-comparar>
+    <label for="q">Adicionar à comparação (até 4)</label>
+    <input id="q" type="search" placeholder="Digite um nome" aria-controls="resultados" aria-expanded="false">
+    <ul id="resultados" role="listbox" hidden></ul>
+  </form>
+</section>
+<section class="comparacao" data-comparacao>
+  <p class="vazio" data-vazio>Nenhuma pessoa escolhida ainda. Busque um nome acima e adicione. O link da página guarda a sua escolha e pode ser compartilhado.</p>
+  <div class="tabela-rolavel" data-comp-tabela hidden></div>
+  <p class="nota" hidden data-comp-nota>As categorias de despesa da Câmara, do Senado e da Presidência são diferentes entre si; por isso as linhas de um tipo só têm valor para quem usa aquele tipo.</p>
+</section>
+{% endblock %}

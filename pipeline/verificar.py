@@ -46,7 +46,7 @@ def main():
         "emenda_agregado": "SELECT pessoa_id, tipo, ano, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, COUNT(*) n FROM emenda GROUP BY 1,2,3",
         "emenda_funcao": "SELECT pessoa_id, ano, funcao, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NOT NULL GROUP BY 1,2,3",
         "emenda_sem_vinculo": "SELECT autor, tipo, COUNT(*) n, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 300",
-        "orcamento_acao": "SELECT pessoa_id, ano, mes, orgao, programa, acao, ROUND(empenhado,2), ROUND(liquidado,2), ROUND(pago,2) FROM orcamento_acao",
+        "orcamento_acao": "SELECT pessoa_id, ano, mes, orgao, programa, acao, ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago FROM orcamento_acao",
         "coleta_log": "SELECT fonte, recurso, ano, registros, coletado_em FROM coleta_log",
     }
     out = Path(a.saida)

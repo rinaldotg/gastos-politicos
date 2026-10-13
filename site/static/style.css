@@ -1,0 +1,117 @@
+:root{
+  --fundo:#F4F6F9; --papel:#FFFFFF; --tinta:#14233A; --tinta-2:#4A5A70; --linha:#D9DFE8;
+  --acento:#1D4ED8; --acento-fundo:#E6ECFB; --alerta:#9A4A00; --alerta-fundo:#FFF3E3;
+  --deputado:#1D4ED8; --senador:#0F766E; --presidente:#86285C;
+  --titulo:'Bricolage Grotesque','Instrument Sans',system-ui,sans-serif;
+  --corpo:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--fundo:#0E1726;--papel:#15233A;--tinta:#E8EDF5;--tinta-2:#9FB0C7;--linha:#2A3B57;--acento:#7DA2FF;--acento-fundo:#1B2D52;--alerta:#FFB868;--alerta-fundo:#3A2A12;
+        --deputado:#7DA2FF;--senador:#4FD1C5;--presidente:#F29AC7}
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--fundo);color:var(--tinta);font:400 1rem/1.55 var(--corpo);font-variant-numeric:tabular-nums}
+a{color:var(--acento)}
+:focus-visible{outline:3px solid var(--acento);outline-offset:2px;border-radius:4px}
+.pular{position:absolute;left:-999px;top:0;background:var(--papel);padding:.5rem 1rem;z-index:10}
+.pular:focus{left:0}
+.topo{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem max(16px,calc((100vw - 1040px)/2));border-bottom:1px solid var(--linha);background:var(--papel)}
+.marca{font:700 1.15rem var(--titulo);color:var(--tinta);text-decoration:none;letter-spacing:-.01em}
+.topo nav{display:flex;gap:1.25rem}
+.topo nav a{color:var(--tinta-2);text-decoration:none;font-weight:500}
+.topo nav a:hover{color:var(--acento)}
+main{max-width:1040px;margin:0 auto;padding:2rem 16px 4rem}
+h1,h2,h3{font-family:var(--titulo);line-height:1.12;letter-spacing:-.015em;margin:0 0 .6rem}
+h1{font-size:clamp(2rem,5.5vw,3.4rem);font-weight:700}
+h2{font-size:1.5rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:600;margin-top:1.4rem}
+.abertura{padding:2.5rem 0 1.5rem;max-width:760px}
+.abertura-curta{padding-top:1rem}
+.apoio{color:var(--tinta-2);max-width:60ch;margin:1rem 0 0}
+.busca{position:relative;margin-top:1.5rem}
+.busca label{display:block;font-weight:600;margin-bottom:.4rem}
+.busca input{width:100%;font:inherit;font-size:1.2rem;padding:.95rem 1.1rem;border:2px solid var(--tinta);border-radius:10px;background:var(--papel);color:var(--tinta)}
+.busca input:focus{outline:3px solid var(--acento);outline-offset:2px;border-color:var(--acento)}
+#resultados{position:absolute;left:0;right:0;top:100%;margin:.35rem 0 0;padding:.25rem;list-style:none;background:var(--papel);border:1px solid var(--linha);border-radius:10px;box-shadow:0 12px 30px rgba(20,35,58,.16);z-index:5;max-height:22rem;overflow:auto}
+#resultados li{padding:.6rem .8rem;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:1rem}
+#resultados li[aria-selected=true],#resultados li:hover{background:var(--acento-fundo)}
+#resultados small{color:var(--tinta-2)}
+.grupos{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:1.5rem 0 2.5rem;border:1px solid var(--linha);border-radius:12px;background:var(--papel);overflow:hidden}
+.grupo{padding:1.1rem 1.25rem;text-decoration:none;color:var(--tinta);border-left:5px solid var(--linha);border-right:1px solid var(--linha);display:flex;flex-direction:column;gap:.15rem}
+.grupo:last-child{border-right:0}
+.grupo-deputado{border-left-color:var(--deputado)}.grupo-senador{border-left-color:var(--senador)}.grupo-presidente{border-left-color:var(--presidente)}
+.grupo:hover{background:var(--acento-fundo)}
+.grupo-nome{font-weight:600}
+.grupo-valor{font:700 2rem/1.1 var(--titulo)}
+.grupo-nota{color:var(--tinta-2);font-size:.9rem}
+.ranking-cab{display:flex;justify-content:space-between;align-items:end;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.controles{display:flex;gap:1rem;flex-wrap:wrap}
+.controles label{display:flex;flex-direction:column;font-size:.85rem;color:var(--tinta-2);gap:.2rem}
+select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--linha);border-radius:8px;background:var(--papel);color:var(--tinta)}
+.tabela-rolavel{overflow-x:auto;border:1px solid var(--linha);border-radius:10px;background:var(--papel)}
+.tabela{width:100%;border-collapse:collapse;font-size:.97rem}
+.tabela th,.tabela td{padding:.6rem .85rem;text-align:left;border-bottom:1px solid var(--linha);vertical-align:top}
+.tabela thead th{font-weight:600;color:var(--tinta-2);background:var(--fundo);position:sticky;top:0}
+.tabela tbody tr:last-child td{border-bottom:0}
+.tabela .num,.tabela th.num{text-align:right;white-space:nowrap}
+.tabela .pos{width:2.5rem;color:var(--tinta-2)}
+.tabela td a{color:var(--tinta);font-weight:500;text-decoration-color:var(--linha)}
+.tabela td a:hover{color:var(--acento)}
+.nota{color:var(--tinta-2);font-size:.9rem;max-width:70ch;margin:.7rem 0 0}
+.dica{color:var(--tinta-2);margin:0 0 .8rem}
+.chamada{margin-top:3rem;padding:1.5rem;border:1px solid var(--linha);border-radius:12px;background:var(--papel)}
+.chamada p{max-width:55ch;color:var(--tinta-2)}
+.botao{display:inline-block;background:var(--tinta);color:var(--fundo);padding:.7rem 1.1rem;border-radius:9px;text-decoration:none;font-weight:600}
+.botao:hover{background:var(--acento);color:#fff}
+.botao-leve{background:transparent;color:var(--acento);border:1.5px solid var(--acento);padding:.5rem .9rem}
+.botao-leve:hover{background:var(--acento);color:#fff}
+.pessoa-cab{padding:1rem 0 1.5rem;border-left:6px solid var(--linha);padding-left:1.1rem;margin-bottom:1.5rem}
+.pessoa-deputado .pessoa-cab{border-left-color:var(--deputado)}.pessoa-senador .pessoa-cab{border-left-color:var(--senador)}.pessoa-presidente .pessoa-cab{border-left-color:var(--presidente)}
+.cargo{margin:0 0 .3rem;color:var(--tinta-2);font-weight:600}
+.resumo-linha{font-size:1.15rem;max-width:62ch;margin:.6rem 0 1rem}
+.aviso{background:var(--alerta-fundo);border:1px solid var(--alerta);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem}
+.aviso h2{font-size:1.1rem;color:var(--alerta)}.aviso p{margin:0;max-width:70ch}
+.bloco{margin:2.5rem 0}
+.anos{display:flex;flex-direction:column;gap:.5rem}
+.ano{border:1px solid var(--linha);border-radius:10px;background:var(--papel)}
+.ano[open]{border-color:var(--tinta-2)}
+.ano summary{display:grid;grid-template-columns:7.5rem 1fr 11rem;align-items:center;gap:1rem;padding:.8rem 1rem;cursor:pointer;list-style:none}
+.ano summary::-webkit-details-marker{display:none}
+.ano summary::before{content:"";position:absolute}
+.ano-n{font:700 1.15rem var(--titulo)}.ano-n small{font:500 .75rem var(--corpo);color:var(--tinta-2);margin-left:.3rem}
+.ano-barra{height:10px;background:var(--fundo);border-radius:5px;overflow:hidden}
+.ano-barra i{display:block;height:100%;background:var(--acento);border-radius:5px}
+.pessoa-senador .ano-barra i{background:var(--senador)}.pessoa-presidente .ano-barra i{background:var(--presidente)}
+.ano-v{text-align:right;font-weight:600}
+.ano .tabela-rolavel{margin:0 1rem 1rem;border-radius:8px}
+.ano .nota{margin:0 1rem 1rem}
+.ano summary:hover{background:var(--acento-fundo);border-radius:10px}
+.lista-simples{list-style:none;margin:.5rem 0 0;padding:0}
+.lista-simples li{display:flex;justify-content:space-between;gap:1rem;padding:.45rem 0;border-bottom:1px solid var(--linha)}
+.ano .lista-simples,.ano h3{margin-left:1rem;margin-right:1rem}
+.texto{max-width:70ch}.texto h2{margin-top:2rem}.texto li{margin:.4rem 0}
+.rodape{border-top:1px solid var(--linha);padding:1.5rem max(16px,calc((100vw - 1040px)/2));color:var(--tinta-2);font-size:.9rem;background:var(--papel)}
+.rodape p{max-width:75ch;margin:.3rem 0}
+/* comparacao */
+.comparacao{margin-top:1.5rem}
+.vazio{padding:1.25rem;border:1px dashed var(--linha);border-radius:10px;color:var(--tinta-2)}
+.comp th.pessoa{min-width:11rem;vertical-align:top}
+.comp th.pessoa a{color:var(--tinta);font-family:var(--titulo);font-size:1.05rem}
+.comp th.pessoa small{display:block;font-weight:400;color:var(--tinta-2)}
+.comp th.pessoa button{font:inherit;font-size:.8rem;margin-top:.35rem;background:none;border:0;color:var(--acento);cursor:pointer;padding:0;text-decoration:underline}
+.comp td.rotulo,.comp th.rotulo{position:sticky;left:0;background:var(--papel);min-width:9rem}
+.comp tr.ano-linha td{font-weight:600;background:var(--papel)}
+.comp tr.ano-linha button{font:inherit;font-weight:600;background:none;border:0;color:var(--tinta);cursor:pointer;padding:0;display:flex;gap:.45rem;align-items:center}
+.comp tr.ano-linha button::before{content:"+";display:inline-grid;place-items:center;width:1.3rem;height:1.3rem;border:1px solid var(--linha);border-radius:5px;font-weight:600}
+.comp tr.ano-linha button[aria-expanded=true]::before{content:"−"}
+.comp tr.cat-linha td{font-size:.92rem;color:var(--tinta-2)}
+.comp tr.cat-linha td.rotulo{padding-left:2.2rem}
+.comp tr.total td{background:var(--acento-fundo);font-weight:700}
+.comp .maior{color:var(--tinta);font-weight:700}
+@media (max-width:720px){
+  .grupos{grid-template-columns:1fr}.grupo{border-right:0;border-bottom:1px solid var(--linha)}.grupo:last-child{border-bottom:0}
+  .ano summary{grid-template-columns:5.5rem 1fr;gap:.4rem .8rem}.ano-v{grid-column:1/-1;text-align:left}
+  .topo nav{gap:.8rem;font-size:.95rem}
+}
+@media (prefers-reduced-motion:no-preference){.ano .tabela-rolavel{animation:abre .18s ease-out}@keyframes abre{from{opacity:0;transform:translateY(-4px)}}}

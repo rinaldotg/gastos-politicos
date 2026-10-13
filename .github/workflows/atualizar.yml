@@ -1,0 +1,72 @@
+name: Atualizar dados e publicar o site
+
+on:
+  schedule:
+    - cron: "0 9 5 * *"   # todo dia 5, 06h no horario de Brasilia
+  workflow_dispatch:
+
+permissions:
+  contents: write   # guardar o banco numa release
+  pages: write
+  id-token: write
+
+concurrency:
+  group: atualizacao
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Baixar o banco da ultima atualizacao
+        run: |
+          mkdir -p data
+          if gh release download dados -p gastos.db.gz -D data 2>/dev/null; then
+            gunzip -f data/gastos.db.gz
+            ls -lh data/gastos.db
+          else
+            echo "Sem banco anterior: a coleta comeca do zero (pode passar do limite de tempo; suba o banco inicial na release 'dados')."
+          fi
+
+      - name: Camara e Senado (ano passado e atual)
+        run: |
+          Y=$(date +%Y)
+          python -m pipeline.run --db data/gastos.db --desde $((Y-1)) --so camara senado
+
+      - name: Portal da Transparencia (Presidencia, emendas, orcamento)
+        continue-on-error: true   # se o Portal bloquear, o site ainda e publicado com os dados ja existentes
+        run: |
+          Y=$(date +%Y)
+          python -m pipeline.run --db data/gastos.db --pular-cadastro --so presidencia emendas orcamento --recarregar-desde $((Y-1))
+
+      - name: Conferir e gerar resumo
+        run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
+
+      - name: Gerar o site
+        run: python site/build.py --resumo resumo --saida dist --base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+
+      - name: Guardar o banco atualizado
+        run: |
+          gzip -kf data/gastos.db
+          gh release view dados >/dev/null 2>&1 || gh release create dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."
+          gh release upload dados data/gastos.db.gz --clobber
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v4

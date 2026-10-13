@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<article class="texto">
+  <h1>De onde vêm os dados e o que cada gasto cobre</h1>
+  <p>Todos os números vêm de bases oficiais, atualizadas todo mês por uma rotina automática. Nada é estimado: cada valor é a soma dos lançamentos publicados pelo órgão.</p>
+
+  <h2>Fontes</h2>
+  <ul>
+    <li><strong>Deputados:</strong> cota parlamentar (CEAP), arquivos anuais da Câmara dos Deputados.</li>
+    <li><strong>Senadores:</strong> cota para exercício da atividade parlamentar (CEAPS), dados abertos do Senado Federal.</li>
+    <li><strong>Presidência:</strong> cartão de pagamento do governo federal (cartão corporativo) e viagens a serviço, do Portal da Transparência. Também o orçamento executado por programa e ação.</li>
+    <li><strong>Emendas:</strong> emendas parlamentares do Portal da Transparência.</li>
+  </ul>
+
+  <h2>O que cada gasto cobre</h2>
+  <h3>Deputado federal</h3>
+  <ul>
+    <li>Cota parlamentar (CEAP): passagens aéreas, locação de veículos, escritório, combustíveis, divulgação do mandato, telefonia. O saldo mensal não usado acumula no ano. O valor mensal varia por estado.</li>
+    <li>Nos 120 dias antes da eleição, candidatos não podem usar a cota para divulgar o mandato.</li>
+    <li><strong>Fora dos totais deste site:</strong> subsídio (R$ 46.366,19 brutos por mês em 2026), verba de gabinete para até 25 secretários parlamentares, auxílio-moradia ou imóvel funcional, diárias em missão oficial e auxílio-mudança.</li>
+  </ul>
+  <h3>Senador</h3>
+  <ul>
+    <li>CEAPS: escritório de apoio no estado, locomoção, consultoria, divulgação e combustível, com nota fiscal. O saldo acumula, e a hospedagem em Brasília é coberta pelo auxílio-moradia. O reembolso pode ser pedido até 90 dias após o fim do exercício.</li>
+    <li><strong>Fora dos totais:</strong> subsídio (igual ao do deputado), diárias e passagens pagas direto pelo Senado, auxílio-mudança, assistência à saúde, equipe de gabinete e auxílio-moradia.</li>
+  </ul>
+  <h3>Presidente da República</h3>
+  <p>O presidente não tem uma cota nem um teto: as despesas do cargo são pagas com recursos públicos. <strong>Os números mostrados não são gasto pessoal.</strong> São despesas do cartão corporativo e viagens (diárias e passagens) de órgãos da Presidência, atribuídas a quem ocupava o cargo na data do lançamento.</p>
+  <ul>
+    <li>Nomes de portadores de cartão e de viajantes não são exibidos.</li>
+    <li>Boa parte do cartão corporativo é sigilosa: aparece o valor, mas não o fornecedor. A página mostra qual parte do cartão está sob sigilo.</li>
+    <li>Vice-Presidência, Agência Brasileira de Inteligência e Empresa Brasil de Comunicação ficam fora do total do presidente.</li>
+    <li>Transporte aéreo, segurança presidencial e residências oficiais têm outras fontes e <strong>não estão incluídos</strong>.</li>
+    <li>O orçamento por programa mostra quanto os órgãos da Presidência pagaram em cada programa. Operações financeiras (empréstimos com retorno, por exemplo) aparecem à parte e não entram na soma.</li>
+  </ul>
+
+  <h2>Emendas</h2>
+  <ul>
+    <li><strong>Individuais:</strong> cada deputado e senador indica; execução obrigatória. Inclui as “emendas Pix” (transferências especiais), que vão direto a estados e municípios sem convênio.</li>
+    <li><strong>De bancada, de comissão e de relator:</strong> não têm autor individual e por isso não aparecem no perfil de ninguém. As de relator são o antigo “orçamento secreto”, declarado inconstitucional pelo STF.</li>
+    <li>Parte das emendas individuais vem do Portal sem identificação do autor e não pode ser atribuída a ninguém.</li>
+    <li>O autor é ligado ao perfil pelo nome. Em raros casos de nomes parecidos, a emenda pode ficar sem vínculo.</li>
+  </ul>
+
+  <h2>Como ler os números</h2>
+  <ul>
+    <li>Valores negativos são devoluções ou estornos e já estão descontados.</li>
+    <li>Câmara, Senado e Presidência classificam as despesas de formas diferentes. A comparação por tipo só vale entre quem usa a mesma classificação.</li>
+    <li>Gastar muito ou pouco não prova irregularidade. Os valores seguem as regras de cada cota.</li>
+    <li>O ano corrente é parcial. Quem exerceu o mandato só por alguns meses mostra menos meses.</li>
+  </ul>
+</article>
+{% endblock %}
