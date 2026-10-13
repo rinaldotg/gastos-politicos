@@ -20,7 +20,7 @@ CARGOS = {
     "senador": ("senador", "Senador", "Senadores"),
     "presidente": ("presidente", "Presidente da República", "Presidentes"),
 }
-MINUSCULAS = {"de", "da", "do", "das", "dos", "e"}
+MINUSCULAS = {"de", "da", "do", "das", "dos", "e", "a", "o", "as", "os", "em", "no", "na", "nos", "nas", "para", "ao", "com", "por"}
 SIGILO = "Informações protegidas por sigilo"
 FORA_DO_NUCLEO = ("VICE", "INTELIGENCIA", "EMPRESA BRASIL", "IMPRENSA NACIONAL", "INTERVENCAO", "SETORIAL")
 MESES_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
@@ -150,9 +150,11 @@ def main():
     for r in orc:
         pid, ano = int(r["pessoa_id"]), int(r["ano"])
         prog = r["programa"] or "(sem programa)"
+        if r["orgao"] and grupo_unidade(r["orgao"]) == "fora":
+            continue  # Vice-Presidencia, EBC, Imprensa Nacional: fora do total do presidente
         pago = f(r.get("pago") or list(r.values())[-1])
         orcamento[pid][ano][prog] += pago
-        if r["orgao"]:
+        if r["orgao"] and not prog.upper().startswith("OPERACOES ESPECIAIS"):
             orc_orgao[pid][ano][r["orgao"]] += pago
     legis = defaultdict(set)
     for r in mand:
@@ -234,7 +236,10 @@ def main():
                 progs = sorted(orcamento[pid][y].items(), key=lambda t: -t[1])
                 financeiras = [(p_, v) for p_, v in progs if p_.upper().startswith("OPERACOES ESPECIAIS")]
                 normais = [(p_, v) for p_, v in progs if not p_.upper().startswith("OPERACOES ESPECIAIS")]
-                orgs = sorted(orc_orgao[pid][y].items(), key=lambda t: -t[1])[:8]
+                orgs = [(nome_bonito(g_), v) for g_, v in sorted(orc_orgao[pid][y].items(), key=lambda t: -t[1])[:8] if v > 0]
+                if len(orgs) < 2:
+                    orgs = []
+                normais = [(nome_bonito(p_), v) for p_, v in normais if v > 0]
                 orc_x.append(dict(ano=y, total=sum(v for _, v in normais), programas=normais[:12],
                                   financeiras=sum(v for _, v in financeiras), financeiras_det=financeiras[:5], orgaos=orgs))
         if orc_x:
