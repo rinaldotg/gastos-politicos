@@ -18,5 +18,14 @@
   </div>
   <p class="nota">Soma dos valores pagos a este recebedor em emendas de cada parlamentar. Clique em "ver emendas" para abrir cada uma. O mesmo CNPJ pode incluir filiais de uma mesma empresa.</p>
 </section>
+<section class="bloco" data-r-obras hidden>
+  <h2>Obras federais com este executor</h2>
+  <p data-r-obras-resumo></p>
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Obra</th><th>Situação</th><th>Tipo</th><th class="num">Valor previsto</th><th>Previsão de término</th></tr></thead>
+    <tbody data-r-obras-corpo></tbody>
+  </table></div>
+  <p class="nota">Dados do Obras.gov.br, plataforma federal de obras. A ligação é pelo CNPJ do executor: a plataforma não informa de qual emenda veio cada obra, então isso mostra o conjunto de obras federais deste executor, não necessariamente as pagas com emenda. Obras com situação "Paralisada" aparecem primeiro.</p>
+</section>
 <p class="nota" data-r-vazio hidden>Não encontramos este recebedor.</p>
 {% endblock %}

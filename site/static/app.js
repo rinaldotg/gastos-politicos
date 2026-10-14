@@ -428,6 +428,24 @@
     }).catch(function () { vazio.hidden = false; });
   }
 
+
+  function blocoObras(box, resumoEl, corpoEl, ob, comExecutor) {
+    var cont = ob[0] || {}, lista = ob[1] || [], n = Object.keys(cont).reduce(function (s, k) { return s + cont[k]; }, 0);
+    if (!n) return;
+    resumoEl.textContent = n + (n === 1 ? ' obra: ' : ' obras: ') + Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; }).map(function (k) { return cont[k] + ' ' + k.toLowerCase(); }).join(', ') + '.' + (n > lista.length ? ' Mostrando as ' + lista.length + ' primeiras.' : '');
+    corpoEl.textContent = '';
+    lista.forEach(function (o) {
+      var cols = [el('td', {}, [document.createTextNode(o[1] || '(sem nome)'), el('small', { text: 'Código ' + o[0] + (o[3] ? ' · ' + o[3] : '') })])];
+      if (comExecutor) cols.push(el('td', { text: o[8] || '' }));
+      cols.push(el('td', {}, [el('span', { class: 'sit ' + (o[2] === 'Paralisada' ? 'sit-alerta' : ''), text: o[2] })]));
+      if (!comExecutor) cols.push(el('td', { text: o[3] || '' }));
+      cols.push(el('td', { class: 'num', text: o[4] ? brl(o[4]) : '—' }));
+      if (!comExecutor) cols.push(el('td', { text: o[5] || '—' }));
+      corpoEl.appendChild(el('tr', {}, cols));
+    });
+    box.hidden = false;
+  }
+
   /* ---------- anos (filtro por ano do pagamento) ---------- */
   function anoDaUrl() { return new URLSearchParams(location.search).get('a') || ''; }
   function qa(a) { return a ? '&a=' + a : ''; }
@@ -500,6 +518,7 @@
       fr.appendChild(document.createTextNode(' · '));
       fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
       if (dados.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
+      blocoObras(document.querySelector('[data-r-obras]'), document.querySelector('[data-r-obras-resumo]'), document.querySelector('[data-r-obras-corpo]'), dados.ob || [{}, []], false);
       ligarAno(selA, render);
       acoes(document.querySelector('[data-acoes]'), [['Baixar CSV (filtro atual)', 'recebedor-' + dig + '.csv', function () {
         var ano = selA.value, out = [];
@@ -527,7 +546,8 @@
       f.slice(0, limite).forEach(function (m, i) {
         corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
           el('td', {}, [el('a', { href: RAIZ + 'municipio/?m=' + m[1] + qa(selA.value), text: m[0] })]),
-          el('td', { class: 'num', text: String(m[2][ano][1]) }), el('td', { class: 'num', text: brl(m[2][ano][0]) })]));
+          el('td', { class: 'num', text: String(m[2][ano][1]) }), el('td', { class: 'num', text: brl(m[2][ano][0]) }),
+          el('td', { class: 'num', text: m[3] ? brl(m[2][ano][0] / m[3]) : '—' })]));
       });
       mais.hidden = f.length <= limite; mais.textContent = 'Mostrar mais (' + (f.length - limite) + ')';
     }
@@ -552,8 +572,9 @@
       var rs = d.r.map(function (x) { return [x[0], x[1], valorAno(x[2], ano)[0]]; }).filter(function (x) { return x[2] > 0; })
         .sort(function (a, b) { return b[2] - a[2]; });
       var total = ps.reduce(function (s, x) { return s + x[1]; }, 0);
-      document.querySelector('[data-mu-info]').textContent = ps.length ? 'Recebedores deste município receberam ' + brl(total) + (ano ? ' em ' + ano : '') + ' em emendas de ' + ps.length +
-        (ps.length === 1 ? ' parlamentar.' : ' parlamentares.') : 'Nenhuma emenda paga a recebedores deste município em ' + ano + '.';
+      document.querySelector('[data-mu-info]').textContent = (ps.length ? 'Recebedores deste município receberam ' + brl(total) + (ano ? ' em ' + ano : '') + ' em emendas de ' + ps.length +
+        (ps.length === 1 ? ' parlamentar.' : ' parlamentares.') : 'Nenhuma emenda paga a recebedores deste município em ' + ano + '.') +
+        (d.pop && total ? ' Isso dá ' + brl(total / d.pop) + ' por habitante (população estimada de ' + d.pop.toLocaleString('pt-BR') + ').' : '');
       var tp = document.querySelector('[data-mu-parl]'); tp.textContent = '';
       ps.forEach(function (x, i) {
         var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
@@ -574,6 +595,7 @@
       res[1].forEach(function (x) { pessoas[x.id] = x; });
       document.querySelector('[data-mu-titulo]').textContent = dados.n;
       document.title = dados.n + ' · emendas recebidas · Gastos Públicos';
+      blocoObras(document.querySelector('[data-mu-obras]'), document.querySelector('[data-mu-obras-resumo]'), document.querySelector('[data-mu-obras-corpo]'), dados.ob || [{}, []], true);
       ligarAno(selA, render);
       var linhasMu = function () {
         var ano = selA.value;

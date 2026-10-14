@@ -99,6 +99,17 @@ CREATE TABLE IF NOT EXISTS emenda_favorecido (
 );
 CREATE INDEX IF NOT EXISTS ix_emenda_fav_codigo ON emenda_favorecido (codigo);
 
+-- Obras federais (Obras.gov.br) cujo executor e recebedor de emendas
+CREATE TABLE IF NOT EXISTS obra (
+    id INTEGER PRIMARY KEY,
+    id_unico TEXT, nome TEXT, situacao TEXT, uf TEXT, especie TEXT, natureza TEXT, tipo TEXT, subtipo TEXT,
+    valor REAL, ini_prev TEXT, fim_prev TEXT, ini_efetiva TEXT, fim_efetiva TEXT, data_situacao TEXT,
+    executor_cnpj TEXT, executor_nome TEXT, repassador TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_obra_cnpj ON obra (executor_cnpj);
+-- Populacao dos municipios (IBGE)
+CREATE TABLE IF NOT EXISTS municipio_pop (ibge TEXT, nome TEXT, uf TEXT, populacao INTEGER, ano INTEGER);
+
 -- Convenio (objeto e situacao) das emendas que viraram convenio (Portal da Transparencia)
 CREATE TABLE IF NOT EXISTS emenda_convenio (
     id INTEGER PRIMARY KEY,

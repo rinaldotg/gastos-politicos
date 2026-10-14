@@ -52,6 +52,10 @@ jobs:
           Y=$(date +%Y)
           python -m pipeline.run --db data/gastos.db --pular-cadastro --so presidencia emendas orcamento --recarregar-desde $((Y-1))
 
+      - name: Obras (Obras.gov.br) e populacao dos municipios (IBGE)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so obras ibge
+
       - name: Conferir e gerar resumo
         run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
 

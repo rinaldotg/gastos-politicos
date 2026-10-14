@@ -163,3 +163,6 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .cartao{display:block;border:1.5px solid var(--linha);border-radius:12px;padding:1rem;background:var(--papel);color:var(--tinta);text-decoration:none}
 .cartao:hover{border-color:var(--acento)}.cartao strong{display:block;font-size:1.05rem}.cartao span{color:var(--tinta-2);font-size:.92rem}
 .cartao select{margin-top:.5rem;font:inherit;padding:.4rem;border-radius:8px;border:1px solid var(--linha);max-width:100%}
+.sit{display:inline-block;padding:.1rem .5rem;border-radius:999px;background:var(--acento-fundo);font-size:.85rem;white-space:nowrap}
+.sit-alerta{background:#fde8e4;color:#8a1c0b;font-weight:600}
+@media (prefers-color-scheme:dark){.sit-alerta{background:#4a1d16;color:#ffd5cc}}

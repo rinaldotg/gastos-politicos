@@ -142,6 +142,21 @@ def main():
             else:
                 ag_[k_] = [nome_, doc_, tipo_, loc_, valor_]
         favs[cod_] = sorted(ag_.values(), key=lambda t: -t[4])
+    obras_cnpj = defaultdict(list)  # cnpj (14 digitos) -> obras do Obras.gov.br cujo executor e esse recebedor
+    try:
+        for r in ler(a.resumo, "obra"):
+            dg = re.sub(r"\D", "", r.get("executor_cnpj") or "").zfill(14)
+            obras_cnpj[dg].append([r.get("id_unico") or "", (r.get("nome") or "").strip(), (r.get("situacao") or "").strip() or "Situação não informada",
+                                   (r.get("tipo") or "").strip(), round(f(r.get("valor"))), data_br(r.get("fim_prev")),
+                                   data_br(r.get("ini_efetiva")), data_br(r.get("fim_efetiva"))])
+    except FileNotFoundError:
+        pass
+    populacao = {}
+    try:
+        for r in ler(a.resumo, "municipio_pop"):
+            populacao[slugify(f'{r["nome"]}-{r["uf"]}')] = int(f(r["populacao"]))
+    except FileNotFoundError:
+        pass
     convenios = defaultdict(list)
     try:
         for r in ler(a.resumo, "emenda_convenio"):
@@ -406,8 +421,12 @@ def main():
         rank_ano = defaultdict(dict)  # ano ("" = todos) -> doc -> [nome, doc, valor, parlamentares]
         for doc, r_ in rec.items():
             dig = re.sub(r"\D", "", doc)
+            obs_ = sorted(obras_cnpj.get(dig.zfill(14), []), key=lambda t: (t[2] != "Paralisada", -t[4]))
+            cont_ = {}
+            for o_ in obs_:
+                cont_[o_[2]] = cont_.get(o_[2], 0) + 1
             sh_r[int(dig) % N_R if dig else 0][doc] = dict(
-                b=1 if dig in BANCOS else 0, n=r_["n"], t=r_["t"], l=r_["l"], p=sorted(r_["p"].values(), key=lambda t: -t[1]))
+                ob=[cont_, obs_[:40]], b=1 if dig in BANCOS else 0, n=r_["n"], t=r_["t"], l=r_["l"], p=sorted(r_["p"].values(), key=lambda t: -t[1]))
             if dig in BANCOS:
                 continue
             por_ano = defaultdict(lambda: [0, set()])
@@ -430,6 +449,12 @@ def main():
         gravar("rec-rank.json", rank_json)
         gravar("rec-busca.json", [[r_["n"], doc, round(sum(q[1] for q in r_["p"].values()))]
                                   for doc, r_ in sorted(rec.items(), key=lambda t: -sum(q[1] for q in t[1]["p"].values()))])
+        obras_muni = defaultdict(list)
+        for doc, r_ in rec.items():
+            dg_ = re.sub(r"\D", "", doc)
+            if "/" in r_["l"] and dg_ not in BANCOS and obras_cnpj.get(dg_.zfill(14)):
+                for o_ in obras_cnpj[dg_.zfill(14)]:
+                    obras_muni[slugify(r_["l"].replace("/", "-"))].append(o_ + [r_["n"]])
         indice_m = []
         for sl, m_ in muni.items():
             por_ano = defaultdict(lambda: [0, set()])
@@ -438,12 +463,16 @@ def main():
                     por_ano[ap_][0] += v_; por_ano[ap_][1].add(pid_)
                     por_ano[0][0] += v_; por_ano[0][1].add(pid_)
             rs = sorted(m_["r"].items(), key=lambda t: -sum(t[1].values()))
+            om_ = sorted(obras_muni.get(sl, []), key=lambda t: (t[2] != "Paralisada", t[2] != "Em execução", -t[4]))
+            cm_ = {}
+            for o_ in om_:
+                cm_[o_[2]] = cm_.get(o_[2], 0) + 1
             gravar(f"m/{sl}.json", dict(
-                n=m_["n"],
+                pop=populacao.get(sl), ob=[cm_, om_[:40]], n=m_["n"],
                 p=sorted([[pid_, {str(ap_): [round(v_), len(cs_)] for ap_, (v_, cs_) in ys.items()}] for pid_, ys in m_["p"].items()],
                          key=lambda t: -sum(v[0] for v in t[1].values())),
                 r=[[k[1], k[0], {str(ap_): round(v_) for ap_, v_ in ys.items()}] for k, ys in rs[:1500]], nr=len(rs)))
-            indice_m.append([m_["n"], sl, {str(ap_): [round(v_), len(ps_)] for ap_, (v_, ps_) in por_ano.items()}])
+            indice_m.append([m_["n"], sl, {str(ap_): [round(v_), len(ps_)] for ap_, (v_, ps_) in por_ano.items()}, populacao.get(sl)])
         gravar("municipios.json", sorted(indice_m, key=lambda t: -t[2].get("0", [0])[0]))
         anos_lista = sorted((a_ for a_ in anos_pag if a_), reverse=True)
         for pagina, titulo_, desc_ in (("municipio", "Emendas recebidas por município", "Quanto cada município recebeu em emendas parlamentares, de quais parlamentares e para quais recebedores."),

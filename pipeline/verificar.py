@@ -50,6 +50,8 @@ def main():
                        FROM emenda WHERE pessoa_id IS NOT NULL""",
         "emenda_favorecido": "SELECT codigo, favorecido, documento, tipo, uf, municipio, ROUND(valor,2) valor, n, ano FROM emenda_favorecido ORDER BY codigo, valor DESC",
         "emenda_convenio": "SELECT codigo, numero, convenente, objeto, situacao, ROUND(valor,2) valor, ROUND(liberado,2) liberado, inicio, fim, publicacao FROM emenda_convenio",
+        "obra": "SELECT id_unico, nome, situacao, uf, especie, natureza, tipo, subtipo, ROUND(valor,2) valor, ini_prev, fim_prev, ini_efetiva, fim_efetiva, data_situacao, executor_cnpj, executor_nome, repassador FROM obra",
+        "municipio_pop": "SELECT ibge, nome, uf, populacao, ano FROM municipio_pop",
         "emenda_funcao": "SELECT pessoa_id, ano, funcao, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NOT NULL GROUP BY 1,2,3",
         "emenda_sem_autor": "SELECT tipo, CASE WHEN lower(autor) LIKE 'sem informa%' THEN 1 ELSE 0 END sem_info, ano, COUNT(*) n, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2,3",
         "emenda_sem_vinculo": "SELECT autor, tipo, COUNT(*) n, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 300",
