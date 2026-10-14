@@ -82,3 +82,17 @@ CREATE TABLE IF NOT EXISTS orcamento_acao (
 );
 CREATE INDEX IF NOT EXISTS ix_orc_pessoa ON orcamento_acao (pessoa_id, ano);
 CREATE INDEX IF NOT EXISTS ix_orc_arquivo ON orcamento_acao (arquivo);
+
+-- Quem recebeu cada emenda (Portal da Transparencia, arquivo "por favorecido"), somado por emenda x favorecido
+CREATE TABLE IF NOT EXISTS emenda_favorecido (
+    id INTEGER PRIMARY KEY,
+    codigo TEXT NOT NULL,          -- codigo da emenda (liga com emenda.codigo)
+    favorecido TEXT,
+    documento TEXT,                -- CNPJ ou CPF (CPF vem mascarado)
+    tipo TEXT,
+    uf TEXT,
+    municipio TEXT,
+    valor REAL NOT NULL,
+    n INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_emenda_fav_codigo ON emenda_favorecido (codigo);

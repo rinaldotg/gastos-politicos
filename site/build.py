@@ -102,6 +102,18 @@ def main():
         edet = ler(a.resumo, "emenda_detalhe")
     except FileNotFoundError:
         edet = []
+    favs = defaultdict(list)  # codigo da emenda -> favorecidos (maiores primeiro)
+    try:
+        for r in ler(a.resumo, "emenda_favorecido"):
+            doc = (r.get("documento") or "").strip()
+            digitos = re.sub(r"\D", "", doc)
+            pf = bool(doc) and ("*" in doc or len(digitos) <= 11)  # CPF: pessoa fisica, nome nao e exibido
+            favs[r["codigo"]].append([("Pessoa física (nome omitido)" if pf else nome_bonito(r.get("favorecido") or "Não informado")),
+                                      "" if pf else doc, (r.get("tipo") or ""),
+                                      (f'{r["municipio"]}/{r["uf"]}' if r.get("municipio") and r.get("uf") else (r.get("uf") or "")),
+                                      round(f(r["valor"])), int(f(r.get("total") or 1))])
+    except FileNotFoundError:
+        pass
 
     atualizado = max((r["coletado_em"] for r in logc), default="")[:10]
     atualizado_txt = ""
@@ -284,7 +296,9 @@ def main():
         for x in lista:
             linhas = sorted(detalhe.get(x["id"], []), key=lambda t: (-t[11], -t[9]))
             if linhas:
-                (saida / "data" / "e" / f"{x['id']}.json").write_text(json.dumps(linhas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                codigos = {l[3] for l in linhas if l[3]}
+                payload = {"r": linhas, "f": {c_: favs[c_] for c_ in codigos if c_ in favs}}
+                (saida / "data" / "e" / f"{x['id']}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     pix_lista = [[x["nome"], x["url"], x["cod"], x["uf"] or "", x["partido"] or "",
                   {str(y): [round(v[0]), round(v[1])] for y, v in sorted(pix[x["id"]].items())}] for x in lista if x["id"] in pix]
     (saida / "data" / "pix.json").write_text(json.dumps(pix_lista, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

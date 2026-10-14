@@ -168,7 +168,7 @@
   /* ---------- emendas de uma pessoa ---------- */
   // linha: [ano, pix(1)/definida(0), numero, codigo, destino, funcao, subfuncao, programa, acao, empenhado, liquidado, pago]
   function iniciarEmendas(box) {
-    var id = box.getAttribute('data-id'), tipo = 'todas', ano = '', linhas = [], abertas = {}, limites = {};
+    var id = box.getAttribute('data-id'), tipo = 'todas', ano = '', linhas = [], abertas = {}, limites = {}, favs = {};
     var areasEl = box.querySelector('[data-areas]'), resumo = box.querySelector('[data-resumo]');
     var selAno = box.querySelector('[data-ano]'), destinos = box.querySelector('[data-destinos]');
     var PASSO = 10;
@@ -177,26 +177,61 @@
         return (tipo === 'todas' || (tipo === 'pix' ? l[1] === 1 : l[1] === 0)) && (!ano || String(l[0]) === ano);
       });
     }
+    function agrupar(itens) {
+      var mapa = {}, ordem = [];
+      itens.forEach(function (l, i) {
+        var k = l[3] || ('x' + i);
+        if (!mapa[k]) { mapa[k] = { l: l, emp: 0, pago: 0, dest: [], acoes: [], k: k }; ordem.push(k); }
+        var g = mapa[k]; g.emp += l[9]; g.pago += l[11];
+        if (l[4] && g.dest.indexOf(l[4]) < 0) g.dest.push(l[4]);
+        var ac = [l[7], l[8]].filter(Boolean).join(' · ');
+        if (ac && g.acoes.indexOf(ac) < 0) g.acoes.push(ac);
+      });
+      return ordem.map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.pago - a.pago || b.emp - a.emp; });
+    }
+    function quemRecebeu(g) {
+      var lista = favs[g.k];
+      if (!lista || !lista.length) {
+        return el('td', { class: 'recebedor', text: g.pago > 0 ? 'Não informado na fonte' : 'Ainda sem pagamento registrado' });
+      }
+      var td = el('td', { class: 'recebedor' });
+      lista.slice(0, 3).forEach(function (r) {
+        td.appendChild(el('div', { class: 'rec' }, [el('strong', { text: r[0] }),
+          el('small', { text: [r[1], r[3], brl(r[4])].filter(Boolean).join(' · ') })]));
+      });
+      var total = lista[0][5] || lista.length;
+      if (lista.length > 3) {
+        var d = el('details', { class: 'rec-mais' }, [el('summary', { text: 'Ver os ' + (total > lista.length ? lista.length + ' maiores de ' + total : lista.length) + ' recebedores' })]);
+        lista.slice(3).forEach(function (r) {
+          d.appendChild(el('div', { class: 'rec' }, [el('strong', { text: r[0] }), el('small', { text: [r[1], r[3], brl(r[4])].filter(Boolean).join(' · ') })]));
+        });
+        td.appendChild(d);
+      } else if (total > lista.length) {
+        td.appendChild(el('small', { text: 'e mais ' + (total - lista.length) + ' recebedores' }));
+      }
+      return td;
+    }
     function tabela(itens, nome) {
-      var lim = limites[nome] || PASSO;
+      var lim = limites[nome] || PASSO, emendas = agrupar(itens);
       var corpo = el('tbody');
-      itens.slice(0, lim).forEach(function (l) {
-        var det = [l[6], l[7], l[8]].filter(Boolean).join(' · ');
+      emendas.slice(0, lim).forEach(function (g) {
+        var l = g.l;
         corpo.appendChild(el('tr', {}, [
-          el('td', { text: String(l[0]) }),
-          el('td', {}, [document.createTextNode((l[1] ? 'Pix' : 'Finalidade definida') + (l[2] ? ' nº ' + l[2] : ''))]),
-          el('td', { text: l[4] || '—' }),
-          el('td', { text: det || '—' }),
-          el('td', { class: 'num', text: brl(l[9]) }), el('td', { class: 'num', text: brl(l[11]) })
+          el('td', {}, [document.createTextNode((l[1] ? 'Pix' : 'Finalidade definida') + (l[2] ? ' nº ' + l[2] : '')),
+                        el('small', { text: 'Ano ' + l[0] + (l[3] ? ' · código ' + l[3] : '') })]),
+          quemRecebeu(g),
+          el('td', { text: g.dest.slice(0, 3).join(', ') + (g.dest.length > 3 ? ' e mais ' + (g.dest.length - 3) : '') || '—' }),
+          el('td', {}, [document.createTextNode([l[6]].filter(Boolean).join('') || '—'), g.acoes.length ? el('small', { text: g.acoes[0] }) : document.createTextNode('')]),
+          el('td', { class: 'num', text: brl(g.emp) }), el('td', { class: 'num', text: brl(g.pago) })
         ]));
       });
       var wrap = el('div', { class: 'tabela-rolavel' }, [el('table', { class: 'tabela tabela-emendas' }, [
-        el('thead', {}, [el('tr', {}, [el('th', { text: 'Ano' }), el('th', { text: 'Emenda' }), el('th', { text: 'Destino' }),
-          el('th', { text: 'Subárea, programa e ação' }), el('th', { class: 'num', text: 'Empenhado' }), el('th', { class: 'num', text: 'Pago' })])]),
+        el('thead', {}, [el('tr', {}, [el('th', { text: 'Emenda' }), el('th', { text: 'Quem recebeu' }), el('th', { text: 'Destino' }),
+          el('th', { text: 'Subárea e ação' }), el('th', { class: 'num', text: 'Empenhado' }), el('th', { class: 'num', text: 'Pago' })])]),
         corpo])]);
       var out = [wrap];
-      if (itens.length > lim) {
-        var b = el('button', { type: 'button', class: 'botao botao-leve', text: 'Mostrar mais (' + (itens.length - lim) + ')' });
+      if (emendas.length > lim) {
+        var b = el('button', { type: 'button', class: 'botao botao-leve', text: 'Mostrar mais (' + (emendas.length - lim) + ')' });
         b.addEventListener('click', function () { limites[nome] = lim + 25; render(); });
         out.push(b);
       }
@@ -243,7 +278,9 @@
       });
     });
     selAno.addEventListener('change', function () { ano = selAno.value; limites = {}; render(); });
-    get('data/e/' + id + '.json').then(function (d) {
+    get('data/e/' + id + '.json').then(function (resp) {
+      var d = Array.isArray(resp) ? resp : resp.r;
+      favs = Array.isArray(resp) ? {} : (resp.f || {});
       linhas = d;
       var anos = {}; d.forEach(function (l) { anos[l[0]] = 1; });
       Object.keys(anos).sort().reverse().forEach(function (a) { selAno.appendChild(el('option', { value: a, text: a })); });

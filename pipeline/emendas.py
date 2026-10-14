@@ -5,6 +5,7 @@ aparecem em totais gerais. O autor so e vinculado a uma pessoa quando o nome (se
 maiusculas) casa com UMA unica pessoa deputado/senador; nomes repetidos ficam sem vinculo.
 Colunas escritas de memoria: ler_csv tolera variacoes e o log imprime as colunas reais.
 """
+import csv
 import io
 import sys
 import zipfile
@@ -44,6 +45,83 @@ def _legislaturas(con):
     for pid, leg in con.execute("SELECT pessoa_id, legislatura FROM mandato WHERE cargo IN ('deputado_federal','senador')"):
         m.setdefault(pid, set()).add(leg)
     return m
+
+
+def _norm(h):
+    return c.sem_acento(h or "").lower().strip()
+
+
+def _fluxo_csv(z, nome):
+    """Abre um CSV grande do zip em fluxo (sem carregar tudo na memoria). Devolve (cabecalho, linhas)."""
+    with z.open(nome) as f:
+        amostra = f.read(65536)
+    try:
+        amostra.decode("utf-8")
+        enc = "utf-8-sig"
+    except UnicodeDecodeError as e:
+        enc = "utf-8-sig" if e.start >= len(amostra) - 4 else "latin-1"
+    primeira = amostra.split(b"\n", 1)[0]
+    sep = ";" if primeira.count(b";") >= primeira.count(b",") else ","
+    texto = io.TextIOWrapper(z.open(nome), encoding=enc, errors="replace", newline="")
+    leitor = csv.reader(texto, delimiter=sep)
+    return next(leitor), leitor
+
+
+def _achar(cab, *padroes, exato=None):
+    """Indice da primeira coluna cujo nome (sem acento, minusculo) contem todos os termos de algum padrao."""
+    ncab = [_norm(h) for h in cab]
+    if exato:
+        for e in exato:
+            if e in ncab:
+                return ncab.index(e)
+    for pad in padroes:
+        for i, h in enumerate(ncab):
+            if all(t in h for t in pad):
+                return i
+    return None
+
+
+def carregar_favorecidos(con, z):
+    """Quem recebeu o dinheiro de cada emenda individual vinculada a um parlamentar."""
+    nome = next((n for n in z.namelist() if "favorecido" in n.lower()), None)
+    if not nome:
+        print("  AVISO: o zip de emendas nao traz o arquivo por favorecido", file=sys.stderr)
+        return 0
+    cab, linhas = _fluxo_csv(z, nome)
+    print(f"  Colunas de emendas por favorecido ({nome}): {cab}")
+    i_cod = _achar(cab, ("codigo", "emenda"), exato=["codigo da emenda"])
+    i_nome = _achar(cab, ("nome", "favorecido"), ("favorecido",), exato=["favorecido"])
+    i_doc = _achar(cab, ("codigo", "favorecido"), ("cnpj",), ("cpf",), ("documento",))
+    i_tipo = _achar(cab, ("tipo", "favorecido"))
+    i_uf = _achar(cab, ("uf", "favorecido"), ("uf",))
+    i_mun = _achar(cab, ("municipio", "favorecido"), ("municipio",))
+    i_val = _achar(cab, ("valor", "recebido"), ("valor",))
+    if i_cod is None or i_nome is None or i_val is None:
+        print("  AVISO: colunas de favorecido nao reconhecidas; mande o log para ajustar", file=sys.stderr)
+        return 0
+    validos = {r[0] for r in con.execute("SELECT DISTINCT codigo FROM emenda WHERE pessoa_id IS NOT NULL AND codigo IS NOT NULL")}
+    agg = {}
+
+    def cel(l, i):
+        return (l[i].strip() if i is not None and i < len(l) else "")
+    for l in linhas:
+        cod = cel(l, i_cod)
+        if cod not in validos:
+            continue
+        chave_ = (cod, cel(l, i_doc), cel(l, i_nome))
+        a = agg.get(chave_)
+        if a is None:
+            agg[chave_] = [cel(l, i_tipo), cel(l, i_uf), cel(l, i_mun), c.numero(cel(l, i_val)), 1]
+        else:
+            a[3] += c.numero(cel(l, i_val)); a[4] += 1
+    con.execute("DELETE FROM emenda_favorecido")
+    con.executemany("""INSERT INTO emenda_favorecido (codigo, favorecido, documento, tipo, uf, municipio, valor, n)
+                       VALUES (?,?,?,?,?,?,?,?)""",
+                    [(k[0], k[2] or None, k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4]) for k, v in agg.items()])
+    c.log(con, "portal", "emendas_favorecidos", None, len(agg))
+    con.commit()
+    print(f"Emendas: {len(agg)} favorecidos (por emenda) ligados a parlamentares")
+    return len(agg)
 
 
 def carregar(con, desde):
@@ -104,6 +182,10 @@ def carregar(con, desde):
         top = sorted(sem.items(), key=lambda x: -x[1])[:15]
         print("  Autores individuais sem correspondencia (15 mais frequentes):", top)
     print(f"Emendas: {len(saida)} linhas; autores individuais sem correspondencia: {sem_vinculo}; nomes ambiguos: {ambiguos}")
+    try:
+        carregar_favorecidos(con, z)
+    except Exception as e:  # o restante das emendas ja esta salvo
+        print(f"  AVISO: favorecidos das emendas falharam: {e}", file=sys.stderr)
     return len(saida)
 
 
