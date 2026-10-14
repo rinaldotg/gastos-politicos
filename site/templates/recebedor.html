@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta" data-recebedor data-n="{{ n_r }}">
+  <p class="voltar"><a href="javascript:history.back()">← Voltar</a></p>
+  <h1 data-r-titulo>Quem destinou emendas a este recebedor</h1>
+  <p class="apoio" data-r-info></p>
+</section>
+<section class="ranking" data-r-lista hidden>
+  <div class="ranking-cab"><h2>Parlamentares que destinaram emendas</h2></div>
+  <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Parlamentar</th><th>UF</th><th>Partido</th><th class="num">Emendas</th><th class="num">Total recebido</th></tr></thead>
+      <tbody data-r-corpo></tbody>
+    </table>
+  </div>
+  <p class="nota">Soma dos valores pagos a este recebedor em emendas de cada parlamentar. Clique em "ver emendas" para abrir cada uma. O mesmo CNPJ pode incluir filiais de uma mesma empresa.</p>
+</section>
+<p class="nota" data-r-vazio hidden>Não encontramos este recebedor.</p>
+{% endblock %}

@@ -139,3 +139,8 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .rec{margin-bottom:.45rem}.rec strong{display:block;font-weight:600}.rec small{color:var(--tinta-2)}
 .rec-mais summary{cursor:pointer;color:var(--acento);font-size:.9rem}
 .tabela-emendas td small{display:block;color:var(--tinta-2)}
+.ver-todos{display:inline-block;margin-top:.15rem;font-size:.9rem;font-weight:600;color:var(--acento)}
+.recebedor a,.tabela td a{color:var(--acento)}
+.tabela td small{display:block;color:var(--tinta-2)}
+.voltar{margin:0 0 .4rem;font-size:.9rem}
+.controles input[type=search]{padding:.45rem .6rem;border:1px solid var(--linha);border-radius:8px;font:inherit;min-width:16rem}

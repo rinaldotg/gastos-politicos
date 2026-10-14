@@ -49,9 +49,8 @@ def main():
                        FROM emenda WHERE pessoa_id IS NOT NULL""",
         "emenda_favorecido": """SELECT codigo, favorecido, documento, tipo, uf, municipio, ROUND(valor,2) valor, n, total FROM (
                        SELECT f.codigo, f.favorecido, f.documento, f.tipo, f.uf, f.municipio, f.valor, f.n,
-                              ROW_NUMBER() OVER (PARTITION BY f.codigo ORDER BY f.valor DESC) pos,
                               COUNT(*) OVER (PARTITION BY f.codigo) total
-                       FROM emenda_favorecido f) WHERE pos <= 8""",
+                       FROM emenda_favorecido f) ORDER BY codigo, valor DESC""",
         "emenda_funcao": "SELECT pessoa_id, ano, funcao, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NOT NULL GROUP BY 1,2,3",
         "emenda_sem_vinculo": "SELECT autor, tipo, COUNT(*) n, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 300",
         "orcamento_acao": "SELECT pessoa_id, ano, mes, orgao, programa, acao, ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago FROM orcamento_acao",

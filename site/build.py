@@ -102,7 +102,7 @@ def main():
         edet = ler(a.resumo, "emenda_detalhe")
     except FileNotFoundError:
         edet = []
-    favs = defaultdict(list)  # codigo da emenda -> favorecidos (maiores primeiro)
+    favs = defaultdict(list)  # codigo da emenda -> TODOS os favorecidos (maiores primeiro)
     try:
         for r in ler(a.resumo, "emenda_favorecido"):
             doc = (r.get("documento") or "").strip()
@@ -111,9 +111,11 @@ def main():
             favs[r["codigo"]].append([("Pessoa física (nome omitido)" if pf else nome_bonito(r.get("favorecido") or "Não informado")),
                                       "" if pf else doc, (r.get("tipo") or ""),
                                       (f'{r["municipio"]}/{r["uf"]}' if r.get("municipio") and r.get("uf") else (r.get("uf") or "")),
-                                      round(f(r["valor"])), int(f(r.get("total") or 1))])
+                                      round(f(r["valor"]))])
     except FileNotFoundError:
         pass
+    for lst in favs.values():
+        lst.sort(key=lambda t: -t[4])
 
     atualizado = max((r["coletado_em"] for r in logc), default="")[:10]
     atualizado_txt = ""
@@ -297,8 +299,47 @@ def main():
             linhas = sorted(detalhe.get(x["id"], []), key=lambda t: (-t[11], -t[9]))
             if linhas:
                 codigos = {l[3] for l in linhas if l[3]}
-                payload = {"r": linhas, "f": {c_: favs[c_] for c_ in codigos if c_ in favs}}
+                payload = {"r": linhas, "f": {c_: [favs[c_][:3], len(favs[c_])] for c_ in codigos if c_ in favs}}
                 (saida / "data" / "e" / f"{x['id']}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    if detalhe and favs:
+        # codigo -> informacoes da emenda (somando as linhas) e autor
+        info = {}
+        for pid_, ls in detalhe.items():
+            for l in ls:
+                if not l[3]:
+                    continue
+                i = info.setdefault(l[3], dict(p=pid_, ano=l[0], pix=l[1], num=l[2], dest=[], fn=l[5], emp=0, pago=0))
+                i["emp"] += l[9]; i["pago"] += l[11]
+                if l[4] and l[4] not in i["dest"]:
+                    i["dest"].append(l[4])
+        N_E, N_R = 120, 200
+        sh_e, sh_r = defaultdict(dict), defaultdict(dict)
+        rec = {}  # documento -> dados
+        for cod, lst in favs.items():
+            i = info.get(cod)
+            if not i:
+                continue
+            sh_e[int(cod) % N_E if cod.isdigit() else 0][cod] = dict(
+                i=[i["p"], i["ano"], i["pix"], i["num"], ", ".join(i["dest"][:4]), i["fn"], round(i["emp"]), round(i["pago"])], f=lst)
+            for nome, doc, tipo, loc, valor in lst:
+                if not doc:
+                    continue
+                r_ = rec.setdefault(doc, dict(n=nome, t=tipo, l=loc, p={}))
+                q = r_["p"].setdefault(i["p"], [i["p"], 0, []])
+                q[1] += valor
+                q[2].append([cod, i["ano"], i["pix"], valor])
+        for doc, r_ in rec.items():
+            dig = re.sub(r"\D", "", doc)
+            sh_r[int(dig) % N_R if dig else 0][doc] = dict(
+                n=r_["n"], t=r_["t"], l=r_["l"], p=sorted(r_["p"].values(), key=lambda t: -t[1]))
+        for nome_dir, sh in (("fe", sh_e), ("fr", sh_r)):
+            (saida / "data" / nome_dir).mkdir(parents=True, exist_ok=True)
+            for k, v in sh.items():
+                (saida / "data" / nome_dir / f"{k}.json").write_text(json.dumps(v, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        for pagina, titulo_, desc_ in (("emenda", "Quem recebeu a emenda", "Todos os recebedores de uma emenda parlamentar, com valores."),
+                                       ("recebedor", "Quem recebeu emendas", "Todos os parlamentares que destinaram emendas a um mesmo recebedor.")):
+            escrever(pagina, env.get_template(pagina + ".html").render(**{**ctx_base, "raiz": "../"}, titulo=titulo_, descricao=desc_,
+                     n_e=N_E, n_r=N_R))
     pix_lista = [[x["nome"], x["url"], x["cod"], x["uf"] or "", x["partido"] or "",
                   {str(y): [round(v[0]), round(v[1])] for y, v in sorted(pix[x["id"]].items())}] for x in lista if x["id"] in pix]
     (saida / "data" / "pix.json").write_text(json.dumps(pix_lista, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

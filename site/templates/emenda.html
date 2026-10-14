@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta" data-emenda data-n="{{ n_e }}">
+  <p class="voltar"><a href="javascript:history.back()">← Voltar</a></p>
+  <h1 data-e-titulo>Quem recebeu a emenda</h1>
+  <p class="apoio" data-e-info></p>
+</section>
+<section class="ranking" data-e-lista hidden>
+  <div class="ranking-cab">
+    <h2 data-e-cont></h2>
+    <div class="controles"><label>Filtrar por nome ou CNPJ<input type="search" data-e-filtro placeholder="Digite para filtrar"></label></div>
+  </div>
+  <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Recebedor</th><th>Tipo</th><th>Local</th><th class="num">Valor recebido</th></tr></thead>
+      <tbody data-e-corpo></tbody>
+    </table>
+  </div>
+  <button type="button" class="botao botao-leve" data-e-mais hidden>Mostrar mais</button>
+  <p class="nota">Valores pagos ao recebedor, segundo o Portal da Transparência. Clique em um recebedor para ver todos os parlamentares que destinaram emendas a ele. Pessoas físicas aparecem sem nome.</p>
+</section>
+<p class="nota" data-e-vazio hidden>Não encontramos os recebedores desta emenda. Pode ser que ainda não tenha havido pagamento.</p>
+{% endblock %}
