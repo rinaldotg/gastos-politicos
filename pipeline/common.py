@@ -34,13 +34,13 @@ def agora():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def get(url, params=None, tentativas=4, timeout=120, stream=False):
+def get(url, params=None, tentativas=4, timeout=120, stream=False, rapido=False):
     """GET com repeticao. Devolve a resposta; levanta a ultima excecao se esgotar."""
     ultimo = None
     portal = eh_portal(url)
     if portal:
         time.sleep(PAUSA_PORTAL)
-        tentativas = max(tentativas, 4)
+        tentativas = 1 if rapido else max(tentativas, 4)  # rapido: tentar enderecos que podem nao existir
     for i in range(tentativas):
         try:
             r = requests.get(url, params=params, headers=HEADERS_NAVEGADOR if portal else HEADERS,
@@ -73,6 +73,8 @@ def abrir_banco(caminho):
             con.execute(f"ALTER TABLE emenda ADD COLUMN {coluna} TEXT")
     if "ano" not in {r[1] for r in con.execute("PRAGMA table_info(emenda_favorecido)")}:
         con.execute("ALTER TABLE emenda_favorecido ADD COLUMN ano INTEGER")
+    if "publicacao" not in {r[1] for r in con.execute("PRAGMA table_info(emenda_convenio)")}:
+        con.execute("ALTER TABLE emenda_convenio ADD COLUMN publicacao TEXT")
     con.commit()
     return con
 

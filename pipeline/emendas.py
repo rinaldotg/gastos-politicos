@@ -145,6 +145,7 @@ def carregar_convenios(con, z):
     i_lib = _achar(cab, ("valor", "liberado"), ("liberado",))
     i_ini = _achar(cab, ("inicio",))
     i_fim = _achar(cab, ("fim",))
+    i_pub = _achar(cab, ("publicacao",))
     if i_cod is None or i_num is None:
         print("  AVISO: colunas de convenios nao reconhecidas; mande o log para ajustar", file=sys.stderr)
         return 0
@@ -158,15 +159,65 @@ def carregar_convenios(con, z):
         if cod not in validos:
             continue
         agg[(cod, cel(l, i_num))] = (cel(l, i_conv), cel(l, i_obj), cel(l, i_sit), c.numero(cel(l, i_val)),
-                                     c.numero(cel(l, i_lib)), cel(l, i_ini), cel(l, i_fim))
+                                     c.numero(cel(l, i_lib)), cel(l, i_ini), cel(l, i_fim), cel(l, i_pub))
     con.execute("DELETE FROM emenda_convenio")
-    con.executemany("""INSERT INTO emenda_convenio (codigo, numero, convenente, objeto, situacao, valor, liberado, inicio, fim)
-                       VALUES (?,?,?,?,?,?,?,?,?)""",
-                    [(k[0], k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4], v[5] or None, v[6] or None) for k, v in agg.items()])
+    con.executemany("""INSERT INTO emenda_convenio (codigo, numero, convenente, objeto, situacao, valor, liberado, inicio, fim, publicacao)
+                       VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    [(k[0], k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4], v[5] or None, v[6] or None, v[7] or None)
+                     for k, v in agg.items()])
     c.log(con, "portal", "emendas_convenios", None, len(agg))
     con.commit()
     print(f"Emendas: {len(agg)} convenios ligados a emendas de parlamentares")
     return len(agg)
+
+
+def carregar_situacao_convenios(con):
+    """Situacao, valor liberado e vigencia dos convenios (cadastro geral de convenios do Portal), ligados pelo numero."""
+    from datetime import date, timedelta
+    BASE = "https://portaldatransparencia.gov.br/download-de-dados/convenios"
+    hoje = date.today()
+    candidatos = [(hoje - timedelta(days=d)).strftime("%Y%m%d") for d in range(0, 15)] + \
+                 [hoje.strftime("%Y%m"), (hoje.replace(day=1) - timedelta(days=1)).strftime("%Y%m")]
+    z = None
+    for cand in candidatos:
+        try:
+            r = c.get(f"{BASE}/{cand}", timeout=600, rapido=True)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            print(f"  Cadastro de convenios baixado ({cand})")
+            break
+        except Exception:
+            continue
+    if z is None:
+        print("  AVISO: nao consegui baixar o cadastro geral de convenios (situacao dos convenios fica sem informacao)", file=sys.stderr)
+        return 0
+    nome = next((n for n in z.namelist() if "convenio" in n.lower() and not any(x in n.lower() for x in ("ordem", "ordens", "liberac"))), None)
+    if not nome:
+        print(f"  AVISO: cadastro de convenios sem arquivo principal: {z.namelist()}", file=sys.stderr)
+        return 0
+    cab, linhas = _fluxo_csv(z, nome)
+    print(f"  Colunas do cadastro de convenios ({nome}): {cab}")
+    i_num = _achar(cab, ("numero", "convenio"), exato=["numero convenio"])
+    i_sit = _achar(cab, ("situacao",))
+    i_lib = _achar(cab, ("valor", "liberado"), ("liberado",))
+    i_ini = _achar(cab, ("inicio", "vigencia"), ("inicio",))
+    i_fim = _achar(cab, ("fim", "vigencia"), ("fim",))
+    if i_num is None or i_sit is None:
+        print("  AVISO: colunas do cadastro de convenios nao reconhecidas; mande o log para ajustar", file=sys.stderr)
+        return 0
+    nossos = {r[0] for r in con.execute("SELECT DISTINCT numero FROM emenda_convenio WHERE numero IS NOT NULL")}
+
+    def cel(l, i):
+        return (l[i].strip() if i is not None and i < len(l) else "")
+    dados = {}
+    for l in linhas:
+        n = cel(l, i_num)
+        if n in nossos:
+            dados[n] = (cel(l, i_sit), c.numero(cel(l, i_lib)), cel(l, i_ini), cel(l, i_fim))
+    con.executemany("UPDATE emenda_convenio SET situacao=?, liberado=?, inicio=?, fim=? WHERE numero=?",
+                    [(v[0] or None, v[1], v[2] or None, v[3] or None, k) for k, v in dados.items()])
+    con.commit()
+    print(f"Emendas: situacao de {len(dados)} de {len(nossos)} convenios")
+    return len(dados)
 
 
 def carregar(con, desde):
@@ -235,6 +286,10 @@ def carregar(con, desde):
         carregar_convenios(con, z)
     except Exception as e:
         print(f"  AVISO: convenios das emendas falharam: {e}", file=sys.stderr)
+    try:
+        carregar_situacao_convenios(con)
+    except Exception as e:
+        print(f"  AVISO: situacao dos convenios falhou: {e}", file=sys.stderr)
     return len(saida)
 
 

@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS emenda_convenio (
     valor REAL,
     liberado REAL,
     inicio TEXT,
-    fim TEXT
+    fim TEXT,
+    publicacao TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_emenda_conv_codigo ON emenda_convenio (codigo);

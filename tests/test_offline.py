@@ -51,6 +51,7 @@ fav = ("Código da Emenda;Código do Autor da Emenda;Nome do Autor da Emenda;Nú
        "1;9;FULANO DE TAL;100;x;2024/01;11222333000144;PREFEITURA X;a;Pessoa Jurídica;SP;Santos;50,00\n")
 cv = ("Código da Emenda;Número Convênio;Convenente;Objeto Convênio;Situação Convênio;Valor Convênio;Valor Liberado;Data Início Vigência;Data Fim Vigência\n"
       "1;123456;PREFEITURA X;Construcao de ubs;Em execução;1.000,00;400,00;01/02/2023;01/02/2025\n")
+cad = ("NÚMERO CONVÊNIO;SITUAÇÃO CONVÊNIO;VALOR LIBERADO;DATA INÍCIO VIGÊNCIA;DATA FIM VIGÊNCIA\n123456;Em execução;400,00;01/02/2023;01/02/2025\n")
 c.get = lambda *a, **k: _zip_multi({"EmendasParlamentares.csv": em, "EmendasParlamentares_PorFavorecido.csv": fav, "EmendasParlamentares_Convenios.csv": cv})
 emendas.carregar(con, 2014)
 print(con.execute("select codigo,documento,valor,ano from emenda_favorecido").fetchall(), con.execute("select * from emenda_convenio").fetchall())

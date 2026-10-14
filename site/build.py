@@ -42,6 +42,13 @@ def nome_bonito(n):
     return n
 
 
+def data_br(t):
+    """Data da fonte (dd/mm/aaaa ou aaaa-mm-dd) em dd/mm/aaaa."""
+    t = (t or "").strip()[:10]
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", t)
+    return f"{m.group(3)}/{m.group(2)}/{m.group(1)}" if m else t
+
+
 def ler(resumo, nome):
     with open(Path(resumo) / f"{nome}.csv", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
@@ -129,7 +136,7 @@ def main():
         for r in ler(a.resumo, "emenda_convenio"):
             convenios[r["codigo"]].append([r.get("numero") or "", nome_bonito(r.get("convenente") or ""), (r.get("objeto") or "").strip(),
                                            (r.get("situacao") or "").strip(), round(f(r.get("valor"))), round(f(r.get("liberado"))),
-                                           (r.get("inicio") or "")[:10], (r.get("fim") or "")[:10]])
+                                           data_br(r.get("inicio")), data_br(r.get("fim")), data_br(r.get("publicacao"))])
     except FileNotFoundError:
         pass
 
