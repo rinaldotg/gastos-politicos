@@ -3,6 +3,8 @@ import sys
 
 from . import common as c
 
+UFS = [11, 12, 13, 14, 15, 16, 17, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 41, 42, 43, 50, 51, 52, 53]
+BASE = "https://servicodados.ibge.gov.br/api/v3/agregados"
 FONTES = [
     # estimativas anuais da populacao residente: periodo mais recente
     ("https://servicodados.ibge.gov.br/api/v3/agregados/6579/periodos/-1/variaveis/9324?localidades=N6[all]", "estimativa"),
@@ -33,10 +35,28 @@ def _ler(j):
     return out
 
 
-def rodar(con):
-    for url, rotulo in FONTES:
+def _por_uf(agregado, periodo, var):
+    """Uma consulta por UF (respostas pequenas, mais resistentes a timeout)."""
+    linhas, falhas = [], 0
+    for uf in UFS:
+        url = f"{BASE}/{agregado}/periodos/{periodo}/variaveis/{var}?localidades=N6[N3[{uf}]]"
         try:
-            linhas = _ler(c.get(url, timeout=300).json())
+            linhas.extend(_ler(c.get(url, tentativas=2, timeout=40).json()))
+        except Exception as e:
+            falhas += 1
+            if falhas == 1:
+                print(f"  AVISO: IBGE UF {uf}: {e}", file=sys.stderr)
+            if falhas >= 3 and not linhas:
+                break
+    return linhas
+
+
+def rodar(con):
+    tentativas = [(None, url, rot) for url, rot in FONTES] + [
+        ((6579, "-1", 9324), None, "estimativa por UF"), ((4714, "2022", 93), None, "censo 2022 por UF")]
+    for por_uf, url, rotulo in tentativas:
+        try:
+            linhas = _por_uf(*por_uf) if por_uf else _ler(c.get(url, tentativas=2, timeout=60).json())
         except Exception as e:
             print(f"  AVISO: populacao do IBGE ({rotulo}) indisponivel: {e}", file=sys.stderr)
             continue

@@ -61,7 +61,7 @@ def rodar(con, tamanhos=(100, 50, 20)):
     if tam is None:
         print("  AVISO: nao consegui consultar a API do Obras.gov.br", file=sys.stderr)
         return 0
-    linhas, pagina, total_paginas, falhas, vistas = [], 0, None, 0, 0
+    linhas, pagina, falhas, vistas, chaves = [], 0, 0, 0, set()
     while True:
         try:
             j = c.get(URL, {"pagina": pagina, "tamanhoDaPagina": tam}, tentativas=3, timeout=180).json()
@@ -76,15 +76,21 @@ def rodar(con, tamanhos=(100, 50, 20)):
         falhas = 0
         itens, tp = _lista(j)
         if pagina == 0:
-            print(f"  Campos das obras: {sorted(itens[0].keys()) if itens else []} (paginas: {tp})")
-        total_paginas = tp or total_paginas
+            extra = {k: v for k, v in j.items() if not isinstance(v, (list, dict))} if isinstance(j, dict) else {}
+            print(f"  Campos das obras: {sorted(itens[0].keys()) if itens else []} (paginas: {tp}; resposta: {extra})")
         if not itens:
             break
+        chave = tuple(str(p.get("idUnico")) for p in itens[:5])
+        if chave in chaves:
+            print("  AVISO: a API repetiu a mesma pagina; parando a leitura", file=sys.stderr)
+            break
+        chaves.add(chave)
+        # totalPages informado pela API nao e confiavel (veio 1 com milhares de projetos): so paramos em pagina vazia/curta
         vistas += len(itens)
         for p in itens:
             linhas.extend(_linhas(p, docs))
         pagina += 1
-        if total_paginas is not None and pagina >= total_paginas:
+        if len(itens) < tam and (tp is None or pagina >= tp):
             break
         if pagina > 5000:
             break
