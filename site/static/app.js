@@ -374,7 +374,7 @@
           var liga = c[4] ? ('Valor do convênio ' + brl(c[4]) + (c[5] ? ' · liberado ' + brl(c[5]) : '')) : '';
           var vig = (c[6] || c[7]) ? ('Vigência: ' + (c[6] || '?') + ' a ' + (c[7] || '?')) : '';
           area.appendChild(el('div', { class: 'convenio' }, [
-            el('p', { class: 'conv-sit' }, [el('strong', { text: c[3] || 'Situação não informada' }), document.createTextNode(c[0] ? ' · convênio nº ' + c[0] : '')]),
+            el('p', { class: 'conv-sit' }, c[3] ? [el('strong', { text: c[3] }), document.createTextNode(c[0] ? ' · convênio nº ' + c[0] : '')] : [el('strong', { text: c[0] ? 'Convênio nº ' + c[0] : 'Convênio' })]),
             el('p', { class: 'conv-obj', text: c[2] || 'Objeto não informado na fonte.' }),
             el('small', { text: [c[1] ? 'Convenente: ' + c[1] : '', liga, vig].filter(Boolean).join(' · ') })
           ]));
