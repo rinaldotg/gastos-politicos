@@ -388,6 +388,7 @@
       info.appendChild(p ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode('parlamentar'));
       info.appendChild(document.createTextNode((p && p.p ? ' (' + p.p + (p.u ? '/' + p.u : '') + ')' : '') + '. Destino: ' + (i[4] || 'não informado') +
         (i[5] ? ' · Área: ' + i[5] : '') + ' · Empenhado ' + brl(i[6]) + ' · Pago ' + brl(i[7]) + '.'));
+      if (i[8] || i[9]) info.appendChild(el('p', { class: 'nota', text: 'Finalidade informada na emenda: ' + [i[5], i[8], i[9]].filter(Boolean).join(' · ') + '. Isso indica a intenção do repasse; não comprova como o recebedor usou o dinheiro.' }));
       var fo = document.querySelector('[data-e-fonte]');
       fo.appendChild(document.createTextNode('Conferir na fonte: no Portal da Transparência, cole o código '));
       fo.appendChild(el('strong', { text: cod }));
@@ -483,6 +484,13 @@
       });
       linhas.sort(function (a, b) { return b[1] - a[1]; });
       var total = linhas.reduce(function (s, x) { return s + x[1]; }, 0);
+      var areas = {};
+      linhas.forEach(function (x) { x[2].forEach(function (e) { var k = e[5] || 'Não informada'; areas[k] = (areas[k] || 0) + e[3]; }); });
+      var ar = document.querySelector('[data-r-areas]');
+      if (ar) {
+        var lst = Object.keys(areas).sort(function (a, b) { return areas[b] - areas[a]; });
+        ar.textContent = lst.length ? 'Áreas informadas nas emendas: ' + lst.slice(0, 6).map(function (k) { return k + ' (' + brl(areas[k]) + ')'; }).join(' · ') + '.' : '';
+      }
       document.querySelector('[data-r-titulo]').textContent = d.n;
       var inf = document.querySelector('[data-r-info]');
       inf.textContent = doc + (d.l ? ' · ' : '');
@@ -517,6 +525,11 @@
       fr.appendChild(el('a', { href: CNPJ_RECEITA, target: '_blank', rel: 'noopener', text: 'Consulta de CNPJ na Receita ↗' }));
       fr.appendChild(document.createTextNode(' · '));
       fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
+      var pub = document.querySelector('[data-r-publico]');
+      if (pub && !dados.b && /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i.test(dados.n)) {
+        pub.hidden = false;
+        if (/FUNDO/i.test(dados.n)) pub.querySelector('[data-r-publico-fundo]').hidden = false;
+      }
       if (dados.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
       blocoObras(document.querySelector('[data-r-obras]'), document.querySelector('[data-r-obras-resumo]'), document.querySelector('[data-r-obras-corpo]'), dados.ob || [{}, []], false);
       ligarAno(selA, render);

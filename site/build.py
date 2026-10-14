@@ -375,7 +375,7 @@ def main():
             for l in ls:
                 if not l[3]:
                     continue
-                i = info.setdefault(l[3], dict(p=pid_, ano=l[0], pix=l[1], num=l[2], dest=[], fn=l[5], emp=0, pago=0))
+                i = info.setdefault(l[3], dict(p=pid_, ano=l[0], pix=l[1], num=l[2], dest=[], fn=l[5], prog=l[7], acao=l[8], emp=0, pago=0))
                 i["emp"] += l[9]; i["pago"] += l[11]
                 if l[4] and l[4] not in i["dest"]:
                     i["dest"].append(l[4])
@@ -392,7 +392,7 @@ def main():
             if not i:
                 continue
             sh_e[int(cod) % N_E if cod.isdigit() else 0][cod] = dict(
-                i=[i["p"], i["ano"], i["pix"], i["num"], ", ".join(i["dest"][:4]), i["fn"], round(i["emp"]), round(i["pago"])],
+                i=[i["p"], i["ano"], i["pix"], i["num"], ", ".join(i["dest"][:4]), i["fn"], round(i["emp"]), round(i["pago"]), i["prog"], i["acao"]],
                 f=favs[cod], c=convenios.get(cod, []))
             for nome, doc, tipo, loc, valor, ano_p in rows_:
                 anos_pag.add(ano_p)
@@ -412,7 +412,7 @@ def main():
                     r_["l"] = loc
                 q = r_["p"].setdefault(i["p"], [i["p"], 0, []])
                 q[1] += valor
-                q[2].append([cod, i["ano"], i["pix"], valor, ano_p])
+                q[2].append([cod, i["ano"], i["pix"], valor, ano_p, i["fn"]])
         (saida / "data" / "fe").mkdir(parents=True, exist_ok=True)
         (saida / "data" / "fr").mkdir(parents=True, exist_ok=True)
         (saida / "data" / "m").mkdir(parents=True, exist_ok=True)

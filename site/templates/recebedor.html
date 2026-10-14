@@ -8,6 +8,17 @@
   <div class="acoes" data-acoes></div>
   <div class="controles"><label>Ano do pagamento <select data-r-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
+<section class="bloco aviso-rastreio" data-r-publico hidden>
+  <h2>Onde o rastreio federal termina</h2>
+  <p>Este recebedor é um ente público ou um fundo. Os dados federais mostram que o dinheiro <strong>chegou</strong> aqui, mas o gasto a partir deste ponto é registrado pelo próprio município ou estado. <span data-r-publico-fundo hidden>No caso de fundos (saúde, educação, assistência), o valor se mistura ao orçamento do fundo.</span> Para saber no que foi usado:</p>
+  <ul>
+    <li>Procure o empenho no <strong>portal de transparência da prefeitura ou do governo estadual</strong> (a lei obriga a publicar despesas com data, valor e favorecido).</li>
+    <li>Saúde: consulte o <a href="https://siops.datasus.gov.br" target="_blank" rel="noopener">SIOPS ↗</a> e o Conselho de Saúde. Educação: <a href="https://www.fnde.gov.br/siope" target="_blank" rel="noopener">SIOPE ↗</a> e o Conselho do Fundeb.</li>
+    <li>Consulte o <strong>Tribunal de Contas do estado</strong>, que costuma ter painel das despesas dos municípios.</li>
+    <li>Peça por escrito (<a href="https://falabr.cgu.gov.br" target="_blank" rel="noopener">Fala.BR ↗</a> ou a ouvidoria local): "Em que foi aplicado o valor recebido pela emenda de código X? Peço os empenhos, notas fiscais e contratos."</li>
+  </ul>
+</section>
+<p class="apoio" data-r-areas></p>
 <section class="ranking" data-r-lista hidden>
   <div class="ranking-cab"><h2>Parlamentares que destinaram emendas</h2></div>
   <div class="tabela-rolavel">
