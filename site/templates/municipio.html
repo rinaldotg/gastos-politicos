@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta" data-municipio>
+  <p class="voltar"><a href="{{ raiz }}municipios/">← Todos os municípios</a></p>
+  <h1 data-mu-titulo>Município</h1>
+  <p class="apoio" data-mu-info></p>
+</section>
+<div data-mu-corpo hidden>
+  <section class="ranking">
+    <div class="ranking-cab"><h2>Parlamentares que enviaram emendas</h2></div>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Parlamentar</th><th>UF</th><th>Partido</th><th class="num">Emendas</th><th class="num">Valor</th></tr></thead>
+      <tbody data-mu-parl></tbody></table></div>
+  </section>
+  <section class="ranking">
+    <div class="ranking-cab"><h2 data-mu-rec-tit>Quem recebeu</h2></div>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Recebedor</th><th class="num">Valor</th></tr></thead>
+      <tbody data-mu-rec></tbody></table></div>
+    <p class="nota">Valores pagos pelo Portal da Transparência (CGU). Clique em um parlamentar para ver todas as emendas dele ou em um recebedor para ver todos que enviaram dinheiro a ele. Pessoas físicas aparecem somadas e sem nome.</p>
+  </section>
+</div>
+<p class="nota" data-mu-vazio hidden>Não encontramos este município.</p>
+{% endblock %}

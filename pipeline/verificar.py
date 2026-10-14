@@ -33,6 +33,7 @@ def main():
 
     consultas = {
         "pessoa": """SELECT p.id, p.nome, p.cargo,
+                        (SELECT id_externo FROM pessoa_fonte f WHERE f.pessoa_id=p.id AND f.fonte IN ('camara','senado') LIMIT 1) id_externo,
                         (SELECT uf FROM mandato m WHERE m.pessoa_id=p.id AND uf IS NOT NULL ORDER BY legislatura DESC LIMIT 1) uf,
                         (SELECT partido FROM mandato m WHERE m.pessoa_id=p.id AND partido IS NOT NULL ORDER BY legislatura DESC LIMIT 1) partido
                      FROM pessoa p""",

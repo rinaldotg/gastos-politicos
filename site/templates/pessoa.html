@@ -9,6 +9,7 @@
       {% if pos %}Em {{ ano_ref }}, ficou na posição {{ pos[0] }} de {{ pos[1] }} {{ 'deputados' if p.cod == 'deputado' else 'senadores' if p.cod == 'senador' else 'presidentes' }} por valor gasto.{% endif %}
     </p>
     <a class="botao botao-leve" href="{{ raiz }}comparar/?p={{ p.id }}">Comparar com outra pessoa</a>
+    {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
   </header>
 
   {% if p.cargo == 'presidente' %}

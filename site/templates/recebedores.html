@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta" data-recebedores>
+  <h1>Quem mais recebe emendas</h1>
+  <p class="apoio">Empresas, prefeituras e entidades que receberam dinheiro de emendas parlamentares. Busque pelo nome ou CNPJ, ou veja os rankings.</p>
+  <div class="controles"><label>Nome ou CNPJ<input type="search" data-rb-filtro placeholder="Ex.: Município de Canguçu ou 88861430000149" autocomplete="off"></label></div>
+</section>
+<section class="ranking">
+  <div class="ranking-cab">
+    <h2 data-rb-tit>Ranking</h2>
+    <div class="segmento" role="group" aria-label="Ordem do ranking">
+      <button type="button" aria-pressed="true" data-rb-modo="v">Quem mais recebeu</button>
+      <button type="button" aria-pressed="false" data-rb-modo="q">Recebeu de mais parlamentares</button>
+    </div>
+  </div>
+  <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Recebedor</th><th class="num">Parlamentares</th><th class="num">Total recebido</th></tr></thead>
+      <tbody data-rb-corpo></tbody>
+    </table>
+  </div>
+  <p class="nota">Receber de vários parlamentares não indica irregularidade: prefeituras e hospitais grandes costumam receber de muitos. O ranking mostra os fatos para quem quiser acompanhar. Pessoas físicas não entram. Bancos que operam repasses (Banco do Brasil, Caixa) ficam de fora.</p>
+</section>
+{% endblock %}

@@ -144,3 +144,6 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .tabela td small{display:block;color:var(--tinta-2)}
 .voltar{margin:0 0 .4rem;font-size:.9rem}
 .controles input[type=search]{padding:.45rem .6rem;border:1px solid var(--linha);border-radius:8px;font:inherit;min-width:16rem}
+.botao-mini{padding:.2rem .6rem;font-size:.85rem}
+.fonte-oficial{font-size:.92rem;color:var(--tinta-2);max-width:75ch}
+.fonte-oficial a{color:var(--acento)}

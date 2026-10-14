@@ -19,6 +19,22 @@
   function get(url) { return fetch(RAIZ + url).then(function (r) { return r.json(); }); }
 
   /* ---------- busca ---------- */
+
+  function slug(t) { return norm(t).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+  function copiar(texto, rotulo) {
+    var b = el('button', { type: 'button', class: 'botao botao-leve botao-mini', text: rotulo });
+    b.addEventListener('click', function () {
+      var ok = function () { b.textContent = 'Copiado ✓'; setTimeout(function () { b.textContent = rotulo; }, 1800); };
+      if (navigator.clipboard) navigator.clipboard.writeText(texto).then(ok, function () {});
+    });
+    return b;
+  }
+  var PORTAL_EMENDAS = 'https://portaldatransparencia.gov.br/emendas/consulta';
+  var CNPJ_RECEITA = 'https://solucoes.receita.fazenda.gov.br/servicos/cnpjreva/cnpjreva_solicitacao.asp';
+  function locLink(loc, texto) {
+    var m = /^(.+)\/([A-Z]{2})$/.exec(loc || '');
+    return m ? el('a', { href: RAIZ + 'municipio/?m=' + slug(loc.replace('/', '-')), text: texto || loc }) : document.createTextNode(texto || loc || '');
+  }
   var buscaCache = null;
   function carregarBusca() { return buscaCache || (buscaCache = get('data/busca.json')); }
 
@@ -326,7 +342,7 @@
       f.slice(0, limite).forEach(function (r, i) {
         var nome = r[1] ? el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]), text: r[0] }) : document.createTextNode(r[0]);
         corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-          el('td', {}, [nome, el('small', { text: r[1] })]), el('td', { text: r[2] }), el('td', { text: r[3] }),
+          el('td', {}, [nome, el('small', { text: r[1] })]), el('td', { text: r[2] }), el('td', {}, [locLink(r[3])]),
           el('td', { class: 'num', text: brl(r[4]) })]));
       });
       mais.hidden = f.length <= limite;
@@ -344,6 +360,13 @@
       info.appendChild(p ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode('parlamentar'));
       info.appendChild(document.createTextNode((p && p.p ? ' (' + p.p + (p.u ? '/' + p.u : '') + ')' : '') + '. Destino: ' + (i[4] || 'não informado') +
         (i[5] ? ' · Área: ' + i[5] : '') + ' · Empenhado ' + brl(i[6]) + ' · Pago ' + brl(i[7]) + '.'));
+      var fo = document.querySelector('[data-e-fonte]');
+      fo.appendChild(document.createTextNode('Conferir na fonte: no Portal da Transparência, cole o código '));
+      fo.appendChild(el('strong', { text: cod }));
+      fo.appendChild(document.createTextNode(' no campo "Código da Emenda". '));
+      fo.appendChild(copiar(cod, 'Copiar código'));
+      fo.appendChild(document.createTextNode(' '));
+      fo.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Abrir consulta de emendas ↗' }));
       linhas = d.f;
       lista.querySelector('[data-e-cont]').textContent = linhas.length + ' recebedores';
       lista.hidden = false; render();
@@ -364,6 +387,16 @@
       var total = d.p.reduce(function (s, x) { return s + x[1]; }, 0);
       document.querySelector('[data-r-info]').textContent = doc + (d.l ? ' · ' + d.l : '') + (d.t ? ' · ' + d.t : '') + ' — recebeu ' + brl(total) +
         ' em emendas de ' + d.p.length + (d.p.length === 1 ? ' parlamentar.' : ' parlamentares.');
+      var fr = document.querySelector('[data-r-fonte]');
+      fr.appendChild(document.createTextNode('Conferir na fonte: '));
+      fr.appendChild(copiar(dig, 'Copiar CNPJ'));
+      fr.appendChild(document.createTextNode(' '));
+      fr.appendChild(el('a', { href: CNPJ_RECEITA, target: '_blank', rel: 'noopener', text: 'Consulta de CNPJ na Receita ↗' }));
+      fr.appendChild(document.createTextNode(' · '));
+      fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
+      if (d.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
+      if (d.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
+      if (d.l) { var inf = document.querySelector('[data-r-info]'); inf.appendChild(document.createTextNode(' Município: ')); inf.appendChild(locLink(d.l)); }
       d.p.forEach(function (x, i) {
         var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
         var det = el('details', { class: 'rec-mais' }, [el('summary', { text: 'ver emendas' })]);
@@ -380,6 +413,88 @@
     }).catch(function () { vazio.hidden = false; });
   }
 
+
+  /* ---------- municipios ---------- */
+  function iniciarMunicipios(sec) {
+    var corpo = document.querySelector('[data-m-corpo]'), mais = document.querySelector('[data-m-mais]'), tit = document.querySelector('[data-m-tit]');
+    var filtro = sec.querySelector('[data-m-filtro]'), dados = [], limite = 30;
+    function render() {
+      var q = norm(filtro.value.trim()), f = dados.filter(function (m) { return !q || norm(m[0]).indexOf(q) >= 0; });
+      tit.textContent = q ? f.length + ' municípios encontrados' : 'Municípios que mais receberam';
+      corpo.textContent = '';
+      f.slice(0, limite).forEach(function (m, i) {
+        corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
+          el('td', {}, [el('a', { href: RAIZ + 'municipio/?m=' + m[1], text: m[0] })]),
+          el('td', { class: 'num', text: String(m[3]) }), el('td', { class: 'num', text: brl(m[2]) })]));
+      });
+      mais.hidden = f.length <= limite; mais.textContent = 'Mostrar mais (' + (f.length - limite) + ')';
+    }
+    mais.addEventListener('click', function () { limite += 50; render(); });
+    filtro.addEventListener('input', function () { limite = 30; render(); });
+    get('data/municipios.json').then(function (d) { dados = d; render(); });
+  }
+  function iniciarMunicipio(sec) {
+    var m = new URLSearchParams(location.search).get('m') || '';
+    var corpo = document.querySelector('[data-mu-corpo]'), vazio = document.querySelector('[data-mu-vazio]');
+    if (!/^[a-z0-9-]+$/.test(m)) { vazio.hidden = false; return; }
+    Promise.all([get('data/m/' + m + '.json'), carregarBusca()]).then(function (res) {
+      var d = res[0], pessoas = {};
+      res[1].forEach(function (x) { pessoas[x.id] = x; });
+      document.querySelector('[data-mu-titulo]').textContent = d.n;
+      document.title = d.n + ' · emendas recebidas · Gastos Públicos';
+      document.querySelector('[data-mu-info]').textContent = 'Recebedores deste município receberam ' + brl(d.t) + ' em emendas de ' + d.p.length +
+        (d.p.length === 1 ? ' parlamentar.' : ' parlamentares.');
+      var tp = document.querySelector('[data-mu-parl]');
+      d.p.forEach(function (x, i) {
+        var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
+        tp.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
+          el('td', {}, [p.url ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode(p.n)]),
+          el('td', { text: p.u || '' }), el('td', { text: p.p || '' }), el('td', { class: 'num', text: String(x[2]) }), el('td', { class: 'num', text: brl(x[1]) })]));
+      });
+      document.querySelector('[data-mu-rec-tit]').textContent = 'Quem recebeu' + (d.nr > d.r.length ? ' (os ' + d.r.length + ' maiores de ' + d.nr + ')' : '');
+      var tr = document.querySelector('[data-mu-rec]');
+      d.r.forEach(function (x, i) {
+        tr.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
+          el('td', {}, [x[1] ? el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(x[1]), text: x[0] }) : document.createTextNode(x[0]), el('small', { text: x[1] })]),
+          el('td', { class: 'num', text: brl(x[2]) })]));
+      });
+      corpo.hidden = false;
+    }).catch(function () { vazio.hidden = false; });
+  }
+
+  /* ---------- ranking e busca de recebedores ---------- */
+  function iniciarRecebedores(sec) {
+    var corpo = document.querySelector('[data-rb-corpo]'), tit = document.querySelector('[data-rb-tit]'), filtro = sec.querySelector('[data-rb-filtro]');
+    var modo = 'v', rank = null, indice = null, botoes = document.querySelectorAll('[data-rb-modo]');
+    function linha(r, i) {
+      return el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
+        el('td', {}, [el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]), text: r[0] }), el('small', { text: r[1] })]),
+        el('td', { class: 'num', text: r[3] === undefined ? '' : String(r[3]) }), el('td', { class: 'num', text: brl(r[2]) })]);
+    }
+    function render() {
+      var q = norm(filtro.value.trim()), qd = q.replace(/\D/g, '');
+      corpo.textContent = '';
+      if (q.length >= 3) {
+        if (!indice) { get('data/rec-busca.json').then(function (d) { indice = d; render(); }); tit.textContent = 'Buscando…'; return; }
+        var f = indice.filter(function (r) { return qd.length >= 5 && /^[\d.\/-]+$/.test(q) ? r[1].indexOf(qd) >= 0 : norm(r[0]).indexOf(q) >= 0; });
+        tit.textContent = f.length + ' recebedores encontrados' + (f.length > 100 ? ' (mostrando os 100 maiores)' : '');
+        f.slice(0, 100).forEach(function (r, i) { corpo.appendChild(linha(r, i)); });
+        return;
+      }
+      tit.textContent = modo === 'v' ? 'Quem mais recebeu' : 'Recebeu de mais parlamentares';
+      if (rank) rank[modo].forEach(function (r, i) { corpo.appendChild(linha([r[0], r[1], r[2], r[3]], i)); });
+    }
+    botoes.forEach(function (b) {
+      b.addEventListener('click', function () {
+        modo = b.getAttribute('data-rb-modo');
+        botoes.forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        render();
+      });
+    });
+    filtro.addEventListener('input', render);
+    get('data/rec-rank.json').then(function (d) { rank = d; render(); });
+  }
+
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
@@ -388,6 +503,9 @@
   document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
   var tr_ = document.querySelector('[data-recebedor]'); if (tr_) iniciarTelaRecebedor(tr_);
+  var mu = document.querySelector('[data-municipios]'); if (mu) iniciarMunicipios(mu);
+  var m1 = document.querySelector('[data-municipio]'); if (m1) iniciarMunicipio(m1);
+  var rb = document.querySelector('[data-recebedores]'); if (rb) iniciarRecebedores(rb);
   var px = document.querySelector('[data-pix]'); if (px) iniciarPix(px);
   var c = document.querySelector('[data-comparacao]'); if (c) iniciarComparacao(c, document.querySelector('[data-comparar]'));
 })();

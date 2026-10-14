@@ -110,7 +110,7 @@ def main():
             pf = bool(doc) and ("*" in doc or len(digitos) <= 11)  # CPF: pessoa fisica, nome nao e exibido
             favs[r["codigo"]].append([("Pessoa física (nome omitido)" if pf else nome_bonito(r.get("favorecido") or "Não informado")),
                                       "" if pf else doc, (r.get("tipo") or ""),
-                                      (f'{r["municipio"]}/{r["uf"]}' if r.get("municipio") and r.get("uf") else (r.get("uf") or "")),
+                                      (f'{nome_bonito(r["municipio"])}/{r["uf"]}' if r.get("municipio") and r.get("uf") else (r.get("uf") or "")),
                                       round(f(r["valor"]))])
     except FileNotFoundError:
         pass
@@ -205,7 +205,10 @@ def main():
             slug = f"{base}-{pid}"
         usados.add((cod, slug))
         tot_ano = {ano: sum(c.values()) for ano, c in anos[pid].items()}
-        lista.append(dict(id=pid, nome=nome, cargo=p["cargo"], cod=cod, slug=slug, uf=p["uf"], partido=p["partido"],
+        ext = (p.get("id_externo") or "").strip()
+        oficial = (f"https://www.camara.leg.br/deputados/{ext}" if p["cargo"] == "deputado_federal" else
+                   f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{ext}" if p["cargo"] == "senador" else "") if ext else ""
+        lista.append(dict(id=pid, oficial=oficial, nome=nome, cargo=p["cargo"], cod=cod, slug=slug, uf=p["uf"], partido=p["partido"],
                           url=f"{cod}/{slug}/", anos=tot_ano, legis=sorted(legis.get(pid, ()))))
     por_id = {x["id"]: x for x in lista}
 
@@ -313,8 +316,11 @@ def main():
                 if l[4] and l[4] not in i["dest"]:
                     i["dest"].append(l[4])
         N_E, N_R = 120, 200
+        # bancos publicos que operam repasses: nao sao destino final do dinheiro, ficam fora de rankings e totais por municipio
+        BANCOS = {"00000000000191", "00360305000104", "07237373000120", "04902979000144"}
         sh_e, sh_r = defaultdict(dict), defaultdict(dict)
         rec = {}  # documento -> dados
+        muni = {}  # slug -> dados do municipio do recebedor
         for cod, lst in favs.items():
             i = info.get(cod)
             if not i:
@@ -322,21 +328,48 @@ def main():
             sh_e[int(cod) % N_E if cod.isdigit() else 0][cod] = dict(
                 i=[i["p"], i["ano"], i["pix"], i["num"], ", ".join(i["dest"][:4]), i["fn"], round(i["emp"]), round(i["pago"])], f=lst)
             for nome, doc, tipo, loc, valor in lst:
+                if "/" in loc and re.sub(r"\D", "", doc) not in BANCOS:
+                    m_ = muni.setdefault(slugify(loc.replace("/", "-")), dict(n=loc, t=0, p={}, r={}))
+                    m_["t"] += valor
+                    q_ = m_["p"].setdefault(i["p"], [i["p"], 0, set()])
+                    q_[1] += valor; q_[2].add(cod)
+                    k_ = (doc, nome) if doc else ("", nome)
+                    m_["r"][k_] = m_["r"].get(k_, 0) + valor
                 if not doc:
                     continue
                 r_ = rec.setdefault(doc, dict(n=nome, t=tipo, l=loc, p={}))
+                if "/" in loc:
+                    r_["l"] = loc
                 q = r_["p"].setdefault(i["p"], [i["p"], 0, []])
                 q[1] += valor
                 q[2].append([cod, i["ano"], i["pix"], valor])
         for doc, r_ in rec.items():
             dig = re.sub(r"\D", "", doc)
             sh_r[int(dig) % N_R if dig else 0][doc] = dict(
-                n=r_["n"], t=r_["t"], l=r_["l"], p=sorted(r_["p"].values(), key=lambda t: -t[1]))
+                b=1 if dig in BANCOS else 0, n=r_["n"], t=r_["t"], l=r_["l"], p=sorted(r_["p"].values(), key=lambda t: -t[1]))
+        # rankings e indice de busca de recebedores
+        resumo_r = [[r_["n"], doc, round(sum(q[1] for q in r_["p"].values())), len(r_["p"])] for doc, r_ in rec.items() if re.sub(r"\D", "", doc) not in BANCOS]
+        gravar = lambda rel, obj: (saida / "data" / rel).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        gravar("rec-rank.json", dict(v=sorted(resumo_r, key=lambda t: -t[2])[:200],
+                                     q=sorted([t for t in resumo_r if t[3] > 1], key=lambda t: (-t[3], -t[2]))[:200]))
+        gravar("rec-busca.json", [[r_["n"], doc, round(sum(q[1] for q in r_["p"].values()))] for doc, r_ in sorted(rec.items(), key=lambda t: -sum(q[1] for q in t[1]["p"].values()))])
+        (saida / "data" / "m").mkdir(parents=True, exist_ok=True)
+        indice_m = []
+        for sl, m_ in muni.items():
+            rs = sorted(m_["r"].items(), key=lambda t: -t[1])
+            gravar(f"m/{sl}.json", dict(n=m_["n"], t=round(m_["t"]),
+                   p=sorted([[q[0], round(q[1]), len(q[2])] for q in m_["p"].values()], key=lambda t: -t[1]),
+                   r=[[k[1], k[0], round(v)] for k, v in rs[:100]], nr=len(rs)))
+            indice_m.append([m_["n"], sl, round(m_["t"]), len(m_["p"])])
+        gravar("municipios.json", sorted(indice_m, key=lambda t: -t[2]))
         for nome_dir, sh in (("fe", sh_e), ("fr", sh_r)):
             (saida / "data" / nome_dir).mkdir(parents=True, exist_ok=True)
             for k, v in sh.items():
                 (saida / "data" / nome_dir / f"{k}.json").write_text(json.dumps(v, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        for pagina, titulo_, desc_ in (("emenda", "Quem recebeu a emenda", "Todos os recebedores de uma emenda parlamentar, com valores."),
+        for pagina, titulo_, desc_ in (("municipio", "Emendas recebidas por município", "Quanto cada município recebeu em emendas parlamentares, de quais parlamentares e para quais recebedores."),
+                                       ("municipios", "Municípios", "Busque seu município e veja quanto recebeu em emendas parlamentares e de quem."),
+                                       ("recebedores", "Quem mais recebe emendas", "Busque empresas, prefeituras e entidades por nome ou CNPJ e veja de quais parlamentares receberam emendas."),
+("emenda", "Quem recebeu a emenda", "Todos os recebedores de uma emenda parlamentar, com valores."),
                                        ("recebedor", "Quem recebeu emendas", "Todos os parlamentares que destinaram emendas a um mesmo recebedor.")):
             escrever(pagina, env.get_template(pagina + ".html").render(**{**ctx_base, "raiz": "../"}, titulo=titulo_, descricao=desc_,
                      n_e=N_E, n_r=N_R))
@@ -365,7 +398,7 @@ def main():
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "comparar/", "emendas-pix/", "sobre/"] + [x["url"] for x in lista]
+    urls = ["", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "sobre/"] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
