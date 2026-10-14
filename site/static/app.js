@@ -627,11 +627,58 @@
     get('data/rec-rank.json').then(function (d) { rank = d; render(); });
   }
 
+
+  /* ---------- pagina de estado ---------- */
+  function iniciarEstado(sec) {
+    var dados = JSON.parse(document.querySelector('[data-es-dados]').textContent), selA = sec.querySelector('[data-es-ano]');
+    var nomeUf = sec.querySelector('h1').textContent;
+    function soma(m, ano) { var t = 0; Object.keys(m).forEach(function (k) { if (!ano || k === ano) t += m[k]; }); return t; }
+    function tabela(tipo, ano) {
+      var box = document.querySelector('[data-es-' + tipo + ']'), corpo = document.querySelector('[data-es-' + tipo + '-corpo]');
+      var xs = dados.p.filter(function (x) { return x[3] === (tipo === 'deps' ? 'd' : 's'); })
+        .map(function (x) { return [x, soma(x[4], ano), soma(x[5], ano)]; })
+        .filter(function (t) { return t[1] > 0 || t[2] > 0; })
+        .sort(function (a, b) { return b[1] - a[1]; });
+      box.hidden = !xs.length;
+      document.querySelector('[data-es-' + tipo + '-tit]').textContent = (tipo === 'deps' ? 'Deputados federais' : 'Senadores') + ' (' + xs.length + ')';
+      var rotCota = 'Cota ' + (ano ? 'em ' + ano : 'paga (todos os anos)'), rotEm = 'Emendas pagas ' + (ano ? '(emendas de ' + ano + ')' : '(desde 2014)');
+      (tipo === 'deps' ? [['[data-es-col-cota]', rotCota], ['[data-es-col-em]', rotEm]] : [['[data-es-col-cota2]', rotCota], ['[data-es-col-em2]', rotEm]])
+        .forEach(function (c) { document.querySelector(c[0]).textContent = c[1]; });
+      corpo.textContent = '';
+      xs.forEach(function (t) {
+        corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + t[0][1], text: t[0][0] })]), el('td', { text: t[0][2] }),
+          el('td', { class: 'num', text: brl(t[1]) }), el('td', { class: 'num', text: brl(t[2]) })]));
+      });
+    }
+    function areas(ano) {
+      var lista = dados.a[ano] || [], box = document.querySelector('[data-es-areas]'), total = lista.reduce(function (s, a) { return s + a[1]; }, 0);
+      document.querySelector('[data-es-areas-tit]').textContent = 'Emendas pagas para ' + nomeUf + ', por área' + (ano ? ' (emendas de ' + ano + ')' : '');
+      document.querySelector('[data-es-areas-intro]').textContent = lista.length ? 'Soma de ' + brl(total) + ' pagos em emendas individuais de parlamentares identificados, de qualquer estado, com destino a ' + nomeUf + '. Abra uma área para ver os municípios que mais receberam.' : 'Sem emendas pagas para este estado' + (ano ? ' em ' + ano : '') + '.';
+      box.textContent = '';
+      var max = lista.length ? lista[0][1] : 1;
+      lista.forEach(function (a) {
+        var d = el('details', { class: 'ano area' }, [el('summary', {}, [el('span', { class: 'ano-n area-n', text: a[0] }),
+          el('span', { class: 'ano-barra', 'aria-hidden': 'true' }, [el('i', { style: 'width:' + (a[1] / max * 100).toFixed(1) + '%' })]),
+          el('span', { class: 'ano-v', text: brl(a[1]) + ' pagos' })])]);
+        var corpo = el('tbody');
+        if (a[4].length) a[4].forEach(function (m) { corpo.appendChild(el('tr', {}, [el('td', { text: m[0] }), el('td', { class: 'num', text: brl(m[1]) })])); });
+        else corpo.appendChild(el('tr', {}, [el('td', { colspan: '2', text: 'Nenhum município específico informado na fonte.' })]));
+        d.appendChild(el('div', { class: 'tabela-rolavel' }, [el('table', { class: 'tabela' }, [el('thead', {}, [el('tr', {}, [el('th', { text: 'Município' }), el('th', { class: 'num', text: 'Pago' })])]), corpo])]));
+        d.appendChild(el('p', { class: 'nota', text: a[3] + ' emendas nesta área; ' + brl(a[2]) + ' empenhados.' + (a[5] ? ' Mais ' + brl(a[5]) + ' foram para vários municípios de uma vez ou sem município informado na fonte, e por isso não aparecem na lista.' : '') }));
+        box.appendChild(d);
+      });
+    }
+    function render() { var ano = selA.value; tabela('deps', ano); tabela('sens', ano); areas(ano); }
+    ligarAno(selA, render);
+    render();
+  }
+
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
   });
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
+  var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);

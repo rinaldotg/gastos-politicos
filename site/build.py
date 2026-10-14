@@ -525,32 +525,39 @@ def main():
              d_pago=snap["pago_emendas"] - (ant or {}).get("pago_emendas", 0)))
 
 
-    # ---- paginas de estado ----
+    # ---- paginas de estado (filtro por ano feito no navegador) ----
     ufs_por_nome = {sem_acento(n).upper(): s_ for s_, n in UFS.items()}
-    area_uf = defaultdict(lambda: defaultdict(lambda: dict(pago=0.0, emp=0.0, cods=set(), vagos=0.0, mun=defaultdict(float))))
+    area_uf = defaultdict(lambda: defaultdict(lambda: dict(pago=0.0, emp=0.0, cods=set(), vagos=0.0, mun=defaultdict(float))))  # (uf) -> (ano|"", area)
     for r in edet:
         sig = ufs_por_nome.get(sem_acento(r.get("uf") or "").upper())
         if not sig:
             continue
-        a_ = area_uf[sig][r.get("funcao") or "Área não informada"]
-        a_["pago"] += f(r["pago"]); a_["emp"] += f(r["empenhado"]); a_["cods"].add(r.get("codigo"))
         mun_ = nome_bonito(r.get("municipio") or "")
-        if sem_acento(mun_).lower() in ("multiplo", "sem informacao", ""):
-            a_["vagos"] = a_.get("vagos", 0.0) + f(r["pago"])  # varios municipios ou nao informado
-        else:
-            a_["mun"][mun_] += f(r["pago"])
+        vago_ = sem_acento(mun_).lower() in ("multiplo", "sem informacao", "")
+        for chave_ano in (str(int(f(r["ano"]))), ""):
+            a_ = area_uf[sig][(chave_ano, r.get("funcao") or "Área não informada")]
+            a_["pago"] += f(r["pago"]); a_["emp"] += f(r["empenhado"]); a_["cods"].add(r.get("codigo"))
+            if vago_:
+                a_["vagos"] += f(r["pago"])
+            else:
+                a_["mun"][mun_] += f(r["pago"])
     for sig, nome_uf in UFS.items():
         pes = [x for x in lista if x["uf"] == sig and x["cargo"] in ("deputado_federal", "senador")]
-        def linha_(x):
-            return dict(x=x, gasto=x["anos"].get(ano_ref, 0), em_pago=sum(e[2] for e in emendas.get(x["id"], {}).values()))
-        deps = sorted([linha_(x) for x in pes if x["cargo"] == "deputado_federal"], key=lambda t: -t["gasto"])
-        sens = sorted([linha_(x) for x in pes if x["cargo"] == "senador"], key=lambda t: -t["gasto"])
-        areas = sorted([(n_, dict(pago=v["pago"], emp=v["emp"], n=len(v["cods"]), vagos=v["vagos"], mun=sorted(v["mun"].items(), key=lambda t: -t[1])[:8]))
-                        for n_, v in area_uf.get(sig, {}).items() if v["pago"] > 0], key=lambda t: -t[1]["pago"])
+        pessoas_js = [[x["nome"], x["url"], x["partido"] or "", "d" if x["cargo"] == "deputado_federal" else "s",
+                       {str(a_): round(v_) for a_, v_ in x["anos"].items()},
+                       {str(a_): round(e_[2]) for a_, e_ in emendas.get(x["id"], {}).items()}] for x in pes]
+        areas_js = {}
+        for (ano_k, area_k), v in area_uf.get(sig, {}).items():
+            if v["pago"] > 0:
+                areas_js.setdefault(ano_k, []).append([area_k, round(v["pago"]), round(v["emp"]), len(v["cods"]),
+                                                       [[m_, round(p_)] for m_, p_ in sorted(v["mun"].items(), key=lambda t: -t[1])[:8]], round(v["vagos"])])
+        for lst_ in areas_js.values():
+            lst_.sort(key=lambda t: -t[1])
+        anos_uf = sorted({int(a_) for t in pessoas_js for a_ in list(t[4]) + list(t[5])} | {int(k) for k in areas_js if k}, reverse=True)
         escrever(f"estado/{sig.lower()}", env.get_template("estado.html").render(
             **{**ctx_base, "raiz": "../../"}, titulo=f"{nome_uf}: gastos da bancada e emendas recebidas", sig=sig, nome_uf=nome_uf,
-            deps=deps, sens=sens, areas=areas, total_areas=sum(a_[1]["pago"] for a_ in areas),
-            descricao=f"Deputados e senadores de {nome_uf}: quanto gastaram e quanto o estado recebeu em emendas, por área."))
+            dados_json=json.dumps(dict(p=pessoas_js, a=areas_js), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"), anos_uf=anos_uf,
+            descricao=f"Deputados e senadores de {nome_uf}: quanto gastaram e quanto o estado recebeu em emendas, por área e por ano."))
     escrever("glossario", env.get_template("glossario.html").render(**{**ctx_base, "raiz": "../"}, titulo="Glossário",
              descricao="O que significam empenhado, liquidado, pago, restos a pagar, emenda Pix, convênio, cota parlamentar e outros termos."))
     if base_url:
