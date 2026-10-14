@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Emendas sem autor identificado</h1>
+  <p class="apoio">Nem toda emenda pode ser ligada a um parlamentar. Este é o tamanho do que fica de fora das páginas individuais e por quê. Mostramos isso para que ninguém confunda "não aparece aqui" com "não existe".</p>
+</section>
+<section class="bloco">
+  <h2>O que fica de fora</h2>
+  {% if cats %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Tipo</th><th class="num">Emendas</th><th class="num">Empenhado</th><th class="num">Pago</th></tr></thead>
+    <tbody>{% for nome, c in cats %}<tr><td>{{ nome }}</td><td class="num">{{ c.n | milhar }}</td><td class="num">{{ c.emp | brl }}</td><td class="num">{{ c.pago | brl }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% for nome, c in cats %}
+  <details class="ano"><summary><span class="ano-n area-n">{{ nome }}: por ano</span></summary>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Ano da emenda</th><th class="num">Emendas</th><th class="num">Empenhado</th><th class="num">Pago</th></tr></thead>
+      <tbody>{% for ano, v in c.anos | dictsort | reverse %}<tr><td>{{ ano }}</td><td class="num">{{ v[0] | milhar }}</td><td class="num">{{ v[1] | brl }}</td><td class="num">{{ v[2] | brl }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </details>
+  {% endfor %}
+  {% else %}<p class="nota">Esta atualização ainda não tem o resumo de emendas sem autor.</p>{% endif %}
+</section>
+<section class="bloco">
+  <h2>Por que algumas emendas ficam sem autor</h2>
+  <ul class="lista-texto">
+    <li><strong>Relator (RP 9):</strong> eram as chamadas "emendas de relator", em que o relator do orçamento distribuía recursos sem indicar quem pediu cada um. O Supremo Tribunal Federal considerou esse formato inconstitucional em 2022. Parte dos dados antigos continua sem autor individual.</li>
+    <li><strong>Bancada e comissão:</strong> são decididas em grupo (a bancada de um estado ou uma comissão do Congresso), então não há um único autor.</li>
+    <li><strong>"Sem informação":</strong> o próprio Portal da Transparência não informa o autor. Não temos como atribuir.</li>
+    <li><strong>Nome não ligado:</strong> o autor aparece com um nome que não conseguimos casar com um parlamentar (por exemplo, nome civil no lugar do nome parlamentar). Isso é limite do site, não da fonte, e vamos corrigindo.</li>
+  </ul>
+</section>
+{% if nomes %}
+<section class="bloco">
+  <h2>Nomes que ainda não conseguimos ligar a um parlamentar</h2>
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Nome na fonte</th><th class="num">Emendas</th><th class="num">Pago</th></tr></thead>
+    <tbody>{% for n, q, p in nomes %}<tr><td>{{ n }}</td><td class="num">{{ q | milhar }}</td><td class="num">{{ p | brl }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Se você reconhece algum desses nomes e sabe a quem pertence, a correção entra na próxima atualização.</p>
+</section>
+{% endif %}
+{% endblock %}

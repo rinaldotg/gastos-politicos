@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>O que mudou desde a última atualização</h1>
+  <p class="apoio">Atualização de {{ atualizado or 'data não informada' }}{% if ant %}, comparada com a de {{ ant_data }}{% endif %}. A rotina roda todo mês.</p>
+</section>
+{% if not ant %}
+<section class="bloco">
+  <p>Esta é a primeira atualização registrada com comparação. A partir da próxima, esta página mostra quem mais gastou e quem mais teve emendas pagas no período.</p>
+  <p class="nota">Agora o site tem {{ snap.n_emendas | milhar }} emendas, {{ snap.n_recebedores | milhar }} recebedores com CNPJ e {{ snap.pago_emendas | brl }} pagos em emendas individuais de parlamentares identificados.</p>
+</section>
+{% else %}
+<section class="bloco">
+  <h2>Em números</h2>
+  <ul class="lista-texto">
+    <li><strong>{{ d_emendas | milhar }}</strong> emendas a mais na base ({{ snap.n_emendas | milhar }} no total).</li>
+    <li><strong>{{ d_receb | milhar }}</strong> recebedores novos com CNPJ ({{ snap.n_recebedores | milhar }} no total).</li>
+    <li><strong>{{ d_pago | brl }}</strong> de variação em emendas pagas.</li>
+  </ul>
+  <p class="nota">Valores já publicados podem ser revistos pela fonte, então pequenas diferenças para trás também aparecem.</p>
+</section>
+{% if mov_gasto %}
+<section class="bloco">
+  <h2>Quem mais gastou desde a última atualização (cota, {{ snap.ano }})</h2>
+  <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>#</th><th>Nome</th><th>UF</th><th>Partido</th><th class="num">Aumento</th></tr></thead><tbody>
+  {% for x, v in mov_gasto %}<tr><td class="pos">{{ loop.index }}</td><td><a href="{{ raiz }}{{ x.url }}">{{ x.nome }}</a></td><td>{{ x.uf or '' }}</td><td>{{ x.partido or '' }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="nota">Gasto dentro das regras da cota não é irregularidade. O aumento reflete notas que entraram na base neste período.</p>
+</section>
+{% endif %}
+{% if mov_emenda %}
+<section class="bloco">
+  <h2>Quem teve mais emendas pagas desde a última atualização</h2>
+  <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>#</th><th>Nome</th><th>UF</th><th>Partido</th><th class="num">Aumento</th></tr></thead><tbody>
+  {% for x, v in mov_emenda %}<tr><td class="pos">{{ loop.index }}</td><td><a href="{{ raiz }}{{ x.url }}">{{ x.nome }}</a></td><td>{{ x.uf or '' }}</td><td>{{ x.partido or '' }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+{% if not mov_gasto and not mov_emenda %}<section class="bloco"><p>Nenhuma mudança relevante entre as duas atualizações.</p></section>{% endif %}
+{% endif %}
+{% endblock %}

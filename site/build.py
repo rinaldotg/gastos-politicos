@@ -88,6 +88,7 @@ def main():
     ap.add_argument("--resumo", default="resumo")
     ap.add_argument("--saida", default="dist")
     ap.add_argument("--base-url", default="")
+    ap.add_argument("--anterior", default="", help="snapshot.json da atualizacao anterior (para a pagina de novidades)")
     a = ap.parse_args()
     saida = Path(a.saida)
     if saida.exists():
@@ -438,6 +439,66 @@ def main():
     (saida / "data" / "busca.json").write_text(json.dumps(busca, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (saida / "data" / "ranking.json").write_text(json.dumps(ranking, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
+
+    # ---- emendas sem autor identificado ----
+    try:
+        sa = ler(a.resumo, "emenda_sem_autor")
+    except FileNotFoundError:
+        sa = []
+    def cat_sa(tipo, sem_info):
+        t = sem_acento(tipo).lower()
+        if "relator" in t:
+            return "Emendas de relator (RP 9)"
+        if "bancada" in t:
+            return "Emendas de bancada estadual"
+        if "comiss" in t:
+            return "Emendas de comissão"
+        return "Individuais sem autor informado na fonte" if sem_info == "1" else "Individuais com nome que o site não conseguiu ligar a um parlamentar"
+    cats_sa = {}
+    for r in sa:
+        c_ = cats_sa.setdefault(cat_sa(r["tipo"], r["sem_info"]), dict(n=0, emp=0.0, pago=0.0, anos={}))
+        c_["n"] += int(f(r["n"])); c_["emp"] += f(r["empenhado"]); c_["pago"] += f(r["pago"])
+        y_ = c_["anos"].setdefault(int(f(r["ano"])), [0, 0.0, 0.0])
+        y_[0] += int(f(r["n"])); y_[1] += f(r["empenhado"]); y_[2] += f(r["pago"])
+    cats_sa = sorted(cats_sa.items(), key=lambda t: -t[1]["pago"])
+    try:
+        nomes_sa = [(r["autor"], int(f(r["n"])), f(r["pago"])) for r in ler(a.resumo, "emenda_sem_vinculo")
+                    if sem_acento(r["autor"]).lower().startswith("sem informa") is False and "bancada" not in sem_acento(r["tipo"]).lower()
+                    and "comiss" not in sem_acento(r["tipo"]).lower() and "relator" not in sem_acento(r["tipo"]).lower()][:30]
+    except FileNotFoundError:
+        nomes_sa = []
+    escrever("sem-autor", env.get_template("sem_autor.html").render(**{**ctx_base, "raiz": "../"}, titulo="Emendas sem autor identificado",
+             descricao="Emendas que o site não consegue atribuir a um parlamentar, por quê, e quanto dinheiro representam.", cats=cats_sa, nomes=nomes_sa))
+
+    # ---- novidades: compara com a atualizacao anterior ----
+    snap = dict(data=atualizado, ano=ano_atual,
+                pessoas={str(x["id"]): [round(sum(anos[x["id"]].get(ano_atual, {}).values())),
+                                        round(sum(e[2] for e in emendas.get(x["id"], {}).values()))] for x in lista},
+                n_emendas=len(edet), n_recebedores=len(rec) if (detalhe and favs) else 0,
+                pago_emendas=round(sum(e[2] for pe in emendas.values() for e in pe.values())))
+    (saida / "data" / "snapshot.json").write_text(json.dumps(snap, separators=(",", ":")), encoding="utf-8")
+    ant = None
+    if a.anterior and Path(a.anterior).exists():
+        try:
+            ant = json.loads(Path(a.anterior).read_text(encoding="utf-8"))
+        except ValueError:
+            ant = None
+    mov_gasto, mov_emenda = [], []
+    if ant:
+        for x in lista:
+            novo = snap["pessoas"][str(x["id"])]; velho = ant.get("pessoas", {}).get(str(x["id"]), [0, 0])
+            if ant.get("ano") == snap["ano"] and novo[0] - velho[0] > 0 and x["cargo"] != "presidente":
+                mov_gasto.append((x, novo[0] - velho[0]))
+            if novo[1] - velho[1] > 0:
+                mov_emenda.append((x, novo[1] - velho[1]))
+        mov_gasto = sorted(mov_gasto, key=lambda t: -t[1])[:15]
+        mov_emenda = sorted(mov_emenda, key=lambda t: -t[1])[:15]
+    escrever("novidades", env.get_template("novidades.html").render(**{**ctx_base, "raiz": "../"}, titulo="O que mudou desde a última atualização",
+             descricao="Novidades de cada atualização mensal: quem mais gastou e quem mais teve emendas pagas desde a atualização anterior.",
+             snap=snap, ant=ant, ant_data=data_br((ant or {}).get('data')), mov_gasto=mov_gasto, mov_emenda=mov_emenda,
+             d_emendas=snap["n_emendas"] - (ant or {}).get("n_emendas", 0), d_receb=snap["n_recebedores"] - (ant or {}).get("n_recebedores", 0),
+             d_pago=snap["pago_emendas"] - (ant or {}).get("pago_emendas", 0)))
+
     resumo_home = {}
     for cargo in CARGOS:
         xs = [x for x in lista if x["cargo"] == cargo]
@@ -452,7 +513,7 @@ def main():
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "sobre/"] + [x["url"] for x in lista]
+    urls = ["", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "sobre/"] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

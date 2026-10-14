@@ -51,6 +51,7 @@ def main():
         "emenda_favorecido": "SELECT codigo, favorecido, documento, tipo, uf, municipio, ROUND(valor,2) valor, n, ano FROM emenda_favorecido ORDER BY codigo, valor DESC",
         "emenda_convenio": "SELECT codigo, numero, convenente, objeto, situacao, ROUND(valor,2) valor, ROUND(liberado,2) liberado, inicio, fim, publicacao FROM emenda_convenio",
         "emenda_funcao": "SELECT pessoa_id, ano, funcao, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NOT NULL GROUP BY 1,2,3",
+        "emenda_sem_autor": "SELECT tipo, CASE WHEN lower(autor) LIKE 'sem informa%' THEN 1 ELSE 0 END sem_info, ano, COUNT(*) n, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2,3",
         "emenda_sem_vinculo": "SELECT autor, tipo, COUNT(*) n, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 300",
         "orcamento_acao": "SELECT pessoa_id, ano, mes, orgao, programa, acao, ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago FROM orcamento_acao",
         "coleta_log": "SELECT fonte, recurso, ano, registros, coletado_em FROM coleta_log",

@@ -4,6 +4,7 @@
   <p class="voltar"><a href="{{ raiz }}municipios/">← Todos os municípios</a></p>
   <h1 data-mu-titulo>Município</h1>
   <p class="apoio" data-mu-info></p>
+  <div class="acoes" data-acoes></div>
   <div class="controles"><label>Ano do pagamento <select data-mu-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <div data-mu-corpo hidden>

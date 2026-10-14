@@ -92,13 +92,15 @@
         </div>
         <label>Ano da emenda <select data-ano><option value="">Todos</option></select></label>
       </div>
+      <div class="acoes" data-acoes></div>
       <p class="em-resumo" data-resumo aria-live="polite"></p>
       <div class="areas" data-areas></div>
       <h3>Municípios que mais receberam</h3>
       <ol class="lista-simples" data-destinos></ol>
     </div>
     {% endif %}
-    <p class="nota">Empenhado é o valor reservado; liquidado, o serviço ou obra já confirmado; pago, o que saiu do caixa. Emendas sem autor identificado na fonte não entram aqui.</p>
+    {% include "_como_cobrar.html" %}
+    <p class="nota">Empenhado é o valor reservado; liquidado, o serviço ou obra já confirmado; pago, o que saiu do caixa. Emendas sem autor identificado na fonte não entram aqui (<a href="{{ raiz }}sem-autor/">entenda</a>).</p>
   </section>
   {% endif %}
 

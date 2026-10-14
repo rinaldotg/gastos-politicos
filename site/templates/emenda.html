@@ -5,6 +5,7 @@
   <h1 data-e-titulo>Quem recebeu a emenda</h1>
   <p class="apoio" data-e-info></p>
   <p class="fonte-oficial" data-e-fonte></p>
+  <div class="acoes" data-acoes></div>
 </section>
 <section class="bloco" data-e-conv hidden>
   <h2>Convênio: o que foi contratado e em que situação está</h2>
@@ -26,4 +27,10 @@
 </section>
 <p class="nota" data-e-semconv hidden>Esta emenda não tem convênio registrado na fonte. Isso é normal em transferências diretas, como as emendas Pix, que não exigem convênio nem projeto prévio.</p>
 <p class="nota" data-e-vazio hidden>Não encontramos os recebedores desta emenda. Pode ser que ainda não tenha havido pagamento.</p>
+<section class="bloco" data-e-cobrar hidden>
+  {% include "_como_cobrar.html" %}
+  <p class="nota">Modelo de pedido de informação (edite antes de enviar):</p>
+  <textarea class="modelo" data-e-modelo rows="9" readonly></textarea>
+  <div class="acoes" data-e-modelo-acoes></div>
+</section>
 {% endblock %}

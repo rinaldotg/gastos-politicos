@@ -3,6 +3,7 @@
 <section class="abertura abertura-curta" data-recebedores>
   <h1>Quem mais recebe emendas</h1>
   <p class="apoio">Empresas, prefeituras e entidades que receberam dinheiro de emendas parlamentares. Busque pelo nome ou CNPJ, ou veja os rankings.</p>
+  <div class="acoes" data-acoes></div>
   <div class="controles"><label>Nome ou CNPJ<input type="search" data-rb-filtro placeholder="Ex.: Município de Canguçu ou 88861430000149" autocomplete="off"></label><label>Ano do pagamento <select data-rb-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <section class="ranking">

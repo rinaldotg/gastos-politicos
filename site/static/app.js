@@ -35,6 +35,30 @@
     var m = /^(.+)\/([A-Z]{2})$/.exec(loc || '');
     return m ? el('a', { href: RAIZ + 'municipio/?m=' + slug(loc.replace('/', '-')), text: texto || loc }) : document.createTextNode(texto || loc || '');
   }
+
+  /* ---------- acoes: copiar link e baixar CSV ---------- */
+  function baixarCsv(nome, cab, linhas) {
+    var esc = function (v) { v = v === null || v === undefined ? '' : String(v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var txt = '﻿' + [cab].concat(linhas).map(function (l) { return l.map(esc).join(';'); }).join('\r\n');
+    var a = el('a', { href: URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' })), download: nome });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  // csvs: [[rotulo, arquivo, function () { return [cabecalho, linhas]; }]]
+  function acoes(box, csvs) {
+    if (!box) return;
+    box.textContent = '';
+    var link = el('button', { type: 'button', class: 'botao botao-leve botao-mini', text: 'Copiar link desta página' });
+    link.addEventListener('click', function () {
+      var ok = function () { link.textContent = 'Link copiado ✓'; setTimeout(function () { link.textContent = 'Copiar link desta página'; }, 1800); };
+      if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(ok, function () {});
+    });
+    box.appendChild(link);
+    (csvs || []).forEach(function (c) {
+      var b = el('button', { type: 'button', class: 'botao botao-leve botao-mini', text: c[0] });
+      b.addEventListener('click', function () { var d = c[2](); baixarCsv(c[1], d[0], d[1]); });
+      box.appendChild(b);
+    });
+  }
   var buscaCache = null;
   function carregarBusca() { return buscaCache || (buscaCache = get('data/busca.json')); }
 
@@ -188,6 +212,10 @@
     var areasEl = box.querySelector('[data-areas]'), resumo = box.querySelector('[data-resumo]');
     var selAno = box.querySelector('[data-ano]'), destinos = box.querySelector('[data-destinos]');
     var PASSO = 10;
+    acoes(box.querySelector('[data-acoes]'), [['Baixar emendas (CSV)', 'emendas-' + id + '.csv', function () {
+      return [['ano', 'tipo', 'numero', 'codigo', 'destino', 'area', 'subarea', 'programa', 'acao', 'empenhado', 'liquidado', 'pago'],
+        filtradas().map(function (l) { return [l[0], l[1] ? 'Pix' : 'Finalidade definida', l[2], l[3], l[4], l[5], l[6], l[7], l[8], l[9], l[10], l[11]]; })];
+    }]]);
     function filtradas() {
       return linhas.filter(function (l) {
         return (tipo === 'todas' || (tipo === 'pix' ? l[1] === 1 : l[1] === 0)) && (!ano || String(l[0]) === ano);
@@ -384,6 +412,17 @@
         document.querySelector('[data-e-semconv]').hidden = false;
       }
       linhas = d.f;
+      acoes(document.querySelector('[data-acoes]'), [['Baixar recebedores (CSV)', 'emenda-' + cod + '.csv', function () {
+        return [['recebedor', 'cnpj', 'tipo', 'local', 'valor'], linhas.map(function (r) { return [r[0], r[1], r[2], r[3], r[4]]; })];
+      }]]);
+      var nomeP = p ? p.n : 'o parlamentar', rec1 = linhas.length ? linhas[0][0] : 'o recebedor';
+      var mod = 'Prezados,\n\nCom base na Lei de Acesso à Informação (Lei nº 12.527/2011), solicito informações sobre a emenda parlamentar ' +
+        (i[3] ? 'nº ' + i[3] + ' ' : '') + 'de ' + i[1] + ' (código ' + cod + '), de autoria de ' + nomeP + ', com destino a ' + (i[4] || 'localidade não informada') +
+        ', cujo recebedor principal consta como ' + rec1 + '.\n\nGostaria de saber: (1) o objeto e a finalidade do recurso; (2) a situação atual da execução, com cronograma; ' +
+        '(3) os valores recebidos e gastos até o momento; (4) onde posso consultar a prestação de contas.\n\nAgradeço desde já.';
+      var tx = document.querySelector('[data-e-modelo]'); tx.value = mod.replace(/\\n/g, '\n');
+      var ac = document.querySelector('[data-e-modelo-acoes]'); ac.appendChild(copiar(tx.value, 'Copiar modelo'));
+      document.querySelector('[data-e-cobrar]').hidden = false;
       lista.querySelector('[data-e-cont]').textContent = linhas.length + ' recebedores';
       lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
@@ -462,6 +501,14 @@
       fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
       if (dados.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
       ligarAno(selA, render);
+      acoes(document.querySelector('[data-acoes]'), [['Baixar CSV (filtro atual)', 'recebedor-' + dig + '.csv', function () {
+        var ano = selA.value, out = [];
+        dados.p.forEach(function (x) {
+          var p = pessoas[x[0]] || { n: '', u: '', p: '' };
+          x[2].forEach(function (e) { if (!ano || String(e[4]) === ano) out.push([p.n, p.u, p.p, e[0], e[1], e[2] ? 'Pix' : 'Individual', e[4] || '', e[3]]); });
+        });
+        return [['parlamentar', 'uf', 'partido', 'codigo_emenda', 'ano_emenda', 'tipo', 'ano_pagamento', 'valor'], out];
+      }]]);
       lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
   }
@@ -469,11 +516,12 @@
   /* ---------- municipios ---------- */
   function iniciarMunicipios(sec) {
     var corpo = document.querySelector('[data-m-corpo]'), mais = document.querySelector('[data-m-mais]'), tit = document.querySelector('[data-m-tit]');
-    var filtro = sec.querySelector('[data-m-filtro]'), selA = sec.querySelector('[data-m-ano]'), dados = [], limite = 30;
+    var filtro = sec.querySelector('[data-m-filtro]'), selA = sec.querySelector('[data-m-ano]'), dados = [], limite = 30, atuais = [];
     function render() {
       var ano = selA.value || '0', q = norm(filtro.value.trim());
       var f = dados.filter(function (m) { return m[2][ano] && (!q || norm(m[0]).indexOf(q) >= 0); })
         .sort(function (a, b) { return b[2][ano][0] - a[2][ano][0]; });
+      atuais = f;
       tit.textContent = q ? f.length + ' municípios encontrados' : 'Municípios que mais receberam' + (selA.value ? ' em ' + selA.value : '');
       corpo.textContent = '';
       f.slice(0, limite).forEach(function (m, i) {
@@ -486,6 +534,10 @@
     mais.addEventListener('click', function () { limite += 50; render(); });
     filtro.addEventListener('input', function () { limite = 30; render(); });
     ligarAno(selA, function () { limite = 30; render(); });
+    acoes(document.querySelector('[data-acoes]'), [['Baixar lista (CSV)', 'municipios.csv', function () {
+      var ano = selA.value || '0';
+      return [['municipio', 'parlamentares', 'total_recebido'], atuais.map(function (m) { return [m[0], m[2][ano][1], m[2][ano][0]]; })];
+    }]]);
     get('data/municipios.json').then(function (d) { dados = d; render(); });
   }
   function iniciarMunicipio(sec) {
@@ -523,6 +575,15 @@
       document.querySelector('[data-mu-titulo]').textContent = dados.n;
       document.title = dados.n + ' · emendas recebidas · Gastos Públicos';
       ligarAno(selA, render);
+      var linhasMu = function () {
+        var ano = selA.value;
+        var ps = dados.p.map(function (x) { var v = valorAno(x[1], ano), p = pessoas[x[0]] || { n: '', u: '', p: '' }; return [p.n, p.u, p.p, v[1], v[0]]; }).filter(function (x) { return x[4] > 0; });
+        var rs = dados.r.map(function (x) { return [x[0], x[1], valorAno(x[2], ano)[0]]; }).filter(function (x) { return x[2] > 0; });
+        return [ps, rs];
+      };
+      acoes(document.querySelector('[data-acoes]'), [
+        ['Baixar parlamentares (CSV)', 'municipio-' + m + '-parlamentares.csv', function () { return [['parlamentar', 'uf', 'partido', 'emendas', 'valor'], linhasMu()[0]]; }],
+        ['Baixar recebedores (CSV)', 'municipio-' + m + '-recebedores.csv', function () { return [['recebedor', 'cnpj', 'valor'], linhasMu()[1]]; }]]);
       corpo.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
   }
@@ -530,7 +591,7 @@
   /* ---------- ranking e busca de recebedores ---------- */
   function iniciarRecebedores(sec) {
     var corpo = document.querySelector('[data-rb-corpo]'), tit = document.querySelector('[data-rb-tit]'), filtro = sec.querySelector('[data-rb-filtro]');
-    var selA = sec.querySelector('[data-rb-ano]'), modo = 'v', rank = null, indice = null, botoes = document.querySelectorAll('[data-rb-modo]');
+    var selA = sec.querySelector('[data-rb-ano]'), modo = 'v', rank = null, indice = null, mostrados = [], botoes = document.querySelectorAll('[data-rb-modo]');
     function linha(r, i) {
       return el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
         el('td', {}, [el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]) + qa(selA.value), text: r[0] }), el('small', { text: r[1] })]),
@@ -538,17 +599,18 @@
     }
     function render() {
       var q = norm(filtro.value.trim()), qd = q.replace(/\D/g, '');
-      corpo.textContent = '';
+      corpo.textContent = ''; mostrados = [];
       if (q.length >= 3) {
         if (!indice) { get('data/rec-busca.json').then(function (d) { indice = d; render(); }); tit.textContent = 'Buscando…'; return; }
         var f = indice.filter(function (r) { return qd.length >= 5 && /^[\d.\/-]+$/.test(q) ? r[1].indexOf(qd) >= 0 : norm(r[0]).indexOf(q) >= 0; });
         tit.textContent = f.length + ' recebedores encontrados (total de todos os anos)' + (f.length > 100 ? ', mostrando os 100 maiores' : '');
+        mostrados = f.slice(0, 100);
         f.slice(0, 100).forEach(function (r, i) { corpo.appendChild(linha(r, i)); });
         return;
       }
       var r_ = rank && rank[selA.value];
       tit.textContent = (modo === 'v' ? 'Quem mais recebeu' : 'Recebeu de mais parlamentares') + (selA.value ? ' em ' + selA.value : '');
-      if (r_) r_[modo].forEach(function (r, i) { corpo.appendChild(linha(r, i)); });
+      if (r_) { mostrados = r_[modo]; r_[modo].forEach(function (r, i) { corpo.appendChild(linha(r, i)); }); }
     }
     botoes.forEach(function (b) {
       b.addEventListener('click', function () {
@@ -559,6 +621,9 @@
     });
     filtro.addEventListener('input', render);
     ligarAno(selA, render);
+    acoes(document.querySelector('[data-acoes]'), [['Baixar lista atual (CSV)', 'recebedores.csv', function () {
+      return [['recebedor', 'cnpj', 'total', 'parlamentares'], mostrados.map(function (r) { return [r[0], r[1], r[2], r[3] === undefined ? '' : r[3]]; })];
+    }]]);
     get('data/rec-rank.json').then(function (d) { rank = d; render(); });
   }
 

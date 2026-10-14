@@ -2,6 +2,7 @@
 {% block conteudo %}
 <section class="abertura abertura-curta" data-municipios>
   <h1>Quanto chegou ao seu município</h1>
+  <div class="acoes" data-acoes></div>
   <p class="apoio">Valores de emendas parlamentares pagos a recebedores (prefeituras, empresas, entidades) em cada município, e de quais parlamentares vieram. Busque pelo nome.</p>
   <div class="controles"><label>Município<input type="search" data-m-filtro placeholder="Ex.: Canguçu" autocomplete="off"></label><label>Ano do pagamento <select data-m-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
