@@ -168,34 +168,68 @@
   /* ---------- emendas de uma pessoa ---------- */
   // linha: [ano, pix(1)/definida(0), numero, codigo, destino, funcao, subfuncao, programa, acao, empenhado, liquidado, pago]
   function iniciarEmendas(box) {
-    var id = box.getAttribute('data-id'), tipo = 'todas', ano = '', limite = 25, linhas = [];
-    var corpo = box.querySelector('[data-corpo]'), resumo = box.querySelector('[data-resumo]'), mais = box.querySelector('[data-mais]');
+    var id = box.getAttribute('data-id'), tipo = 'todas', ano = '', linhas = [], abertas = {}, limites = {};
+    var areasEl = box.querySelector('[data-areas]'), resumo = box.querySelector('[data-resumo]');
     var selAno = box.querySelector('[data-ano]'), destinos = box.querySelector('[data-destinos]');
+    var PASSO = 10;
     function filtradas() {
       return linhas.filter(function (l) {
         return (tipo === 'todas' || (tipo === 'pix' ? l[1] === 1 : l[1] === 0)) && (!ano || String(l[0]) === ano);
       });
     }
-    function render() {
-      var f = filtradas(), emp = 0, pago = 0, dest = {};
-      f.forEach(function (l) { emp += l[9]; pago += l[11]; if (l[4]) dest[l[4]] = (dest[l[4]] || 0) + l[11]; });
-      var rot = tipo === 'pix' ? 'emendas Pix' : tipo === 'def' ? 'emendas com finalidade definida' : 'emendas individuais';
-      resumo.textContent = f.length ? (f.length + ' lançamentos de ' + rot + (ano ? ' de ' + ano : '') + ': ' + brl(emp) + ' empenhados e ' + brl(pago) + ' pagos.')
-                                   : 'Nenhuma emenda neste filtro.';
-      corpo.textContent = '';
-      f.slice(0, limite).forEach(function (l) {
-        var area = [l[5], l[6]].filter(Boolean).join(' · ');
-        var acao = [l[7], l[8]].filter(Boolean).join(' · ');
+    function tabela(itens, nome) {
+      var lim = limites[nome] || PASSO;
+      var corpo = el('tbody');
+      itens.slice(0, lim).forEach(function (l) {
+        var det = [l[6], l[7], l[8]].filter(Boolean).join(' · ');
         corpo.appendChild(el('tr', {}, [
           el('td', { text: String(l[0]) }),
           el('td', {}, [document.createTextNode((l[1] ? 'Pix' : 'Finalidade definida') + (l[2] ? ' nº ' + l[2] : ''))]),
           el('td', { text: l[4] || '—' }),
-          el('td', {}, [document.createTextNode(area || '—'), acao ? el('small', { text: acao }) : document.createTextNode('')]),
+          el('td', { text: det || '—' }),
           el('td', { class: 'num', text: brl(l[9]) }), el('td', { class: 'num', text: brl(l[11]) })
         ]));
       });
-      mais.hidden = f.length <= limite;
-      mais.textContent = 'Mostrar mais (' + (f.length - limite) + ')';
+      var wrap = el('div', { class: 'tabela-rolavel' }, [el('table', { class: 'tabela tabela-emendas' }, [
+        el('thead', {}, [el('tr', {}, [el('th', { text: 'Ano' }), el('th', { text: 'Emenda' }), el('th', { text: 'Destino' }),
+          el('th', { text: 'Subárea, programa e ação' }), el('th', { class: 'num', text: 'Empenhado' }), el('th', { class: 'num', text: 'Pago' })])]),
+        corpo])]);
+      var out = [wrap];
+      if (itens.length > lim) {
+        var b = el('button', { type: 'button', class: 'botao botao-leve', text: 'Mostrar mais (' + (itens.length - lim) + ')' });
+        b.addEventListener('click', function () { limites[nome] = lim + 25; render(); });
+        out.push(b);
+      }
+      return out;
+    }
+    function render() {
+      var f = filtradas(), emp = 0, pago = 0, dest = {}, grupos = {};
+      f.forEach(function (l) {
+        emp += l[9]; pago += l[11];
+        if (l[4]) dest[l[4]] = (dest[l[4]] || 0) + l[11];
+        var g = l[5] || 'Área não informada';
+        (grupos[g] = grupos[g] || { itens: [], emp: 0, pago: 0 });
+        grupos[g].itens.push(l); grupos[g].emp += l[9]; grupos[g].pago += l[11];
+      });
+      var rot = tipo === 'pix' ? 'emendas Pix' : tipo === 'def' ? 'emendas com finalidade definida' : 'emendas individuais';
+      resumo.textContent = f.length ? (f.length + ' lançamentos de ' + rot + (ano ? ' de ' + ano : '') + ': ' + brl(emp) + ' empenhados e ' + brl(pago) + ' pagos.')
+                                   : 'Nenhuma emenda neste filtro.';
+      areasEl.textContent = '';
+      var maximo = 0;
+      Object.keys(grupos).forEach(function (g) { maximo = Math.max(maximo, grupos[g].pago); });
+      Object.keys(grupos).sort(function (a, b) { return grupos[b].pago - grupos[a].pago || grupos[b].emp - grupos[a].emp; }).forEach(function (g) {
+        var gr = grupos[g];
+        var barra = el('span', { class: 'ano-barra', 'aria-hidden': 'true' }, [el('i', { style: 'width:' + (maximo ? Math.max(0, gr.pago) / maximo * 100 : 0).toFixed(1) + '%' })]);
+        var sum = el('summary', {}, [el('span', { class: 'ano-n area-n', text: g }), barra,
+          el('span', { class: 'ano-v', text: brl(gr.pago) + ' pagos' })]);
+        var d = el('details', { class: 'ano area' }, [sum]);
+        if (abertas[g]) d.setAttribute('open', '');
+        d.addEventListener('toggle', function () { abertas[g] = d.open; });
+        var itens = gr.itens.slice().sort(function (a, b) { return b[11] - a[11] || b[9] - a[9]; });
+        d.appendChild(el('p', { class: 'nota', text: gr.itens.length + ' lançamentos · ' + brl(gr.emp) + ' empenhados' }));
+        tabela(itens, g).forEach(function (n) { d.appendChild(n); });
+        areasEl.appendChild(d);
+      });
       destinos.textContent = '';
       Object.keys(dest).sort(function (a, b) { return dest[b] - dest[a]; }).slice(0, 8).forEach(function (k) {
         if (dest[k] > 0) destinos.appendChild(el('li', {}, [el('span', { text: k }), el('span', { class: 'num', text: brl(dest[k]) })]));
@@ -203,13 +237,12 @@
     }
     box.querySelectorAll('[data-tipo]').forEach(function (b) {
       b.addEventListener('click', function () {
-        tipo = b.getAttribute('data-tipo'); limite = 25;
+        tipo = b.getAttribute('data-tipo'); limites = {};
         box.querySelectorAll('[data-tipo]').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
         render();
       });
     });
-    selAno.addEventListener('change', function () { ano = selAno.value; limite = 25; render(); });
-    mais.addEventListener('click', function () { limite += 50; render(); });
+    selAno.addEventListener('change', function () { ano = selAno.value; limites = {}; render(); });
     get('data/e/' + id + '.json').then(function (d) {
       linhas = d;
       var anos = {}; d.forEach(function (l) { anos[l[0]] = 1; });

@@ -75,13 +75,14 @@
       <tbody>{% for ano, e in emendas %}<tr><td>{{ ano }}</td><td class="num">{{ e[0] | brl }}</td><td class="num">{{ e[1] | brl }}</td><td class="num">{{ e[2] | brl }}</td></tr>{% endfor %}</tbody>
     </table>
     </div>
-    {% if em_funcao %}
+    {% if em_funcao and not tem_detalhe %}
     <h3>Para onde foi o dinheiro pago</h3>
     <ul class="lista-simples">{% for fn, v in em_funcao %}<li><span>{{ fn }}</span><span class="num">{{ v | brl }}</span></li>{% endfor %}</ul>
     {% endif %}
     {% if tem_detalhe %}
     <div class="emendas-det" data-emendas data-id="{{ p.id }}">
-      <h3>Cada emenda, em detalhe</h3>
+      <h3>Para onde foi o dinheiro</h3>
+      <p class="dica">Toque em uma área para ver cada emenda: ano, número, município de destino, programa e ação, valor empenhado e pago.</p>
       <div class="filtros">
         <div class="segmento" role="group" aria-label="Tipo de emenda">
           <button type="button" aria-pressed="true" data-tipo="todas">Todas</button>
@@ -91,13 +92,7 @@
         <label>Ano da emenda <select data-ano><option value="">Todos</option></select></label>
       </div>
       <p class="em-resumo" data-resumo aria-live="polite"></p>
-      <div class="tabela-rolavel">
-        <table class="tabela tabela-emendas">
-          <thead><tr><th>Ano</th><th>Emenda</th><th>Destino</th><th>Área e ação</th><th class="num">Empenhado</th><th class="num">Pago</th></tr></thead>
-          <tbody data-corpo></tbody>
-        </table>
-      </div>
-      <button type="button" class="botao botao-leve" data-mais hidden>Mostrar mais</button>
+      <div class="areas" data-areas></div>
       <h3>Municípios que mais receberam</h3>
       <ol class="lista-simples" data-destinos></ol>
     </div>
