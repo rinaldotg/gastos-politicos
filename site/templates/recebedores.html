@@ -3,7 +3,7 @@
 <section class="abertura abertura-curta" data-recebedores>
   <h1>Quem mais recebe emendas</h1>
   <p class="apoio">Empresas, prefeituras e entidades que receberam dinheiro de emendas parlamentares. Busque pelo nome ou CNPJ, ou veja os rankings.</p>
-  <div class="controles"><label>Nome ou CNPJ<input type="search" data-rb-filtro placeholder="Ex.: Município de Canguçu ou 88861430000149" autocomplete="off"></label></div>
+  <div class="controles"><label>Nome ou CNPJ<input type="search" data-rb-filtro placeholder="Ex.: Município de Canguçu ou 88861430000149" autocomplete="off"></label><label>Ano do pagamento <select data-rb-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <section class="ranking">
   <div class="ranking-cab">
@@ -19,6 +19,6 @@
       <tbody data-rb-corpo></tbody>
     </table>
   </div>
-  <p class="nota">Receber de vários parlamentares não indica irregularidade: prefeituras e hospitais grandes costumam receber de muitos. O ranking mostra os fatos para quem quiser acompanhar. Pessoas físicas não entram. Bancos que operam repasses (Banco do Brasil, Caixa) ficam de fora.</p>
+  <p class="nota">Receber de vários parlamentares não indica irregularidade: prefeituras e hospitais grandes costumam receber de muitos. O ranking mostra os fatos para quem quiser acompanhar. O ano é o do pagamento; a busca por nome mostra o total de todos os anos, e o filtro vale dentro da página do recebedor. Pessoas físicas não entram. Bancos que operam repasses (Banco do Brasil, Caixa) ficam de fora.</p>
 </section>
 {% endblock %}

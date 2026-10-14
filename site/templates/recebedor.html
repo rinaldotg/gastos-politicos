@@ -5,6 +5,7 @@
   <h1 data-r-titulo>Quem destinou emendas a este recebedor</h1>
   <p class="apoio" data-r-info></p>
   <p class="fonte-oficial" data-r-fonte></p>
+  <div class="controles"><label>Ano do pagamento <select data-r-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <section class="ranking" data-r-lista hidden>
   <div class="ranking-cab"><h2>Parlamentares que destinaram emendas</h2></div>

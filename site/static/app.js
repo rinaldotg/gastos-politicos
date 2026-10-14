@@ -367,26 +367,92 @@
       fo.appendChild(copiar(cod, 'Copiar código'));
       fo.appendChild(document.createTextNode(' '));
       fo.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Abrir consulta de emendas ↗' }));
+      var cs = d.c || [], cb = document.querySelector('[data-e-conv]');
+      if (cs.length) {
+        var area = cb.querySelector('[data-e-conv-corpo]');
+        cs.forEach(function (c) {
+          var liga = c[4] ? ('Valor do convênio ' + brl(c[4]) + (c[5] ? ' · liberado ' + brl(c[5]) : '')) : '';
+          var vig = (c[6] || c[7]) ? ('Vigência: ' + (c[6] || '?') + ' a ' + (c[7] || '?')) : '';
+          area.appendChild(el('div', { class: 'convenio' }, [
+            el('p', { class: 'conv-sit' }, [el('strong', { text: c[3] || 'Situação não informada' }), document.createTextNode(c[0] ? ' · convênio nº ' + c[0] : '')]),
+            el('p', { class: 'conv-obj', text: c[2] || 'Objeto não informado na fonte.' }),
+            el('small', { text: [c[1] ? 'Convenente: ' + c[1] : '', liga, vig].filter(Boolean).join(' · ') })
+          ]));
+        });
+        cb.hidden = false;
+      } else {
+        document.querySelector('[data-e-semconv]').hidden = false;
+      }
       linhas = d.f;
       lista.querySelector('[data-e-cont]').textContent = linhas.length + ' recebedores';
       lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
   }
 
+  /* ---------- anos (filtro por ano do pagamento) ---------- */
+  function anoDaUrl() { return new URLSearchParams(location.search).get('a') || ''; }
+  function qa(a) { return a ? '&a=' + a : ''; }
+  function ligarAno(sel, aoMudar) {
+    sel.value = anoDaUrl();
+    if (sel.value !== anoDaUrl()) sel.value = '';
+    sel.addEventListener('change', function () {
+      var u = new URL(location.href);
+      if (sel.value) u.searchParams.set('a', sel.value); else u.searchParams.delete('a');
+      history.replaceState(null, '', u.toString());
+      aoMudar(sel.value);
+    });
+  }
+  function valorAno(mapa, ano) {  // mapa {ano: valor | [valor, n]}; ano '' = soma de todos
+    var tot = 0, n = 0;
+    Object.keys(mapa).forEach(function (k) {
+      if (ano && k !== ano) return;
+      var v = mapa[k];
+      tot += Array.isArray(v) ? v[0] : v; n += Array.isArray(v) ? v[1] : 0;
+    });
+    return [tot, n];
+  }
+
   /* ---------- tela: parlamentares que destinaram emendas a um recebedor ---------- */
   function iniciarTelaRecebedor(sec) {
     var doc = new URLSearchParams(location.search).get('d') || '', N = +sec.getAttribute('data-n');
     var lista = document.querySelector('[data-r-lista]'), vazio = document.querySelector('[data-r-vazio]'), corpo = lista.querySelector('[data-r-corpo]');
-    var dig = doc.replace(/\D/g, '');
+    var selA = document.querySelector('[data-r-ano]'), dig = doc.replace(/\D/g, ''), dados = null, pessoas = {};
     if (!dig) { vazio.hidden = false; return; }
-    Promise.all([get('data/fr/' + (Number(dig) % N) + '.json'), carregarBusca()]).then(function (res) {
-      var d = res[0][doc], pessoas = {};
-      res[1].forEach(function (x) { pessoas[x.id] = x; });
-      if (!d) { vazio.hidden = false; return; }
+    function render() {
+      var ano = selA.value, d = dados, linhas = [];
+      d.p.forEach(function (x) {
+        var es = x[2].filter(function (e) { return !ano || String(e[4]) === ano; });
+        if (es.length) linhas.push([x[0], es.reduce(function (s, e) { return s + e[3]; }, 0), es]);
+      });
+      linhas.sort(function (a, b) { return b[1] - a[1]; });
+      var total = linhas.reduce(function (s, x) { return s + x[1]; }, 0);
       document.querySelector('[data-r-titulo]').textContent = d.n;
-      var total = d.p.reduce(function (s, x) { return s + x[1]; }, 0);
-      document.querySelector('[data-r-info]').textContent = doc + (d.l ? ' · ' + d.l : '') + (d.t ? ' · ' + d.t : '') + ' — recebeu ' + brl(total) +
-        ' em emendas de ' + d.p.length + (d.p.length === 1 ? ' parlamentar.' : ' parlamentares.');
+      var inf = document.querySelector('[data-r-info]');
+      inf.textContent = doc + (d.l ? ' · ' : '');
+      if (d.l) inf.appendChild(locLink(d.l));
+      inf.appendChild(document.createTextNode((d.t ? ' · ' + d.t : '') + ' — ' + (linhas.length ?
+        'recebeu ' + brl(total) + (ano ? ' em ' + ano : '') + ' em emendas de ' + linhas.length + (linhas.length === 1 ? ' parlamentar.' : ' parlamentares.') :
+        'não recebeu emendas pagas em ' + ano + '.')));
+      corpo.textContent = '';
+      linhas.forEach(function (x, i) {
+        var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
+        var det = el('details', { class: 'rec-mais' }, [el('summary', { text: 'ver emendas' })]);
+        var porCod = {};
+        x[2].forEach(function (e) { var k = e[0]; (porCod[k] = porCod[k] || [e[0], e[1], e[2], 0]); porCod[k][3] += e[3]; });
+        Object.keys(porCod).map(function (k) { return porCod[k]; }).sort(function (a, b) { return b[3] - a[3]; }).forEach(function (e) {
+          det.appendChild(el('div', { class: 'rec' }, [el('a', { href: RAIZ + 'emenda/?c=' + encodeURIComponent(e[0]), text: (e[2] ? 'Pix' : 'Individual') + ' · ' + e[1] + ' · código ' + e[0] }),
+            el('small', { text: brl(e[3]) })]));
+        });
+        corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
+          el('td', {}, [p.url ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode(p.n), det]),
+          el('td', { text: p.u || '' }), el('td', { text: p.p || '' }),
+          el('td', { class: 'num', text: String(Object.keys(porCod).length) }), el('td', { class: 'num', text: brl(x[1]) })]));
+      });
+    }
+    Promise.all([get('data/fr/' + (Number(dig) % N) + '.json'), carregarBusca()]).then(function (res) {
+      dados = res[0][doc];
+      res[1].forEach(function (x) { pessoas[x.id] = x; });
+      if (!dados) { vazio.hidden = false; return; }
       var fr = document.querySelector('[data-r-fonte]');
       fr.appendChild(document.createTextNode('Conferir na fonte: '));
       fr.appendChild(copiar(dig, 'Copiar CNPJ'));
@@ -394,81 +460,80 @@
       fr.appendChild(el('a', { href: CNPJ_RECEITA, target: '_blank', rel: 'noopener', text: 'Consulta de CNPJ na Receita ↗' }));
       fr.appendChild(document.createTextNode(' · '));
       fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
-      if (d.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
-      if (d.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
-      if (d.l) { var inf = document.querySelector('[data-r-info]'); inf.appendChild(document.createTextNode(' Município: ')); inf.appendChild(locLink(d.l)); }
-      d.p.forEach(function (x, i) {
-        var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
-        var det = el('details', { class: 'rec-mais' }, [el('summary', { text: 'ver emendas' })]);
-        x[2].sort(function (a, b) { return b[3] - a[3]; }).forEach(function (e) {
-          det.appendChild(el('div', { class: 'rec' }, [el('a', { href: RAIZ + 'emenda/?c=' + encodeURIComponent(e[0]), text: (e[2] ? 'Pix' : 'Individual') + ' · ' + e[1] + ' · código ' + e[0] }),
-            el('small', { text: brl(e[3]) })]));
-        });
-        corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-          el('td', {}, [p.url ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode(p.n), det]),
-          el('td', { text: p.u || '' }), el('td', { text: p.p || '' }),
-          el('td', { class: 'num', text: String(x[2].length) }), el('td', { class: 'num', text: brl(x[1]) })]));
-      });
-      lista.hidden = false;
+      if (dados.b) fr.appendChild(el('p', { class: 'nota', text: 'Atenção: este é um banco público que opera repasses de emendas. O dinheiro passa por ele, mas o destino final não é o banco; por isso ele fica fora dos rankings e dos totais por município.' }));
+      ligarAno(selA, render);
+      lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
   }
-
 
   /* ---------- municipios ---------- */
   function iniciarMunicipios(sec) {
     var corpo = document.querySelector('[data-m-corpo]'), mais = document.querySelector('[data-m-mais]'), tit = document.querySelector('[data-m-tit]');
-    var filtro = sec.querySelector('[data-m-filtro]'), dados = [], limite = 30;
+    var filtro = sec.querySelector('[data-m-filtro]'), selA = sec.querySelector('[data-m-ano]'), dados = [], limite = 30;
     function render() {
-      var q = norm(filtro.value.trim()), f = dados.filter(function (m) { return !q || norm(m[0]).indexOf(q) >= 0; });
-      tit.textContent = q ? f.length + ' municípios encontrados' : 'Municípios que mais receberam';
+      var ano = selA.value || '0', q = norm(filtro.value.trim());
+      var f = dados.filter(function (m) { return m[2][ano] && (!q || norm(m[0]).indexOf(q) >= 0); })
+        .sort(function (a, b) { return b[2][ano][0] - a[2][ano][0]; });
+      tit.textContent = q ? f.length + ' municípios encontrados' : 'Municípios que mais receberam' + (selA.value ? ' em ' + selA.value : '');
       corpo.textContent = '';
       f.slice(0, limite).forEach(function (m, i) {
         corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-          el('td', {}, [el('a', { href: RAIZ + 'municipio/?m=' + m[1], text: m[0] })]),
-          el('td', { class: 'num', text: String(m[3]) }), el('td', { class: 'num', text: brl(m[2]) })]));
+          el('td', {}, [el('a', { href: RAIZ + 'municipio/?m=' + m[1] + qa(selA.value), text: m[0] })]),
+          el('td', { class: 'num', text: String(m[2][ano][1]) }), el('td', { class: 'num', text: brl(m[2][ano][0]) })]));
       });
       mais.hidden = f.length <= limite; mais.textContent = 'Mostrar mais (' + (f.length - limite) + ')';
     }
     mais.addEventListener('click', function () { limite += 50; render(); });
     filtro.addEventListener('input', function () { limite = 30; render(); });
+    ligarAno(selA, function () { limite = 30; render(); });
     get('data/municipios.json').then(function (d) { dados = d; render(); });
   }
   function iniciarMunicipio(sec) {
     var m = new URLSearchParams(location.search).get('m') || '';
-    var corpo = document.querySelector('[data-mu-corpo]'), vazio = document.querySelector('[data-mu-vazio]');
+    var corpo = document.querySelector('[data-mu-corpo]'), vazio = document.querySelector('[data-mu-vazio]'), selA = document.querySelector('[data-mu-ano]');
+    var dados = null, pessoas = {};
     if (!/^[a-z0-9-]+$/.test(m)) { vazio.hidden = false; return; }
-    Promise.all([get('data/m/' + m + '.json'), carregarBusca()]).then(function (res) {
-      var d = res[0], pessoas = {};
-      res[1].forEach(function (x) { pessoas[x.id] = x; });
-      document.querySelector('[data-mu-titulo]').textContent = d.n;
-      document.title = d.n + ' · emendas recebidas · Gastos Públicos';
-      document.querySelector('[data-mu-info]').textContent = 'Recebedores deste município receberam ' + brl(d.t) + ' em emendas de ' + d.p.length +
-        (d.p.length === 1 ? ' parlamentar.' : ' parlamentares.');
-      var tp = document.querySelector('[data-mu-parl]');
-      d.p.forEach(function (x, i) {
+    function render() {
+      var ano = selA.value, d = dados;
+      var ps = d.p.map(function (x) { var v = valorAno(x[1], ano); return [x[0], v[0], v[1]]; }).filter(function (x) { return x[1] > 0 || x[2] > 0; })
+        .sort(function (a, b) { return b[1] - a[1]; });
+      var rs = d.r.map(function (x) { return [x[0], x[1], valorAno(x[2], ano)[0]]; }).filter(function (x) { return x[2] > 0; })
+        .sort(function (a, b) { return b[2] - a[2]; });
+      var total = ps.reduce(function (s, x) { return s + x[1]; }, 0);
+      document.querySelector('[data-mu-info]').textContent = ps.length ? 'Recebedores deste município receberam ' + brl(total) + (ano ? ' em ' + ano : '') + ' em emendas de ' + ps.length +
+        (ps.length === 1 ? ' parlamentar.' : ' parlamentares.') : 'Nenhuma emenda paga a recebedores deste município em ' + ano + '.';
+      var tp = document.querySelector('[data-mu-parl]'); tp.textContent = '';
+      ps.forEach(function (x, i) {
         var p = pessoas[x[0]] || { n: 'Parlamentar', url: '', u: '', p: '' };
         tp.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
           el('td', {}, [p.url ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode(p.n)]),
           el('td', { text: p.u || '' }), el('td', { text: p.p || '' }), el('td', { class: 'num', text: String(x[2]) }), el('td', { class: 'num', text: brl(x[1]) })]));
       });
-      document.querySelector('[data-mu-rec-tit]').textContent = 'Quem recebeu' + (d.nr > d.r.length ? ' (os ' + d.r.length + ' maiores de ' + d.nr + ')' : '');
-      var tr = document.querySelector('[data-mu-rec]');
-      d.r.forEach(function (x, i) {
+      document.querySelector('[data-mu-rec-tit]').textContent = 'Quem recebeu' + (d.nr > d.r.length ? ' (os ' + d.r.length + ' maiores de ' + d.nr + ' no total)' : '');
+      var tr = document.querySelector('[data-mu-rec]'); tr.textContent = '';
+      rs.slice(0, 200).forEach(function (x, i) {
         tr.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-          el('td', {}, [x[1] ? el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(x[1]), text: x[0] }) : document.createTextNode(x[0]), el('small', { text: x[1] })]),
+          el('td', {}, [x[1] ? el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(x[1]) + qa(selA.value), text: x[0] }) : document.createTextNode(x[0]), el('small', { text: x[1] })]),
           el('td', { class: 'num', text: brl(x[2]) })]));
       });
-      corpo.hidden = false;
+    }
+    Promise.all([get('data/m/' + m + '.json'), carregarBusca()]).then(function (res) {
+      dados = res[0];
+      res[1].forEach(function (x) { pessoas[x.id] = x; });
+      document.querySelector('[data-mu-titulo]').textContent = dados.n;
+      document.title = dados.n + ' · emendas recebidas · Gastos Públicos';
+      ligarAno(selA, render);
+      corpo.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
   }
 
   /* ---------- ranking e busca de recebedores ---------- */
   function iniciarRecebedores(sec) {
     var corpo = document.querySelector('[data-rb-corpo]'), tit = document.querySelector('[data-rb-tit]'), filtro = sec.querySelector('[data-rb-filtro]');
-    var modo = 'v', rank = null, indice = null, botoes = document.querySelectorAll('[data-rb-modo]');
+    var selA = sec.querySelector('[data-rb-ano]'), modo = 'v', rank = null, indice = null, botoes = document.querySelectorAll('[data-rb-modo]');
     function linha(r, i) {
       return el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-        el('td', {}, [el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]), text: r[0] }), el('small', { text: r[1] })]),
+        el('td', {}, [el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]) + qa(selA.value), text: r[0] }), el('small', { text: r[1] })]),
         el('td', { class: 'num', text: r[3] === undefined ? '' : String(r[3]) }), el('td', { class: 'num', text: brl(r[2]) })]);
     }
     function render() {
@@ -477,12 +542,13 @@
       if (q.length >= 3) {
         if (!indice) { get('data/rec-busca.json').then(function (d) { indice = d; render(); }); tit.textContent = 'Buscando…'; return; }
         var f = indice.filter(function (r) { return qd.length >= 5 && /^[\d.\/-]+$/.test(q) ? r[1].indexOf(qd) >= 0 : norm(r[0]).indexOf(q) >= 0; });
-        tit.textContent = f.length + ' recebedores encontrados' + (f.length > 100 ? ' (mostrando os 100 maiores)' : '');
+        tit.textContent = f.length + ' recebedores encontrados (total de todos os anos)' + (f.length > 100 ? ', mostrando os 100 maiores' : '');
         f.slice(0, 100).forEach(function (r, i) { corpo.appendChild(linha(r, i)); });
         return;
       }
-      tit.textContent = modo === 'v' ? 'Quem mais recebeu' : 'Recebeu de mais parlamentares';
-      if (rank) rank[modo].forEach(function (r, i) { corpo.appendChild(linha([r[0], r[1], r[2], r[3]], i)); });
+      var r_ = rank && rank[selA.value];
+      tit.textContent = (modo === 'v' ? 'Quem mais recebeu' : 'Recebeu de mais parlamentares') + (selA.value ? ' em ' + selA.value : '');
+      if (r_) r_[modo].forEach(function (r, i) { corpo.appendChild(linha(r, i)); });
     }
     botoes.forEach(function (b) {
       b.addEventListener('click', function () {
@@ -492,6 +558,7 @@
       });
     });
     filtro.addEventListener('input', render);
+    ligarAno(selA, render);
     get('data/rec-rank.json').then(function (d) { rank = d; render(); });
   }
 

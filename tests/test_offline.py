@@ -37,6 +37,24 @@ c.get = lambda *a, **k: zipar("EmendasParlamentares.csv", em, "latin-1")
 emendas.carregar(con, 2014)
 print(con.execute("select pessoa_id,autor,tipo,pago from emenda").fetchall())
 
+# Emendas com favorecidos (com ano do pagamento) e convenios
+import io as _io, zipfile as _zf
+def _zip_multi(arquivos):
+    b = _io.BytesIO()
+    with _zf.ZipFile(b, "w") as z:
+        for n, t in arquivos.items():
+            z.writestr(n, t.encode("latin-1"))
+    class R: content = b.getvalue()
+    return R()
+fav = ("Código da Emenda;Código do Autor da Emenda;Nome do Autor da Emenda;Número da emenda;Tipo de Emenda;Ano/Mês;Código do Favorecido;Favorecido;Natureza Jurídica;Tipo Favorecido;UF Favorecido;Município Favorecido;Valor Recebido\n"
+       "1;9;FULANO DE TAL;100;x;2023/05;11222333000144;PREFEITURA X;a;Pessoa Jurídica;SP;Santos;100,00\n"
+       "1;9;FULANO DE TAL;100;x;2024/01;11222333000144;PREFEITURA X;a;Pessoa Jurídica;SP;Santos;50,00\n")
+cv = ("Código da Emenda;Número Convênio;Convenente;Objeto Convênio;Situação Convênio;Valor Convênio;Valor Liberado;Data Início Vigência;Data Fim Vigência\n"
+      "1;123456;PREFEITURA X;Construcao de ubs;Em execução;1.000,00;400,00;01/02/2023;01/02/2025\n")
+c.get = lambda *a, **k: _zip_multi({"EmendasParlamentares.csv": em, "EmendasParlamentares_PorFavorecido.csv": fav, "EmendasParlamentares_Convenios.csv": cv})
+emendas.carregar(con, 2014)
+print(con.execute("select codigo,documento,valor,ano from emenda_favorecido").fetchall(), con.execute("select * from emenda_convenio").fetchall())
+
 from pipeline import orcamento
 ex = ("Nome Órgão Superior;Nome Órgão;Nome Programa Orçamentário;Nome Ação;Valor Empenhado (R$);Valor Liquidado (R$);Valor Pago (R$)\n"
       "Presidência da República;Secom;Comunicação;Publicidade;1.000,00;500,00;400,00\n"

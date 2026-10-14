@@ -3,7 +3,7 @@
 <section class="abertura abertura-curta" data-municipios>
   <h1>Quanto chegou ao seu município</h1>
   <p class="apoio">Valores de emendas parlamentares pagos a recebedores (prefeituras, empresas, entidades) em cada município, e de quais parlamentares vieram. Busque pelo nome.</p>
-  <div class="controles"><label>Município<input type="search" data-m-filtro placeholder="Ex.: Canguçu" autocomplete="off"></label></div>
+  <div class="controles"><label>Município<input type="search" data-m-filtro placeholder="Ex.: Canguçu" autocomplete="off"></label><label>Ano do pagamento <select data-m-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <section class="ranking" data-m-lista>
   <div class="ranking-cab"><h2 data-m-tit>Municípios que mais receberam</h2></div>
@@ -14,6 +14,6 @@
     </table>
   </div>
   <button type="button" class="botao botao-leve" data-m-mais hidden>Mostrar mais</button>
-  <p class="nota">O município é o do recebedor do dinheiro, conforme o Portal da Transparência. Brasília/DF inclui órgãos federais. Emendas sem pagamento registrado ainda não aparecem.</p>
+  <p class="nota">O município é o do recebedor do dinheiro, conforme o Portal da Transparência. Brasília/DF inclui órgãos federais. O ano é o do pagamento ao recebedor. Emendas sem pagamento registrado ainda não aparecem.</p>
 </section>
 {% endblock %}

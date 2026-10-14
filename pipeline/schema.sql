@@ -93,6 +93,22 @@ CREATE TABLE IF NOT EXISTS emenda_favorecido (
     uf TEXT,
     municipio TEXT,
     valor REAL NOT NULL,
-    n INTEGER NOT NULL
+    n INTEGER NOT NULL,
+    ano INTEGER                    -- ano do pagamento (coluna "Ano/Mes" do Portal)
 );
 CREATE INDEX IF NOT EXISTS ix_emenda_fav_codigo ON emenda_favorecido (codigo);
+
+-- Convenio (objeto e situacao) das emendas que viraram convenio (Portal da Transparencia)
+CREATE TABLE IF NOT EXISTS emenda_convenio (
+    id INTEGER PRIMARY KEY,
+    codigo TEXT NOT NULL,          -- codigo da emenda
+    numero TEXT,                   -- numero do convenio
+    convenente TEXT,
+    objeto TEXT,
+    situacao TEXT,
+    valor REAL,
+    liberado REAL,
+    inicio TEXT,
+    fim TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_emenda_conv_codigo ON emenda_convenio (codigo);

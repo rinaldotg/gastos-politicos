@@ -71,6 +71,8 @@ def abrir_banco(caminho):
     for coluna in ("programa", "acao", "localidade"):
         if coluna not in existentes:
             con.execute(f"ALTER TABLE emenda ADD COLUMN {coluna} TEXT")
+    if "ano" not in {r[1] for r in con.execute("PRAGMA table_info(emenda_favorecido)")}:
+        con.execute("ALTER TABLE emenda_favorecido ADD COLUMN ano INTEGER")
     con.commit()
     return con
 

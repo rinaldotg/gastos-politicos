@@ -7,6 +7,7 @@ Colunas escritas de memoria: ler_csv tolera variacoes e o log imprime as colunas
 """
 import csv
 import io
+import re
 import sys
 import zipfile
 
@@ -96,6 +97,7 @@ def carregar_favorecidos(con, z):
     i_uf = _achar(cab, ("uf", "favorecido"), ("uf",))
     i_mun = _achar(cab, ("municipio", "favorecido"), ("municipio",))
     i_val = _achar(cab, ("valor", "recebido"), ("valor",))
+    i_ano = _achar(cab, ("ano", "mes"), ("ano",))
     if i_cod is None or i_nome is None or i_val is None:
         print("  AVISO: colunas de favorecido nao reconhecidas; mande o log para ajustar", file=sys.stderr)
         return 0
@@ -108,19 +110,62 @@ def carregar_favorecidos(con, z):
         cod = cel(l, i_cod)
         if cod not in validos:
             continue
-        chave_ = (cod, cel(l, i_doc), cel(l, i_nome))
+        m_ano = re.match(r"\s*(\d{4})", cel(l, i_ano))
+        chave_ = (cod, cel(l, i_doc), cel(l, i_nome), int(m_ano.group(1)) if m_ano else 0)
         a = agg.get(chave_)
         if a is None:
             agg[chave_] = [cel(l, i_tipo), cel(l, i_uf), cel(l, i_mun), c.numero(cel(l, i_val)), 1]
         else:
             a[3] += c.numero(cel(l, i_val)); a[4] += 1
     con.execute("DELETE FROM emenda_favorecido")
-    con.executemany("""INSERT INTO emenda_favorecido (codigo, favorecido, documento, tipo, uf, municipio, valor, n)
-                       VALUES (?,?,?,?,?,?,?,?)""",
-                    [(k[0], k[2] or None, k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4]) for k, v in agg.items()])
+    con.executemany("""INSERT INTO emenda_favorecido (codigo, favorecido, documento, tipo, uf, municipio, valor, n, ano)
+                       VALUES (?,?,?,?,?,?,?,?,?)""",
+                    [(k[0], k[2] or None, k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4], k[3] or None)
+                     for k, v in agg.items()])
     c.log(con, "portal", "emendas_favorecidos", None, len(agg))
     con.commit()
     print(f"Emendas: {len(agg)} favorecidos (por emenda) ligados a parlamentares")
+    return len(agg)
+
+
+def carregar_convenios(con, z):
+    """Convenio de cada emenda (objeto, convenente, situacao, valores), quando a emenda virou convenio."""
+    nome = next((n for n in z.namelist() if "convenio" in n.lower()), None)
+    if not nome:
+        print("  AVISO: o zip de emendas nao traz o arquivo de convenios", file=sys.stderr)
+        return 0
+    cab, linhas = _fluxo_csv(z, nome)
+    print(f"  Colunas de convenios ({nome}): {cab}")
+    i_cod = _achar(cab, ("codigo", "emenda"), exato=["codigo da emenda"])
+    i_num = _achar(cab, ("numero", "convenio"), ("convenio",))
+    i_conv = _achar(cab, ("convenente",), ("nome", "convenente"))
+    i_obj = _achar(cab, ("objeto",))
+    i_sit = _achar(cab, ("situacao",))
+    i_val = _achar(cab, ("valor", "convenio"), ("valor", "original"), ("valor", "total"))
+    i_lib = _achar(cab, ("valor", "liberado"), ("liberado",))
+    i_ini = _achar(cab, ("inicio",))
+    i_fim = _achar(cab, ("fim",))
+    if i_cod is None or i_num is None:
+        print("  AVISO: colunas de convenios nao reconhecidas; mande o log para ajustar", file=sys.stderr)
+        return 0
+    validos = {r[0] for r in con.execute("SELECT DISTINCT codigo FROM emenda WHERE pessoa_id IS NOT NULL AND codigo IS NOT NULL")}
+    agg = {}
+
+    def cel(l, i):
+        return (l[i].strip() if i is not None and i < len(l) else "")
+    for l in linhas:
+        cod = cel(l, i_cod)
+        if cod not in validos:
+            continue
+        agg[(cod, cel(l, i_num))] = (cel(l, i_conv), cel(l, i_obj), cel(l, i_sit), c.numero(cel(l, i_val)),
+                                     c.numero(cel(l, i_lib)), cel(l, i_ini), cel(l, i_fim))
+    con.execute("DELETE FROM emenda_convenio")
+    con.executemany("""INSERT INTO emenda_convenio (codigo, numero, convenente, objeto, situacao, valor, liberado, inicio, fim)
+                       VALUES (?,?,?,?,?,?,?,?,?)""",
+                    [(k[0], k[1] or None, v[0] or None, v[1] or None, v[2] or None, v[3], v[4], v[5] or None, v[6] or None) for k, v in agg.items()])
+    c.log(con, "portal", "emendas_convenios", None, len(agg))
+    con.commit()
+    print(f"Emendas: {len(agg)} convenios ligados a emendas de parlamentares")
     return len(agg)
 
 
@@ -186,6 +231,10 @@ def carregar(con, desde):
         carregar_favorecidos(con, z)
     except Exception as e:  # o restante das emendas ja esta salvo
         print(f"  AVISO: favorecidos das emendas falharam: {e}", file=sys.stderr)
+    try:
+        carregar_convenios(con, z)
+    except Exception as e:
+        print(f"  AVISO: convenios das emendas falharam: {e}", file=sys.stderr)
     return len(saida)
 
 
