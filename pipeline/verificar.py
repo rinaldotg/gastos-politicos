@@ -40,6 +40,7 @@ def main():
         "mandato": "SELECT pessoa_id, cargo, legislatura, uf, partido, data_inicio, data_fim FROM mandato",
         "gasto_ano_categoria": "SELECT pessoa_id, fonte, ano, categoria, ROUND(SUM(valor),2) total, COUNT(*) n FROM gasto GROUP BY 1,2,3,4",
         "gasto_mensal": "SELECT pessoa_id, ano, mes, ROUND(SUM(valor),2) total FROM gasto GROUP BY 1,2,3",
+        "gasto_mes_categoria": "SELECT pessoa_id, ano, mes, categoria, ROUND(SUM(valor),2) total FROM gasto WHERE mes IS NOT NULL GROUP BY 1,2,3,4",
         "top_fornecedores": """SELECT * FROM (SELECT pessoa_id, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total, COUNT(*) n,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id ORDER BY SUM(valor) DESC) pos
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, fornecedor, cnpj_cpf) WHERE pos<=20""",

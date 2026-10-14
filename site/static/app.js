@@ -545,6 +545,40 @@
     }).catch(function () { vazio.hidden = false; });
   }
 
+  /* ---------- cota mes a mes ---------- */
+  var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  function iniciarMeses(sec) {
+    var pid = sec.getAttribute('data-pid'), selA = sec.querySelector('[data-pm-ano]'), corpo = sec.querySelector('[data-pm-corpo]'), dados = {};
+    function linhasAno(ano) {
+      var m = dados[ano] || {};
+      return Object.keys(m).map(Number).sort(function (a, b) { return a - b; }).map(function (n) {
+        var cats = Object.keys(m[n]).map(function (c) { return [c, m[n][c]]; }).sort(function (a, b) { return b[1] - a[1]; });
+        return { n: n, cats: cats, total: cats.reduce(function (s, c) { return s + c[1]; }, 0) };
+      });
+    }
+    function render() {
+      var ano = selA.value, ls = linhasAno(ano), tot = ls.reduce(function (s, l) { return s + l.total; }, 0);
+      sec.querySelector('[data-pm-resumo]').textContent = ls.length ?
+        'Em ' + ano + ': ' + brl(tot) + ' em ' + ls.length + (ls.length === 1 ? ' mês' : ' meses') + ' com despesas (média de ' + brl(tot / ls.length) + ' por mês).' :
+        'Sem despesas registradas em ' + ano + '.';
+      corpo.textContent = '';
+      ls.forEach(function (l) {
+        var tr = el('tr', {}, [el('td', {}, [el('details', { class: 'rec-mais' }, [el('summary', { text: MESES[l.n - 1] || String(l.n) })].concat(
+          l.cats.map(function (c) { return el('div', { class: 'rec' }, [el('span', { text: c[0] }), el('small', { text: brl(c[1]) })]); })))]),
+          el('td', { class: 'num', text: brl(l.total) }), el('td', { class: 'num', text: l.cats[0] ? l.cats[0][0] : '' })]);
+        corpo.appendChild(tr);
+      });
+    }
+    get('data/pm/' + pid + '.json').then(function (d) {
+      dados = d; selA.addEventListener('change', render); render();
+      acoes(sec.querySelector('[data-acoes]'), [['Baixar mês a mês (CSV)', 'cota-mensal-' + pid + '.csv', function () {
+        var out = [];
+        Object.keys(dados).sort().forEach(function (a) { linhasAno(a).forEach(function (l) { l.cats.forEach(function (c) { out.push([a, l.n, c[0], c[1]]); }); }); });
+        return [['ano', 'mes', 'tipo_de_despesa', 'valor'], out];
+      }]]);
+    }).catch(function () { sec.hidden = true; });
+  }
+
   /* ---------- municipios ---------- */
   function iniciarMunicipios(sec) {
     var corpo = document.querySelector('[data-m-corpo]'), mais = document.querySelector('[data-m-mais]'), tit = document.querySelector('[data-m-tit]');
@@ -717,6 +751,7 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var pm_ = document.querySelector('[data-pm]'); if (pm_) iniciarMeses(pm_);
   var tr_ = document.querySelector('[data-recebedor]'); if (tr_) iniciarTelaRecebedor(tr_);
   var mu = document.querySelector('[data-municipios]'); if (mu) iniciarMunicipios(mu);
   var m1 = document.querySelector('[data-municipio]'); if (m1) iniciarMunicipio(m1);

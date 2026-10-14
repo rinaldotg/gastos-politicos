@@ -42,6 +42,20 @@
     Valores legais de 2026, não gasto efetivo: a verba de gabinete é um teto e o uso real varia. {% if p.cod == 'senador' %}No Senado, outros valores (equipe e auxílios) variam por gabinete e ainda não estão aqui.{% endif %} <a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
   </section>
   {% endif %}
+  {% if tem_mes %}
+  <section class="bloco" data-pm data-pid="{{ p.id }}">
+    <h2>Quanto está gastando: mês a mês</h2>
+    <p>Despesas pagas com a cota parlamentar, mês a mês e por tipo de despesa.</p>
+    <div class="controles"><label>Ano <select data-pm-ano>{% for a in anos_mes %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
+    <p class="apoio" data-pm-resumo></p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Mês</th><th class="num">Total no mês</th><th class="num">Maior tipo de despesa</th></tr></thead>
+      <tbody data-pm-corpo></tbody>
+    </table></div>
+    <div class="acoes" data-acoes></div>
+    <p class="nota">Clique em um mês para ver o valor de cada tipo de despesa. É a data da despesa informada pela fonte oficial; meses sem linha não tiveram despesa registrada. Isto é só a cota: subsídio, gabinete e auxílios estão na tabela acima como limites legais.</p>
+  </section>
+  {% endif %}
 
   <section class="bloco">
     <h2>Gastos por ano</h2>

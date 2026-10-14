@@ -109,6 +109,14 @@ def main():
     pessoas = {int(r["id"]): r for r in ler(a.resumo, "pessoa")}
     gac = ler(a.resumo, "gasto_ano_categoria")
     mensal = ler(a.resumo, "gasto_mensal")
+    try:
+        mes_cat = ler(a.resumo, "gasto_mes_categoria")
+    except FileNotFoundError:
+        mes_cat = []
+    pm = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # pid -> ano -> mes -> categoria -> total
+    for r in mes_cat:
+        if f(r["total"]) != 0 and r.get("mes"):
+            pm[int(r["pessoa_id"])][str(int(f(r["ano"])))][str(int(f(r["mes"])))][r["categoria"] or "(sem tipo)"] = round(f(r["total"]), 2)
     forn = ler(a.resumo, "top_fornecedores")
     unid = ler(a.resumo, "presidencia_unidades")
     emag = ler(a.resumo, "emenda_agregado")
@@ -345,7 +353,11 @@ def main():
             mx = max(o["total"] for o in orc_x) or 1
             for o in orc_x:
                 o["largura"] = max(0, o["total"]) / mx * 100
-        html = env.get_template("pessoa.html").render(
+        tem_mes = bool(pm.get(pid)) and x["cargo"] != "presidente"
+        if tem_mes:
+            (saida / "data" / "pm").mkdir(parents=True, exist_ok=True)
+            (saida / "data" / "pm" / f"{pid}.json").write_text(json.dumps(pm[pid], ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        html = env.get_template("pessoa.html").render(tem_mes=tem_mes, anos_mes=sorted(pm[pid], reverse=True) if tem_mes else [],
             **{**ctx_base, "raiz": "../../"}, titulo=f"{x['nome']}: gastos desde 2014", p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
