@@ -9,6 +9,7 @@
       {% if pos %}Em {{ ano_ref }}, ficou na posição {{ pos[0] }} de {{ pos[1] }} {{ 'deputados' if p.cod == 'deputado' else 'senadores' if p.cod == 'senador' else 'presidentes' }} por valor gasto.{% endif %}
     </p>
     <a class="botao botao-leve" href="{{ raiz }}comparar/?p={{ p.id }}">Comparar com outra pessoa</a>
+    {% if uf_url %}<a class="botao botao-leve" href="{{ raiz }}{{ uf_url }}">Ver o estado {{ p.uf }}</a>{% endif %}
     {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
   </header>
 
@@ -23,6 +24,23 @@
     <p>Dos {{ sig.cartao | brl }} no cartão, <strong>{{ sig.sigilo | brl }} ({{ sig.parte | pct }})</strong> estão sob sigilo: o valor é público, mas o fornecedor não. Em viagens a serviço, foram {{ sig.viagens | brl }}.</p>
   </section>
   {% endif %}
+  {% endif %}
+
+  {% if custo %}
+  <section class="bloco">
+    <h2>Quanto custa um mandato</h2>
+    <p>A cota abaixo é só uma parte. Pela lei, o mandato tem outros valores mensais que <strong>não entram nos totais deste site</strong>:</p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <tbody>
+        <tr><td>Subsídio (salário bruto)</td><td class="num">{{ custo.subsidio | brl2 }} por mês</td></tr>
+        {% if custo.gabinete %}<tr><td>Verba de gabinete (teto, para até 25 assessores)</td><td class="num">até {{ custo.gabinete | brl2 }} por mês</td></tr>{% endif %}
+        {% if custo.moradia %}<tr><td>Auxílio-moradia (quando não usa imóvel funcional)</td><td class="num">{{ custo.moradia | brl2 }} por mês</td></tr>{% endif %}
+        {% if ano_ref_cota %}<tr><td>Cota parlamentar paga em {{ ano_ref }} (deste site)</td><td class="num">{{ ano_ref_cota | brl }} no ano</td></tr>{% endif %}
+      </tbody>
+    </table></div>
+    {% if custo.gabinete %}<p>Somando subsídio, teto de gabinete e auxílio-moradia, o limite legal é de <strong>{{ ((custo.subsidio + custo.gabinete + custo.moradia) * 12) | brl }} por ano</strong>, fora a cota.{% else %}<p>{% endif %}
+    Valores legais de 2026, não gasto efetivo: a verba de gabinete é um teto e o uso real varia. {% if p.cod == 'senador' %}No Senado, outros valores (equipe e auxílios) variam por gabinete e ainda não estão aqui.{% endif %} <a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
+  </section>
   {% endif %}
 
   <section class="bloco">
@@ -70,10 +88,18 @@
   <section class="bloco">
     <h2>Emendas individuais</h2>
     <p>Dinheiro do orçamento federal que {{ p.nome }} indicou para estados e municípios: <strong>{{ em_tot[0] | brl }}</strong> empenhados e <strong>{{ em_tot[2] | brl }}</strong> pagos desde {{ em_desde }}{% if em_pix %}, dos quais {{ em_pix | brl }} em “emendas Pix” (transferências especiais, sem convênio){% endif %}.</p>
+    {% if em_exec %}
+    <div class="promessa">
+      <h3>Promessa x entrega</h3>
+      <p>De cada R$ 100 empenhados em emendas de {{ p.nome }}, <strong>R$ {{ (em_exec.pct * 100) | round(0) | int }}</strong> já foram pagos{% if em_exec.pct_ant is not none %}. Considerando só as emendas de {{ em_exec.corte }} ou anteriores, que já tiveram tempo de ser executadas: <strong>{{ (em_exec.pct_ant * 100) | round(0) | int }}%</strong> pagos{% endif %}.</p>
+      {% if em_exec.rap_i or em_exec.rap_c %}<p>Restos a pagar (empenhos de anos anteriores): <strong>{{ em_exec.rap_i | brl }}</strong> inscritos, <strong>{{ em_exec.rap_p | brl }}</strong> pagos depois e <strong>{{ em_exec.rap_c | brl }}</strong> cancelados.</p>{% endif %}
+      <p class="nota">Pagar menos que o empenhado não prova problema: a emenda pode ser recente, estar em análise ou ter impedimento técnico. A taxa ajuda a ver quanto do que foi prometido chegou. <a href="{{ raiz }}glossario/">O que é empenhado, liquidado e pago</a>.</p>
+    </div>
+    {% endif %}
     <div class="tabela-rolavel">
     <table class="tabela">
-      <thead><tr><th>Ano da emenda</th><th class="num">Empenhado</th><th class="num">Liquidado</th><th class="num">Pago</th></tr></thead>
-      <tbody>{% for ano, e in emendas %}<tr><td>{{ ano }}</td><td class="num">{{ e[0] | brl }}</td><td class="num">{{ e[1] | brl }}</td><td class="num">{{ e[2] | brl }}</td></tr>{% endfor %}</tbody>
+      <thead><tr><th>Ano da emenda</th><th class="num">Empenhado</th><th class="num">Liquidado</th><th class="num">Pago</th><th class="num">% pago</th></tr></thead>
+      <tbody>{% for ano, e in emendas %}<tr><td>{{ ano }}</td><td class="num">{{ e[0] | brl }}</td><td class="num">{{ e[1] | brl }}</td><td class="num">{{ e[2] | brl }}</td><td class="num">{{ ((e[2] / e[0] * 100) | round(0) | int) ~ "%" if e[0] > 0 else "—" }}</td></tr>{% endfor %}</tbody>
     </table>
     </div>
     {% if em_funcao and not tem_detalhe %}

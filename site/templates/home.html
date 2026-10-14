@@ -10,6 +10,19 @@
   <p class="apoio">Deputados federais, senadores e Presidência da República, de 2014 até hoje. Dinheiro público da cota parlamentar, do cartão corporativo e das viagens oficiais.</p>
 </section>
 
+<section aria-label="Por onde começar">
+  <h2>O que você quer saber?</h2>
+  <div class="cartoes">
+    <a class="cartao" href="municipios/"><strong>Meu município</strong><span>Quanto chegou em emendas e de quais parlamentares.</span></a>
+    <div class="cartao"><strong>Meu estado</strong><span>Bancada, gastos e emendas por área.</span>
+      <select data-uf-select aria-label="Escolha o estado"><option value="">Escolher estado…</option>{% for s, n in ufs %}<option value="{{ s | lower }}">{{ n }}</option>{% endfor %}</select></div>
+    <a class="cartao" href="recebedores/"><strong>Quem recebe o dinheiro</strong><span>Empresas, prefeituras e entidades que mais recebem emendas.</span></a>
+    <a class="cartao" href="emendas-pix/"><strong>Emendas Pix</strong><span>Quem mais usa a transferência direta, sem convênio.</span></a>
+    {% if presidentes %}<a class="cartao" href="{{ presidentes[-1].url }}"><strong>Presidência</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
+    <a class="cartao" href="novidades/"><strong>O que mudou</strong><span>Novidades desde a última atualização.</span></a>
+  </div>
+</section>
+
 <section class="grupos" aria-label="Quem está no site">
   {% for cargo, r in resumo.items() %}
   <a class="grupo grupo-{{ r.cod }}" href="#ranking" data-cargo="{{ cargo }}">

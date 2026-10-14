@@ -156,3 +156,10 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .como-cobrar a,.lista-texto a{color:var(--acento)}
 .modelo{width:100%;max-width:75ch;font:inherit;font-size:.92rem;padding:.7rem;border:1px solid var(--linha);border-radius:10px;background:var(--papel);color:var(--tinta)}
 .lista-texto{max-width:75ch;padding-left:1.2rem}.lista-texto li{margin:.5rem 0}
+.promessa{background:var(--acento-fundo);border-radius:10px;padding:.2rem 1rem .6rem;margin:1rem 0;max-width:80ch}
+.promessa h3{margin:.7rem 0 .2rem}
+.glossario dt{font-weight:700;margin-top:1rem}.glossario dd{margin:.15rem 0 0;max-width:70ch}
+.cartoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.8rem;margin:1rem 0}
+.cartao{display:block;border:1.5px solid var(--linha);border-radius:12px;padding:1rem;background:var(--papel);color:var(--tinta);text-decoration:none}
+.cartao:hover{border-color:var(--acento)}.cartao strong{display:block;font-size:1.05rem}.cartao span{color:var(--tinta-2);font-size:.92rem}
+.cartao select{margin-top:.5rem;font:inherit;padding:.4rem;border-radius:8px;border:1px solid var(--linha);max-width:100%}

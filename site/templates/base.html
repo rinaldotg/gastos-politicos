@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ raiz }}static/style.css">
+{% if base_url %}<link rel="alternate" type="application/rss+xml" title="Atualizações" href="{{ raiz }}feed.xml">{% endif %}
 </head>
 <body data-raiz="{{ raiz }}">
 <a class="pular" href="#conteudo">Ir para o conteúdo</a>
@@ -31,7 +32,7 @@
 </main>
 <footer class="rodape">
   <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}Atualizado em {{ atualizado }}; a rotina roda todo mês.{% endif %}</p>
-  <p><a href="{{ raiz }}novidades/">O que mudou</a> · <a href="{{ raiz }}sem-autor/">Emendas sem autor identificado</a> · <a href="{{ raiz }}sobre/">Fontes e método</a></p>
+  <p><a href="{{ raiz }}novidades/">O que mudou</a> · <a href="{{ raiz }}glossario/">Glossário</a>{% if base_url %} · <a href="{{ raiz }}feed.xml">RSS</a>{% endif %} · <a href="{{ raiz }}sem-autor/">Emendas sem autor identificado</a> · <a href="{{ raiz }}sobre/">Fontes e método</a></p>
   <p>Gasto não é irregularidade: os valores mostram o que foi pago dentro das regras de cada cota. <a href="{{ raiz }}sobre/">Entenda o que está e o que não está nos números.</a></p>
 </footer>
 <script src="{{ raiz }}static/app.js" defer></script>

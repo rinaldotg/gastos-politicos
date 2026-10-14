@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <p class="voltar"><a href="{{ raiz }}">← Início</a></p>
+  <h1>{{ nome_uf }}</h1>
+  <p class="apoio">Quanto os deputados e senadores de {{ nome_uf }} gastaram e quanto o estado recebeu em emendas, por área. Para ver o dinheiro por município, use a <a href="{{ raiz }}municipios/">busca de municípios</a>.</p>
+</section>
+{% for titulo, lista, rotulo in (("Deputados federais", deps, "deputados"), ("Senadores", sens, "senadores")) %}
+{% if lista %}
+<section class="bloco">
+  <h2>{{ titulo }} ({{ lista | length }})</h2>
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Nome</th><th>Partido</th><th class="num">Cota em {{ ano_ref }}</th><th class="num">Emendas pagas (desde 2014)</th></tr></thead>
+    <tbody>{% for l in lista %}<tr><td><a href="{{ raiz }}{{ l.x.url }}">{{ l.x.nome }}</a></td><td>{{ l.x.partido or '' }}</td><td class="num">{{ l.gasto | brl }}</td><td class="num">{{ l.em_pago | brl }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if loop.first %}<p class="nota">Quem ocupou o cargo só parte do período aparece com valores menores. Compare olhando o perfil de cada pessoa.</p>{% endif %}
+</section>
+{% endif %}
+{% endfor %}
+<section class="bloco">
+  <h2>Emendas pagas para {{ nome_uf }}, por área</h2>
+  {% if areas %}
+  <p>Soma de <strong>{{ total_areas | brl }}</strong> pagos desde 2014 em emendas individuais de parlamentares identificados, de qualquer estado, com destino a {{ nome_uf }}. Abra uma área para ver os municípios que mais receberam.</p>
+  <div class="areas">
+  {% for nome, a in areas %}
+    <details class="ano area"><summary><span class="ano-n area-n">{{ nome }}</span><span class="ano-barra" aria-hidden="true"><i style="width: {{ (a.pago / areas[0][1].pago * 100) | round(1) }}%"></i></span><span class="ano-v">{{ a.pago | brl }} pagos</span></summary>
+      <div class="tabela-rolavel"><table class="tabela">
+        <thead><tr><th>Município</th><th class="num">Pago</th></tr></thead>
+        <tbody>{% for m, v in a.mun %}<tr><td>{{ m }}</td><td class="num">{{ v | brl }}</td></tr>{% else %}<tr><td colspan="2">Nenhum município específico informado na fonte.</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <p class="nota">{{ a.n | milhar }} emendas nesta área; {{ a.emp | brl }} empenhados.{% if a.vagos %} Mais {{ a.vagos | brl }} foram para vários municípios de uma vez ou sem município informado na fonte, e por isso não aparecem na lista.{% endif %}</p>
+    </details>
+  {% endfor %}
+  </div>
+  {% else %}<p class="nota">Ainda não há detalhe de emendas para este estado.</p>{% endif %}
+</section>
+{% endblock %}

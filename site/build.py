@@ -15,6 +15,16 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 AQUI = Path(__file__).parent
+# Valores legais por mes (2026), como documentados em conteudo/o_que_cobre.md. Sao limites, nao gasto efetivo.
+CUSTO_MANDATO = {
+    "deputado_federal": dict(subsidio=46366.19, gabinete=165806.07, moradia=4253.00),
+    "senador": dict(subsidio=46366.19, gabinete=None, moradia=None),
+}
+UFS = {"AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas", "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal",
+       "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão", "MT": "Mato Grosso", "MS": "Mato Grosso do Sul", "MG": "Minas Gerais",
+       "PA": "Pará", "PB": "Paraíba", "PR": "Paraná", "PE": "Pernambuco", "PI": "Piauí", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
+       "RS": "Rio Grande do Sul", "RO": "Rondônia", "RR": "Roraima", "SC": "Santa Catarina", "SP": "São Paulo", "SE": "Sergipe", "TO": "Tocantins"}
+
 CARGOS = {
     "deputado_federal": ("deputado", "Deputado federal", "Deputados federais"),
     "senador": ("senador", "Senador", "Senadores"),
@@ -183,6 +193,11 @@ def main():
         e = emendas[pid][ano]
         e[0] += f(r["empenhado"]); e[1] += f(r["liquidado"]); e[2] += f(r["pago"])
         emendas_tipo[pid]["pix" if "Especiais" in r["tipo"] else "def"] += f(r["pago"])
+    rap = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0, 0.0]))  # pid -> ano -> [inscritos, cancelados, pagos]
+    for r in emag:
+        if r["pessoa_id"]:
+            e = rap[int(float(r["pessoa_id"]))][int(r["ano"])]
+            e[0] += f(r.get("rap_inscrito")); e[1] += f(r.get("rap_cancelado")); e[2] += f(r.get("rap_pago"))
     pix = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))  # pid -> ano -> [empenhado, pago]
     for r in emag:
         if r["pessoa_id"] and "Especiais" in r["tipo"]:
@@ -256,6 +271,7 @@ def main():
     env = Environment(loader=FileSystemLoader(AQUI / "templates"), autoescape=select_autoescape(["html"]))
     env.filters["brl"] = brl
     env.filters["curto"] = brl_curto
+    env.filters["brl2"] = lambda v: "R$ " + f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     env.filters["milhar"] = lambda v: f"{int(v):,}".replace(",", ".")
     env.filters["pct"] = lambda v: f"{v * 100:.0f}%".replace(".", ",")
     base_url = a.base_url.rstrip("/")
@@ -283,6 +299,15 @@ def main():
         forn_x = sorted(fornec.get(pid, []), key=lambda t: -t[1])[:15]
         em = sorted(emendas.get(pid, {}).items(), reverse=True)
         em_tot = [sum(e[i] for _, e in em) for i in range(3)]
+        em_exec = None
+        if em and em_tot[0] > 0:
+            corte = ano_atual - 2  # emendas de ate dois anos atras ja tiveram tempo de ser executadas
+            antigas = [e for a_, e in em if a_ <= corte]
+            ra = rap.get(pid, {})
+            em_exec = dict(pct=em_tot[2] / em_tot[0], corte=corte,
+                           emp_ant=sum(e[0] for e in antigas), pago_ant=sum(e[2] for e in antigas),
+                           rap_i=sum(v[0] for v in ra.values()), rap_c=sum(v[1] for v in ra.values()), rap_p=sum(v[2] for v in ra.values()))
+            em_exec["pct_ant"] = (em_exec["pago_ant"] / em_exec["emp_ant"]) if em_exec["emp_ant"] > 0 else None
         sig = None
         if x["cargo"] == "presidente":
             cartao = sum(fontes_ano[pid][y].get("pres_cpgf", 0) for y in fontes_ano[pid])
@@ -307,10 +332,10 @@ def main():
                 o["largura"] = max(0, o["total"]) / mx * 100
         html = env.get_template("pessoa.html").render(
             **{**ctx_base, "raiz": "../../"}, titulo=f"{x['nome']}: gastos desde 2014", p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
-            linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot,
+            linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
             em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x,
-            pos=posicao.get(pid) if x["cargo"] != "presidente" else None, tem_detalhe=bool(detalhe.get(pid)), desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
+            uf_url=(f"estado/{x['uf'].lower()}/" if x["uf"] in UFS else ""), pos=posicao.get(pid) if x["cargo"] != "presidente" else None, tem_detalhe=bool(detalhe.get(pid)), desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
                 f"{CARGOS[x['cargo']][1]} {x['nome']}: {brl_curto(total_geral)} em gastos desde 2014, por ano e por tipo de despesa."))
         escrever(f"{x['cod']}/{x['slug']}", html)
         dados = dict(id=pid, n=x["nome"], c=x["cod"], u=x["uf"], p=x["partido"], url=x["url"],
@@ -499,6 +524,44 @@ def main():
              d_emendas=snap["n_emendas"] - (ant or {}).get("n_emendas", 0), d_receb=snap["n_recebedores"] - (ant or {}).get("n_recebedores", 0),
              d_pago=snap["pago_emendas"] - (ant or {}).get("pago_emendas", 0)))
 
+
+    # ---- paginas de estado ----
+    ufs_por_nome = {sem_acento(n).upper(): s_ for s_, n in UFS.items()}
+    area_uf = defaultdict(lambda: defaultdict(lambda: dict(pago=0.0, emp=0.0, cods=set(), vagos=0.0, mun=defaultdict(float))))
+    for r in edet:
+        sig = ufs_por_nome.get(sem_acento(r.get("uf") or "").upper())
+        if not sig:
+            continue
+        a_ = area_uf[sig][r.get("funcao") or "Área não informada"]
+        a_["pago"] += f(r["pago"]); a_["emp"] += f(r["empenhado"]); a_["cods"].add(r.get("codigo"))
+        mun_ = nome_bonito(r.get("municipio") or "")
+        if sem_acento(mun_).lower() in ("multiplo", "sem informacao", ""):
+            a_["vagos"] = a_.get("vagos", 0.0) + f(r["pago"])  # varios municipios ou nao informado
+        else:
+            a_["mun"][mun_] += f(r["pago"])
+    for sig, nome_uf in UFS.items():
+        pes = [x for x in lista if x["uf"] == sig and x["cargo"] in ("deputado_federal", "senador")]
+        def linha_(x):
+            return dict(x=x, gasto=x["anos"].get(ano_ref, 0), em_pago=sum(e[2] for e in emendas.get(x["id"], {}).values()))
+        deps = sorted([linha_(x) for x in pes if x["cargo"] == "deputado_federal"], key=lambda t: -t["gasto"])
+        sens = sorted([linha_(x) for x in pes if x["cargo"] == "senador"], key=lambda t: -t["gasto"])
+        areas = sorted([(n_, dict(pago=v["pago"], emp=v["emp"], n=len(v["cods"]), vagos=v["vagos"], mun=sorted(v["mun"].items(), key=lambda t: -t[1])[:8]))
+                        for n_, v in area_uf.get(sig, {}).items() if v["pago"] > 0], key=lambda t: -t[1]["pago"])
+        escrever(f"estado/{sig.lower()}", env.get_template("estado.html").render(
+            **{**ctx_base, "raiz": "../../"}, titulo=f"{nome_uf}: gastos da bancada e emendas recebidas", sig=sig, nome_uf=nome_uf,
+            deps=deps, sens=sens, areas=areas, total_areas=sum(a_[1]["pago"] for a_ in areas),
+            descricao=f"Deputados e senadores de {nome_uf}: quanto gastaram e quanto o estado recebeu em emendas, por área."))
+    escrever("glossario", env.get_template("glossario.html").render(**{**ctx_base, "raiz": "../"}, titulo="Glossário",
+             descricao="O que significam empenhado, liquidado, pago, restos a pagar, emenda Pix, convênio, cota parlamentar e outros termos."))
+    if base_url:
+        (saida / "feed.xml").write_text('''<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Gastos Públicos: atualizações</title><link>{b}/</link>
+<description>Aviso de cada atualização mensal dos dados de gastos de parlamentares e da Presidência.</description><language>pt-BR</language>
+<item><title>Atualização de {d}</title><link>{b}/novidades/</link><guid isPermaLink="false">atualizacao-{iso}</guid>
+<description>Dados atualizados em {d}. Veja o que mudou desde a atualização anterior.</description></item>
+</channel></rss>
+'''.format(b=base_url, d=atualizado_txt, iso=atualizado), encoding="utf-8")
+
     resumo_home = {}
     for cargo in CARGOS:
         xs = [x for x in lista if x["cargo"] == cargo]
@@ -506,14 +569,14 @@ def main():
                                   rotulo=CARGOS[cargo][2])
     escrever("index.html", env.get_template("home.html").render(**ctx_base, titulo="Gastos dos parlamentares e da Presidência",
              resumo=resumo_home, descricao="Quanto deputados federais, senadores e a Presidência da República gastaram desde 2014, com o quê e com quem. Busque e compare.",
-             presidentes=[x for x in lista if x["cargo"] == "presidente"]))
+             presidentes=[x for x in lista if x["cargo"] == "presidente"], ufs=sorted(UFS.items(), key=lambda t: t[1])))
     escrever("comparar", env.get_template("comparar.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar gastos",
              descricao="Compare lado a lado os gastos de parlamentares e presidentes, ano a ano e por tipo de despesa."))
     escrever("sobre", env.get_template("sobre.html").render(**{**ctx_base, "raiz": "../"}, titulo="De onde vêm os dados e o que cada gasto cobre",
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "sobre/"] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

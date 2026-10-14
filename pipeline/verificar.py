@@ -44,7 +44,7 @@ def main():
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id ORDER BY SUM(valor) DESC) pos
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, fornecedor, cnpj_cpf) WHERE pos<=20""",
         "presidencia_unidades": "SELECT pessoa_id, fonte, ano, unidade, categoria, ROUND(SUM(valor),2) total, COUNT(*) n FROM gasto WHERE fonte LIKE 'pres%' GROUP BY 1,2,3,4,5",
-        "emenda_agregado": "SELECT pessoa_id, tipo, ano, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, COUNT(*) n FROM emenda GROUP BY 1,2,3",
+        "emenda_agregado": "SELECT pessoa_id, tipo, ano, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, COUNT(*) n, ROUND(SUM(rap_inscrito),2) rap_inscrito, ROUND(SUM(rap_cancelado),2) rap_cancelado, ROUND(SUM(rap_pago),2) rap_pago FROM emenda GROUP BY 1,2,3",
         "emenda_detalhe": """SELECT pessoa_id, codigo, numero, tipo, ano, uf, municipio, localidade, funcao, subfuncao, programa, acao,
                        ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago
                        FROM emenda WHERE pessoa_id IS NOT NULL""",

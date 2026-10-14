@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS emenda (
     acao TEXT,
     localidade TEXT,
     empenhado REAL, liquidado REAL, pago REAL,
+    rap_inscrito REAL, rap_cancelado REAL, rap_pago REAL,   -- restos a pagar (empenhos de anos anteriores)
     arquivo TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_emenda_pessoa ON emenda (pessoa_id, ano);

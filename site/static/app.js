@@ -631,6 +631,7 @@
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
   });
+  document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
