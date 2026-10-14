@@ -98,6 +98,10 @@ def main():
     orc = ler(a.resumo, "orcamento_acao")
     mand = ler(a.resumo, "mandato")
     logc = ler(a.resumo, "coleta_log")
+    try:
+        edet = ler(a.resumo, "emenda_detalhe")
+    except FileNotFoundError:
+        edet = []
 
     atualizado = max((r["coletado_em"] for r in logc), default="")[:10]
     atualizado_txt = ""
@@ -141,6 +145,20 @@ def main():
         e = emendas[pid][ano]
         e[0] += f(r["empenhado"]); e[1] += f(r["liquidado"]); e[2] += f(r["pago"])
         emendas_tipo[pid]["pix" if "Especiais" in r["tipo"] else "def"] += f(r["pago"])
+    pix = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))  # pid -> ano -> [empenhado, pago]
+    for r in emag:
+        if r["pessoa_id"] and "Especiais" in r["tipo"]:
+            e = pix[int(float(r["pessoa_id"]))][int(r["ano"])]
+            e[0] += f(r["empenhado"]); e[1] += f(r["pago"])
+    detalhe = defaultdict(list)
+    for r in edet:
+        if not r["pessoa_id"]:
+            continue
+        loc = f'{r["municipio"]}/{r["uf"]}' if r.get("municipio") and r.get("uf") else (r.get("localidade") or r.get("uf") or "")
+        detalhe[int(float(r["pessoa_id"]))].append([
+            int(r["ano"]), 1 if "Especiais" in r["tipo"] else 0, r.get("numero") or "", r.get("codigo") or "", loc,
+            r.get("funcao") or "", r.get("subfuncao") or "", r.get("programa") or "", r.get("acao") or "",
+            round(f(r["empenhado"])), round(f(r["liquidado"])), round(f(r["pago"]))])
     em_funcao = defaultdict(lambda: defaultdict(float))
     for r in efun:
         if r["pessoa_id"]:
@@ -251,7 +269,7 @@ def main():
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot,
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
             em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x,
-            pos=posicao.get(pid) if x["cargo"] != "presidente" else None, desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
+            pos=posicao.get(pid) if x["cargo"] != "presidente" else None, tem_detalhe=bool(detalhe.get(pid)), desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
                 f"{CARGOS[x['cargo']][1]} {x['nome']}: {brl_curto(total_geral)} em gastos desde 2014, por ano e por tipo de despesa."))
         escrever(f"{x['cod']}/{x['slug']}", html)
         dados = dict(id=pid, n=x["nome"], c=x["cod"], u=x["uf"], p=x["partido"], url=x["url"],
@@ -261,6 +279,18 @@ def main():
                      em={str(y): [round(v, 2) for v in e] for y, e in em})
         (saida / "data" / "p" / f"{pid}.json").write_text(json.dumps(dados, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
+    if detalhe:
+        (saida / "data" / "e").mkdir(parents=True)
+        for x in lista:
+            linhas = sorted(detalhe.get(x["id"], []), key=lambda t: (-t[11], -t[9]))
+            if linhas:
+                (saida / "data" / "e" / f"{x['id']}.json").write_text(json.dumps(linhas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    pix_lista = [[x["nome"], x["url"], x["cod"], x["uf"] or "", x["partido"] or "",
+                  {str(y): [round(v[0]), round(v[1])] for y, v in sorted(pix[x["id"]].items())}] for x in lista if x["id"] in pix]
+    (saida / "data" / "pix.json").write_text(json.dumps(pix_lista, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    escrever("emendas-pix", env.get_template("pix.html").render(**{**ctx_base, "raiz": "../"}, titulo="Quem mais usa emendas Pix",
+             descricao="Ranking de deputados e senadores por valor de emendas Pix (transferências especiais) indicadas e pagas.",
+             anos=sorted({int(y) for t in pix_lista for y in t[5]}, reverse=True)))
     busca = [dict(n=x["nome"], a=slugify(x["nome"]).replace("-", " "), c=x["cod"], u=x["uf"] or "", p=x["partido"] or "",
                   url=x["url"], id=x["id"]) for x in lista]
     (saida / "data" / "busca.json").write_text(json.dumps(busca, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -280,7 +310,7 @@ def main():
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "comparar/", "sobre/"] + [x["url"] for x in lista]
+    urls = ["", "comparar/", "emendas-pix/", "sobre/"] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

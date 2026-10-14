@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Quem mais usa emendas Pix</h1>
+  <p class="apoio">Emendas Pix são transferências especiais: o dinheiro vai direto para estados e municípios, sem convênio e sem projeto detalhado antes do repasse. Lista dos que mais indicaram, do maior para o menor.</p>
+</section>
+<section class="ranking" data-pix>
+  <div class="ranking-cab">
+    <h2>Ranking</h2>
+    <div class="controles">
+      <label>Cargo
+        <select data-p-cargo>
+          <option value="">Deputados e senadores</option>
+          <option value="deputado">Deputados federais</option>
+          <option value="senador">Senadores</option>
+        </select>
+      </label>
+      <label>Ano da emenda
+        <select data-p-ano>
+          <option value="">Todos os anos</option>
+          {% for a in anos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ordenar por
+        <select data-p-ordem>
+          <option value="1">Valor pago</option>
+          <option value="0">Valor empenhado</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <p class="em-resumo" data-p-resumo aria-live="polite"></p>
+  <div class="tabela-rolavel">
+    <table class="tabela">
+      <thead><tr><th class="pos">#</th><th>Nome</th><th>UF</th><th>Partido</th><th class="num">Empenhado</th><th class="num">Pago</th></tr></thead>
+      <tbody data-p-corpo></tbody>
+    </table>
+  </div>
+  <button type="button" class="botao botao-leve" data-p-mais hidden>Mostrar mais</button>
+  <p class="nota">Empenhado é o valor reservado no orçamento; pago, o que já saiu do caixa. Emendas Pix sem autor identificado na fonte não aparecem. Cada nome leva ao perfil, onde dá para ver cada emenda e o município de destino.</p>
+</section>
+{% endblock %}

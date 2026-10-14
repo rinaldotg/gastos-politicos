@@ -164,10 +164,97 @@
     iniciarBusca(form, function (d) { adicionar(d.id).then(function () { url(); render(); }); });
   }
 
+
+  /* ---------- emendas de uma pessoa ---------- */
+  // linha: [ano, pix(1)/definida(0), numero, codigo, destino, funcao, subfuncao, programa, acao, empenhado, liquidado, pago]
+  function iniciarEmendas(box) {
+    var id = box.getAttribute('data-id'), tipo = 'todas', ano = '', limite = 25, linhas = [];
+    var corpo = box.querySelector('[data-corpo]'), resumo = box.querySelector('[data-resumo]'), mais = box.querySelector('[data-mais]');
+    var selAno = box.querySelector('[data-ano]'), destinos = box.querySelector('[data-destinos]');
+    function filtradas() {
+      return linhas.filter(function (l) {
+        return (tipo === 'todas' || (tipo === 'pix' ? l[1] === 1 : l[1] === 0)) && (!ano || String(l[0]) === ano);
+      });
+    }
+    function render() {
+      var f = filtradas(), emp = 0, pago = 0, dest = {};
+      f.forEach(function (l) { emp += l[9]; pago += l[11]; if (l[4]) dest[l[4]] = (dest[l[4]] || 0) + l[11]; });
+      var rot = tipo === 'pix' ? 'emendas Pix' : tipo === 'def' ? 'emendas com finalidade definida' : 'emendas individuais';
+      resumo.textContent = f.length ? (f.length + ' lançamentos de ' + rot + (ano ? ' de ' + ano : '') + ': ' + brl(emp) + ' empenhados e ' + brl(pago) + ' pagos.')
+                                   : 'Nenhuma emenda neste filtro.';
+      corpo.textContent = '';
+      f.slice(0, limite).forEach(function (l) {
+        var area = [l[5], l[6]].filter(Boolean).join(' · ');
+        var acao = [l[7], l[8]].filter(Boolean).join(' · ');
+        corpo.appendChild(el('tr', {}, [
+          el('td', { text: String(l[0]) }),
+          el('td', {}, [document.createTextNode((l[1] ? 'Pix' : 'Finalidade definida') + (l[2] ? ' nº ' + l[2] : ''))]),
+          el('td', { text: l[4] || '—' }),
+          el('td', {}, [document.createTextNode(area || '—'), acao ? el('small', { text: acao }) : document.createTextNode('')]),
+          el('td', { class: 'num', text: brl(l[9]) }), el('td', { class: 'num', text: brl(l[11]) })
+        ]));
+      });
+      mais.hidden = f.length <= limite;
+      mais.textContent = 'Mostrar mais (' + (f.length - limite) + ')';
+      destinos.textContent = '';
+      Object.keys(dest).sort(function (a, b) { return dest[b] - dest[a]; }).slice(0, 8).forEach(function (k) {
+        if (dest[k] > 0) destinos.appendChild(el('li', {}, [el('span', { text: k }), el('span', { class: 'num', text: brl(dest[k]) })]));
+      });
+    }
+    box.querySelectorAll('[data-tipo]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        tipo = b.getAttribute('data-tipo'); limite = 25;
+        box.querySelectorAll('[data-tipo]').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+        render();
+      });
+    });
+    selAno.addEventListener('change', function () { ano = selAno.value; limite = 25; render(); });
+    mais.addEventListener('click', function () { limite += 50; render(); });
+    get('data/e/' + id + '.json').then(function (d) {
+      linhas = d;
+      var anos = {}; d.forEach(function (l) { anos[l[0]] = 1; });
+      Object.keys(anos).sort().reverse().forEach(function (a) { selAno.appendChild(el('option', { value: a, text: a })); });
+      render();
+    }).catch(function () { resumo.textContent = 'Não foi possível carregar o detalhe das emendas.'; });
+  }
+
+  /* ---------- ranking de emendas Pix ---------- */
+  function iniciarPix(sec) {
+    var selC = sec.querySelector('[data-p-cargo]'), selA = sec.querySelector('[data-p-ano]'), selO = sec.querySelector('[data-p-ordem]');
+    var corpo = sec.querySelector('[data-p-corpo]'), mais = sec.querySelector('[data-p-mais]'), resumo = sec.querySelector('[data-p-resumo]');
+    var dados = [], limite = 30;
+    function render() {
+      var ordem = Number(selO.value), ano = selA.value, tot = [0, 0];
+      var lista = dados.filter(function (d) { return !selC.value || d[2] === selC.value; }).map(function (d) {
+        var v = [0, 0];
+        Object.keys(d[5]).forEach(function (a) { if (!ano || a === ano) { v[0] += d[5][a][0]; v[1] += d[5][a][1]; } });
+        return { d: d, v: v };
+      }).filter(function (x) { return x.v[0] > 0 || x.v[1] > 0; }).sort(function (a, b) { return b.v[ordem] - a.v[ordem]; });
+      lista.forEach(function (x) { tot[0] += x.v[0]; tot[1] += x.v[1]; });
+      resumo.textContent = lista.length + ' parlamentares' + (ano ? ' com emendas Pix de ' + ano : ' com emendas Pix') + ': ' + brl(tot[0]) + ' empenhados e ' + brl(tot[1]) + ' pagos.';
+      corpo.textContent = '';
+      lista.slice(0, limite).forEach(function (x, i) {
+        corpo.appendChild(el('tr', {}, [
+          el('td', { class: 'pos', text: String(i + 1) }),
+          el('td', {}, [el('a', { href: RAIZ + x.d[1], text: x.d[0] })]),
+          el('td', { text: x.d[3] }), el('td', { text: x.d[4] }),
+          el('td', { class: 'num', text: brl(x.v[0]) }), el('td', { class: 'num', text: brl(x.v[1]) })
+        ]));
+      });
+      mais.hidden = lista.length <= limite;
+      mais.textContent = 'Mostrar mais (' + (lista.length - limite) + ')';
+    }
+    [selC, selA, selO].forEach(function (s) { s.addEventListener('change', function () { limite = 30; render(); }); });
+    mais.addEventListener('click', function () { limite += 50; render(); });
+    get('data/pix.json').then(function (d) { dados = d; render(); });
+  }
+
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
   });
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
+  document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
+  var px = document.querySelector('[data-pix]'); if (px) iniciarPix(px);
   var c = document.querySelector('[data-comparacao]'); if (c) iniciarComparacao(c, document.querySelector('[data-comparar]'));
 })();

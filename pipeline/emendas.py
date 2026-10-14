@@ -91,10 +91,13 @@ def carregar(con, desde):
                       col(l, "Número da emenda", "Numero da emenda"), col(l, "UF") or None,
                       col(l, "Município", "Municipio") or None, col(l, "Nome Função", "Nome Funcao") or None,
                       col(l, "Nome Subfunção", "Nome Subfuncao") or None,
+                      col(l, "Nome Programa") or None, col(l, "Nome Ação", "Nome Acao") or None,
+                      col(l, "Localidade de aplicação do recurso", "Localidade de aplicacao do recurso") or None,
                       c.numero(col(l, "Valor Empenhado")), c.numero(col(l, "Valor Liquidado")),
                       c.numero(col(l, "Valor Pago")), "emendas:unico"))
     con.executemany("""INSERT INTO emenda (pessoa_id, autor, tipo, codigo, ano, numero, uf, municipio, funcao,
-                       subfuncao, empenhado, liquidado, pago, arquivo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", saida)
+                       subfuncao, programa, acao, localidade, empenhado, liquidado, pago, arquivo)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", saida)
     c.log(con, "portal", "emendas", None, len(saida))
     con.commit()
     if sem:

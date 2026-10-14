@@ -66,6 +66,12 @@ def abrir_banco(caminho):
     Path(caminho).parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(caminho)
     con.executescript((Path(__file__).parent / "schema.sql").read_text(encoding="utf-8"))
+    # bancos criados por versoes antigas: acrescenta colunas novas
+    existentes = {r[1] for r in con.execute("PRAGMA table_info(emenda)")}
+    for coluna in ("programa", "acao", "localidade"):
+        if coluna not in existentes:
+            con.execute(f"ALTER TABLE emenda ADD COLUMN {coluna} TEXT")
+    con.commit()
     return con
 
 

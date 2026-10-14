@@ -44,6 +44,9 @@ def main():
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, fornecedor, cnpj_cpf) WHERE pos<=20""",
         "presidencia_unidades": "SELECT pessoa_id, fonte, ano, unidade, categoria, ROUND(SUM(valor),2) total, COUNT(*) n FROM gasto WHERE fonte LIKE 'pres%' GROUP BY 1,2,3,4,5",
         "emenda_agregado": "SELECT pessoa_id, tipo, ano, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, COUNT(*) n FROM emenda GROUP BY 1,2,3",
+        "emenda_detalhe": """SELECT pessoa_id, codigo, numero, tipo, ano, uf, municipio, localidade, funcao, subfuncao, programa, acao,
+                       ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago
+                       FROM emenda WHERE pessoa_id IS NOT NULL""",
         "emenda_funcao": "SELECT pessoa_id, ano, funcao, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NOT NULL GROUP BY 1,2,3",
         "emenda_sem_vinculo": "SELECT autor, tipo, COUNT(*) n, ROUND(SUM(pago),2) pago FROM emenda WHERE pessoa_id IS NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 300",
         "orcamento_acao": "SELECT pessoa_id, ano, mes, orgao, programa, acao, ROUND(empenhado,2) empenhado, ROUND(liquidado,2) liquidado, ROUND(pago,2) pago FROM orcamento_acao",

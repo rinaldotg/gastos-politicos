@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS emenda (
     municipio TEXT,
     funcao TEXT,
     subfuncao TEXT,
+    programa TEXT,
+    acao TEXT,
+    localidade TEXT,
     empenhado REAL, liquidado REAL, pago REAL,
     arquivo TEXT NOT NULL
 );
