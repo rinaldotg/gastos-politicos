@@ -214,6 +214,9 @@ def main():
     for r in mensal:
         if f(r["total"]) != 0:
             meses[int(r["pessoa_id"])][int(r["ano"])] += 1
+    forn_doc = defaultdict(list)  # pid -> (fornecedor, total, documento)
+    for r in forn:
+        forn_doc[int(r["pessoa_id"])].append((r["fornecedor"], f(r["total"]), re.sub(r"\D", "", r.get("cnpj_cpf") or "")))
     fornec = defaultdict(list)
     for r in forn:
         fornec[int(r["pessoa_id"])].append((r["fornecedor"], f(r["total"]), int(r["n"])))
@@ -500,6 +503,7 @@ def main():
                 r=[[k[1], k[0], {str(ap_): round(v_) for ap_, v_ in ys.items()}] for k, ys in rs[:1500]], nr=len(rs)))
             indice_m.append([m_["n"], sl, {str(ap_): [round(v_), len(ps_)] for ap_, (v_, ps_) in por_ano.items()}, populacao.get(sl)])
         gravar("municipios.json", sorted(indice_m, key=lambda t: -t[2].get("0", [0])[0]))
+        gravar("tce-lista.json", {sl_: sorted(tc[sl_]["f"]) for sl_ in tc if sl_ in muni and tc[sl_]["f"]})
         anos_lista = sorted((a_ for a_ in anos_pag if a_), reverse=True)
         for pagina, titulo_, desc_ in (("municipio", "Emendas recebidas por município", "Quanto cada município recebeu em emendas parlamentares, de quais parlamentares e para quais recebedores."),
                                        ("municipios", "Municípios", "Busque seu município e veja quanto recebeu em emendas parlamentares e de quem."),
@@ -549,6 +553,36 @@ def main():
         nomes_sa = []
     escrever("sem-autor", env.get_template("sem_autor.html").render(**{**ctx_base, "raiz": "../"}, titulo="Emendas sem autor identificado",
              descricao="Emendas que o site não consegue atribuir a um parlamentar, por quê, e quanto dinheiro representam.", cats=cats_sa, nomes=nomes_sa))
+
+    # ---- pontos de atencao: padroes factuais nos dados publicos (nao afirmam irregularidade) ----
+    NORMAL = re.compile(r"AEREA|AIRLINES|\bGOL\b|\bTAM\b|AZUL|LATAM|CORREIOS|TELEFONICA|\bCLARO\b|\bVIVO\b|\bTIM\b|LOCALIZA|MOVIDA|UNIDAS|HOTEL|ENERGIA|COMPANHIA|PETROBRAS|POSTO|IPIRANGA|SHELL", re.I)
+    at_obras, at_rec, at_forn = [], [], []
+    try:
+        for doc_, r_ in rec.items():
+            dg_ = re.sub(r"\D", "", doc_).zfill(14)
+            if dg_ in BANCOS:
+                continue
+            for o_ in obras_cnpj.get(dg_, []):
+                if o_[2] == "Paralisada":
+                    at_obras.append([o_[1], r_["n"], r_["l"], o_[3], o_[4], o_[5], re.sub(r"\D", "", doc_)])
+        at_obras = sorted(at_obras, key=lambda t: -t[4])[:40]
+        at_rec = [t for t in rank_json.get("", {}).get("q", []) if re.sub(r"\D", "", t[1]).zfill(14) not in BANCOS][:30]
+    except NameError:
+        pass
+    for x in lista:
+        if x["cargo"] == "presidente":
+            continue
+        tot_ = sum(x["anos"].values())
+        if tot_ < 200000:
+            continue
+        for nome_, v_, doc_ in sorted(forn_doc.get(x["id"], []), key=lambda t: -t[1])[:3]:
+            if len(doc_) == 14 and v_ / tot_ >= 0.25 and not NORMAL.search(sem_acento(nome_)):
+                at_forn.append([x["nome"], x["url"], x["uf"] or "", x["partido"] or "", nome_, doc_, round(v_), v_ / tot_])
+                break
+    at_forn = sorted(at_forn, key=lambda t: -t[6])[:40]
+    escrever("atencao", env.get_template("atencao.html").render(**{**ctx_base, "raiz": "../"}, titulo="Pontos de atenção",
+             descricao="Padrões nos dados públicos que valem uma pergunta ao responsável. Não indicam irregularidade.",
+             obras=at_obras, recebedores=at_rec, fornecedores=at_forn))
 
     # ---- novidades: compara com a atualizacao anterior ----
     snap = dict(data=atualizado, ano=ano_atual,
@@ -638,7 +672,7 @@ def main():
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

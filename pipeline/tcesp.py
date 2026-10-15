@@ -21,8 +21,8 @@ PAGINA = "https://transparencia.tce.sp.gov.br/municipio/{slug}"
 RE_EMENDA = re.compile(r"EMENDAS? PARLAMENTAR|EMENDA (IMPOSITIVA|INDIVIDUAL|DE BANCADA|ESPECIAL|PIX)|TRANSFERENCIA ESPECIAL|EMENDAS? (DO|DA) (DEPUTAD|SENAD|VEREAD)")
 ALIAS = {"embu": "embu-das-artes"}  # nome no Portal da Transparencia federal x nome no TCE-SP
 LISTA = "https://transparencia.tce.sp.gov.br/api/json/municipios"
-ANO_MIN = 2023
-N_MUNICIPIOS = 12
+ANO_MIN = 2024
+N_MUNICIPIOS = 30
 RETER = 300  # pagamentos de fonte federal guardados por municipio e ano (alem dos que citam emenda)
 
 

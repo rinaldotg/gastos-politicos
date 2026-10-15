@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Pontos de atenção</h1>
+  <p class="apoio">Padrões que aparecem nos dados públicos e que valem uma pergunta ao responsável. <strong>Nenhum deles indica irregularidade</strong>: cada um tem explicações normais, e a lista serve para saber o que perguntar, não para acusar.</p>
+</section>
+<section class="bloco">
+  <h2>Obras paralisadas em quem recebeu emendas</h2>
+  {% if obras %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Obra</th><th>Executor</th><th>Tipo</th><th class="num">Valor previsto</th><th>Término previsto</th></tr></thead>
+    <tbody>{% for o in obras %}<tr><td>{{ o[0] }}</td><td><a href="{{ raiz }}recebedor/?d={{ o[6] }}">{{ o[1] }}</a>{% if o[2] %}<small>{{ o[2] }}</small>{% endif %}</td><td>{{ o[3] }}</td><td class="num">{{ o[4] | brl }}</td><td>{{ o[5] or "—" }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Obras federais do Obras.gov.br com situação "Paralisada", cujo executor também recebeu emendas. A plataforma não diz de qual emenda veio a obra. Paralisação pode ter causa técnica, judicial ou de licença; pergunte ao executor o motivo e o prazo de retomada.</p>
+  {% else %}<p class="nota">Esta atualização não trouxe dados de obras.</p>{% endif %}
+</section>
+<section class="bloco">
+  <h2>Recebedores de emendas de muitos parlamentares</h2>
+  {% if recebedores %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Recebedor</th><th class="num">Parlamentares</th><th class="num">Total recebido</th></tr></thead>
+    <tbody>{% for r in recebedores %}<tr><td><a href="{{ raiz }}recebedor/?d={{ r[1] | urlencode }}">{{ r[0] }}</a><small>{{ r[1] }}</small></td><td class="num">{{ r[3] }}</td><td class="num">{{ r[2] | brl }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Ser procurado por vários parlamentares é comum em hospitais, associações e prefeituras grandes. Vale conferir se o recurso de cada um tem finalidade e prestação de contas separadas.</p>
+  {% endif %}
+</section>
+<section class="bloco">
+  <h2>Cota concentrada em um único fornecedor</h2>
+  {% if fornecedores %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Parlamentar</th><th>Fornecedor</th><th class="num">Valor</th><th class="num">% da cota</th></tr></thead>
+    <tbody>{% for f in fornecedores %}<tr><td><a href="{{ raiz }}{{ f[1] }}">{{ f[0] }}</a><small>{{ f[2] }}{% if f[3] %} · {{ f[3] }}{% endif %}</small></td><td>{{ f[4] }}<small>CNPJ {{ f[5] }}</small></td><td class="num">{{ f[6] | brl }}</td><td class="num">{{ (f[7] * 100) | round(0) | int }}%</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Parlamentares em que um mesmo fornecedor (pessoa jurídica) concentra 25% ou mais de toda a cota desde 2014. Companhias aéreas, correios, telefonia, hotéis e combustível ficam de fora por concentrarem naturalmente. Concentração pode ser normal (único prestador na região, contrato contínuo); a pergunta útil é como o fornecedor foi escolhido e que serviço entregou.</p>
+  {% else %}<p class="nota">Nenhum caso nesta atualização.</p>{% endif %}
+</section>
+{% endblock %}

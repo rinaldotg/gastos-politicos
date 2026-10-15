@@ -12,14 +12,17 @@
 
 <section aria-label="Por onde começar">
   <h2>O que você quer saber?</h2>
+  <p class="apoio">O caminho do dinheiro: <strong>parlamentar → emenda → quem recebeu → município → onde foi gasto</strong>. Escolha por onde começar.</p>
   <div class="cartoes">
-    <a class="cartao" href="municipios/"><strong>Meu município</strong><span>Quanto chegou em emendas e de quais parlamentares.</span></a>
-    <div class="cartao"><strong>Meu estado</strong><span>Bancada, gastos e emendas por área.</span>
+    <a class="cartao" href="#ranking"><strong>O que meu deputado ou senador gastou?</strong><span>Busque o nome acima: cota mês a mês, emendas e para onde foram.</span></a>
+    <a class="cartao" href="municipios/"><strong>O que chegou à minha cidade?</strong><span>Emendas recebidas, de quais parlamentares e, em alguns municípios de São Paulo, onde a prefeitura gastou.</span></a>
+    <a class="cartao" href="recebedores/"><strong>Quem recebeu o dinheiro?</strong><span>Prefeituras, fundos, empresas e entidades que mais recebem emendas.</span></a>
+    <div class="cartao"><strong>Como está meu estado?</strong><span>Bancada, gastos e emendas por área.</span>
       <select data-uf-select aria-label="Escolha o estado"><option value="">Escolher estado…</option>{% for s, n in ufs %}<option value="{{ s | lower }}">{{ n }}</option>{% endfor %}</select></div>
-    <a class="cartao" href="recebedores/"><strong>Quem recebe o dinheiro</strong><span>Empresas, prefeituras e entidades que mais recebem emendas.</span></a>
-    <a class="cartao" href="emendas-pix/"><strong>Emendas Pix</strong><span>Quem mais usa a transferência direta, sem convênio.</span></a>
-    {% if presidentes %}<a class="cartao" href="{{ presidentes[-1].url }}"><strong>Presidência</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
-    <a class="cartao" href="novidades/"><strong>O que mudou</strong><span>Novidades desde a última atualização.</span></a>
+    <a class="cartao" href="atencao/"><strong>O que vale perguntar?</strong><span>Obras paralisadas, recebedores muito procurados e concentração de fornecedores: fatos, sem acusação.</span></a>
+    <a class="cartao" href="emendas-pix/"><strong>Quem usa a emenda Pix?</strong><span>Transferência direta, sem convênio nem projeto prévio.</span></a>
+    {% if presidentes %}<a class="cartao" href="{{ presidentes[-1].url }}"><strong>E a Presidência?</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
+    <a class="cartao" href="novidades/"><strong>O que mudou?</strong><span>Novidades desde a última atualização.</span></a>
   </div>
 </section>
 

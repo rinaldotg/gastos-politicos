@@ -304,9 +304,13 @@
       });
       destinos.textContent = '';
       Object.keys(dest).sort(function (a, b) { return dest[b] - dest[a]; }).slice(0, 8).forEach(function (k) {
-        if (dest[k] > 0) destinos.appendChild(el('li', {}, [el('span', { text: k }), el('span', { class: 'num', text: brl(dest[k]) })]));
+        if (dest[k] <= 0) return;
+        var sl_ = slug(k.replace('/', '-')), nome_ = [locLink(k)];
+        if (TCE && TCE[sl_]) nome_.push(el('small', {}, [document.createTextNode(' · '), el('a', { href: RAIZ + 'municipio/?m=' + sl_ + '#tce', text: 'ver onde a prefeitura gastou' })]));
+        destinos.appendChild(el('li', {}, [el('span', {}, nome_), el('span', { class: 'num', text: brl(dest[k]) })]));
       });
     }
+    box.addEventListener('tce', function () { if (linhas.length) render(); });
     box.querySelectorAll('[data-tipo]').forEach(function (b) {
       b.addEventListener('click', function () {
         tipo = b.getAttribute('data-tipo'); limites = {};
@@ -358,6 +362,11 @@
 
 
   /* ---------- tela: todos os recebedores de uma emenda ---------- */
+  var TCE = null;
+  function carregarTce() {
+    if (TCE) return Promise.resolve(TCE);
+    return get('data/tce-lista.json').then(function (t) { TCE = t; return t; }).catch(function () { TCE = {}; return TCE; });
+  }
   var RE_PUBLICO = /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i;
   function trilhaEmenda(box, d, p, cod, linhas, cs) {
     var i = d.i, tot = linhas.reduce(function (s, r) { return s + r[4]; }, 0), pub = 0, nPub = 0;
@@ -373,8 +382,16 @@
       ['5. A partir daqui', nPub ? 'O gasto é do município ou estado. Procure o empenho no portal de transparência dele, consulte SIOPS (saúde) ou SIOPE (educação) e o Tribunal de Contas do estado; ou use o modelo de pedido no fim desta página.' :
         'Peça ao recebedor o objeto, a prestação de contas e as notas fiscais; o modelo de pedido está no fim desta página.']
     ];
-    var ol = box.querySelector('[data-e-trilha-passos]');
-    passos.forEach(function (x) { ol.appendChild(el('li', {}, [el('strong', { text: x[0] + ' — ' }), document.createTextNode(x[1])])); });
+    var ol = box.querySelector('[data-e-trilha-passos]'), vistos = {}, ligas = [];
+    linhas.forEach(function (r) {
+      var sl = slug((r[3] || '').replace('/', '-'));
+      if (TCE && TCE[sl] && !vistos[sl] && ligas.length < 3) { vistos[sl] = 1; ligas.push(el('a', { href: RAIZ + 'municipio/?m=' + sl + '#tce', text: 'Despesa de ' + r[3] + ' (TCE-SP) →' })); }
+    });
+    passos.forEach(function (x, n) {
+      var li = el('li', {}, [el('strong', { text: x[0] + ' — ' }), document.createTextNode(x[1])]);
+      if (n === 4 && ligas.length) { li.appendChild(document.createTextNode(' Neste caso já dá para ver para onde o município gastou: ')); ligas.forEach(function (a, j) { if (j) li.appendChild(document.createTextNode(' · ')); li.appendChild(a); }); }
+      ol.appendChild(li);
+    });
     box.hidden = false;
   }
   function iniciarTelaEmenda(sec) {
@@ -443,7 +460,7 @@
       var tx = document.querySelector('[data-e-modelo]'); tx.value = mod.replace(/\\n/g, '\n');
       var ac = document.querySelector('[data-e-modelo-acoes]'); ac.appendChild(copiar(tx.value, 'Copiar modelo'));
       document.querySelector('[data-e-cobrar]').hidden = false;
-      trilhaEmenda(document.querySelector('[data-e-trilha]'), d, p, cod, linhas, cs);
+      carregarTce().then(function () { trilhaEmenda(document.querySelector('[data-e-trilha]'), d, p, cod, linhas, cs); });
       lista.querySelector('[data-e-cont]').textContent = linhas.length + ' recebedores';
       lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });
@@ -800,7 +817,7 @@
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
-  document.querySelectorAll('[data-emendas]').forEach(iniciarEmendas);
+  document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
   var pm_ = document.querySelector('[data-pm]'); if (pm_) iniciarMeses(pm_);
   var tr_ = document.querySelector('[data-recebedor]'); if (tr_) iniciarTelaRecebedor(tr_);
