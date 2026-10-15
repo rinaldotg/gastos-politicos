@@ -12,6 +12,25 @@
     {% if uf_url %}<a class="botao botao-leve" href="{{ raiz }}{{ uf_url }}">Ver o estado {{ p.uf }}</a>{% endif %}
     {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
   </header>
+  {% if painel %}
+  <section class="bloco painel-pares">
+    <h2>O voto está valendo a pena? Compare com os pares</h2>
+    <p>Período: {{ painel.periodo }} até hoje ({{ painel.meses }} {{ 'mês' if painel.meses == 1 else 'meses' }} de mandato com cota registrada). Pares: {{ painel.escopo }}, {{ painel.n }} {{ 'parlamentares' }}. <strong>Cada linha mede uma coisa diferente e não há nota única</strong>: quem gasta menos nem sempre entrega mais, e o contrário também.</p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Indicador</th><th class="num">{{ p.nome }}</th><th class="num">Mediana dos pares</th><th class="num">Posição entre os pares</th></tr></thead>
+      <tbody>
+      {% for l in painel.linhas %}
+      <tr><td>{{ l.rot }}<small>{{ 'menor valor = gasta menos' if l.menor else 'maior valor = mais' }}</small></td>
+        <td class="num">{% if l.v is none %}—{% elif l.fmt == 'brl' %}{{ l.v | brl }}{% elif l.fmt == 'pct' %}{{ l.v | round(0) | int }}%{% else %}{{ l.v | int }}{% endif %}</td>
+        <td class="num">{% if l.mediana is none %}—{% elif l.fmt == 'brl' %}{{ l.mediana | brl }}{% elif l.fmt == 'pct' %}{{ l.mediana | round(0) | int }}%{% else %}{{ l.mediana | round(1) }}{% endif %}</td>
+        <td class="num">{% if l.pos %}{{ l.pos }}º {{ 'menor' if l.menor else 'maior' }} de {{ l.n }}{% else %}sem dados suficientes{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="nota">Como ler: a cota varia com o estado (distância de Brasília), por isso a comparação é com pares do mesmo estado sempre que há ao menos 5. "Projetos" são só projetos de lei, PEC e decretos legislativos em que a pessoa é autora principal, sem contar requerimentos. "Viraram norma" mostra o resultado final de aprovação, que depende também do tema e da articulação política. A presença mede votações nominais entre o primeiro e o último voto da pessoa no ano; não inclui comissões. Dados de atuação da Câmara vêm dos arquivos abertos da Câmara e os do Senado, da API de processos; a presença só existe para deputados por enquanto. Veja a <a href="{{ raiz }}pares/">tabela completa dos pares</a>.</p>
+  </section>
+  {% endif %}
+
 
   {% if p.cargo == 'presidente' %}
   <aside class="aviso">

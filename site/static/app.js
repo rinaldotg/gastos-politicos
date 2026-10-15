@@ -616,6 +616,57 @@
     }).catch(function () { sec.hidden = true; });
   }
 
+  /* ---------- pares ---------- */
+  function iniciarPares(sec) {
+    var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]');
+    var cab = document.querySelector('[data-p-cab]'), corpo = document.querySelector('[data-p-corpo]'), mais = document.querySelector('[data-p-mais]');
+    var dados = null, ordem = 6, asc = true, limite = 60, atuais = [];
+    function fmt(v, f) { return v === null || v === undefined ? '—' : f === 'brl' ? brl(v) : f === 'pct' ? Math.round(v) + '%' : String(Math.round(v)); }
+    function med(v) { v = v.filter(function (x) { return x !== null; }).sort(function (a, b) { return a - b; }); return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null; }
+    function render() {
+      if (!dados) return;
+      var nq = norm(q.value.trim());
+      var base = dados.linhas.filter(function (l) { return l[5] === selC.value && (!selU.value || l[3] === selU.value); });
+      var ind = dados.ind;
+      cab.textContent = '';
+      var tr = el('tr', {}, [el('th', { text: 'Parlamentar' }), el('th', { text: 'UF' }), el('th', { text: 'Partido' })]);
+      ind.forEach(function (x, i) {
+        var th = el('th', { class: 'num', title: x[2] ? 'menor valor = gasta menos' : 'maior valor = mais', 'aria-sort': ordem === 6 + i ? (asc ? 'ascending' : 'descending') : 'none' });
+        var b = el('button', { type: 'button', class: 'botao-th', text: x[1] + (ordem === 6 + i ? (asc ? ' ↑' : ' ↓') : '') });
+        b.addEventListener('click', function () { if (ordem === 6 + i) asc = !asc; else { ordem = 6 + i; asc = !!x[2]; } limite = 60; render(); });
+        th.appendChild(b); tr.appendChild(th);
+      });
+      tr.appendChild(el('th', { class: 'num', text: 'Meses' }));
+      cab.appendChild(tr);
+      var lista = base.filter(function (l) { return !nq || norm(l[1]).indexOf(nq) >= 0; }).sort(function (a, b) {
+        var x = a[ordem], y = b[ordem];
+        if (x === null) return 1; if (y === null) return -1;
+        return asc ? x - y : y - x;
+      });
+      atuais = lista;
+      var medianas = ind.map(function (_, i) { return med(base.map(function (l) { return l[6 + i]; })); });
+      sec.querySelector('[data-p-resumo]').textContent = base.length + ' parlamentares' + (selU.value ? ' em ' + selU.value : '') + ' com ao menos 3 meses de cota registrada desde ' + dados.periodo + '.';
+      corpo.textContent = '';
+      corpo.appendChild(el('tr', { class: 'total' }, [el('td', { text: 'Mediana do grupo' }), el('td'), el('td')].concat(ind.map(function (x, i) { return el('td', { class: 'num', text: fmt(medianas[i], x[3]) }); })).concat([el('td')])));
+      lista.slice(0, limite).forEach(function (l) {
+        corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + l[2], text: l[1] })]), el('td', { text: l[3] }), el('td', { text: l[4] }),
+          ].concat(ind.map(function (x, i) { return el('td', { class: 'num', text: fmt(l[6 + i], x[3]) }); })).concat([el('td', { class: 'num', text: String(l[6 + ind.length]) })])));
+      });
+      mais.hidden = lista.length <= limite;
+      mais.textContent = 'Mostrar mais (' + (lista.length - limite) + ')';
+    }
+    mais.addEventListener('click', function () { limite += 100; render(); });
+    [selC, selU].forEach(function (s_) { s_.addEventListener('change', function () { limite = 60; render(); }); });
+    q.addEventListener('input', function () { limite = 60; render(); });
+    get('data/pares.json').then(function (d) {
+      dados = d;
+      acoes(document.querySelector('[data-acoes]'), [['Baixar tabela (CSV)', 'pares.csv', function () {
+        return [['parlamentar', 'uf', 'partido'].concat(d.ind.map(function (x) { return x[1]; })), atuais.map(function (l) { return [l[1], l[3], l[4]].concat(d.ind.map(function (_, i) { return l[6 + i]; })); })];
+      }]]);
+      render();
+    });
+  }
+
   /* ---------- municipios ---------- */
   function iniciarMunicipios(sec) {
     var corpo = document.querySelector('[data-m-corpo]'), mais = document.querySelector('[data-m-mais]'), tit = document.querySelector('[data-m-tit]');
@@ -819,6 +870,7 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var pa_ = document.querySelector('[data-pares]'); if (pa_) iniciarPares(pa_);
   var pm_ = document.querySelector('[data-pm]'); if (pm_) iniciarMeses(pm_);
   var tr_ = document.querySelector('[data-recebedor]'); if (tr_) iniciarTelaRecebedor(tr_);
   var mu = document.querySelector('[data-municipios]'); if (mu) iniciarMunicipios(mu);

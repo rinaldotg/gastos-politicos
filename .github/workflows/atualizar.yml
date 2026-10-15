@@ -60,6 +60,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so tcesp
 
+      - name: Atuacao legislativa (projetos, normas, votacoes)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao
+
       - name: Conferir e gerar resumo
         run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
 

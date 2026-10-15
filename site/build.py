@@ -113,6 +113,14 @@ def main():
         mes_cat = ler(a.resumo, "gasto_mes_categoria")
     except FileNotFoundError:
         mes_cat = []
+    atu = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0, 0, 0]))  # pid -> ano -> [proposicoes, pl, pec, normas, votos, janela]
+    try:
+        for r in ler(a.resumo, "atuacao"):
+            t_ = atu[int(r["pessoa_id"])][int(f(r["ano"]))]
+            for k_, nome_ in enumerate(("proposicoes", "pl", "pec", "normas", "votos", "votacoes_janela")):
+                t_[k_] += int(f(r.get(nome_)))
+    except FileNotFoundError:
+        pass
     tc = defaultdict(lambda: dict(f={}, p={}))  # slug do municipio no site -> ano -> dados do TCE-SP (piloto Sao Paulo)
     try:
         for r in ler(a.resumo, "tce_funcao"):
@@ -318,7 +326,61 @@ def main():
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(html, encoding="utf-8")
 
+    # ---- indicadores comparaveis (periodo da legislatura atual) e pares ----
+    PERIODO = 2023
+    stats = {}
+    for x in lista:
+        if x["cargo"] == "presidente":
+            continue
+        pid_ = x["id"]
+        meses_p = sum(n_ for y_, n_ in meses[pid_].items() if y_ >= PERIODO)
+        cota_p = sum(sum(anos[pid_][y_].values()) for y_ in anos[pid_] if y_ >= PERIODO)
+        e_ = [sum(v_[i_] for y_, v_ in emendas.get(pid_, {}).items() if y_ >= PERIODO) for i_ in range(3)]
+        t_ = [sum(v_[i_] for y_, v_ in atu.get(pid_, {}).items() if y_ >= PERIODO) for i_ in range(6)]
+        tem_atu = any(y_ >= PERIODO for y_ in atu.get(pid_, {}))
+        stats[pid_] = dict(
+            meses=meses_p, cota=round(cota_p),
+            cota_mes=(cota_p / meses_p) if meses_p >= 3 else None,
+            em_emp=round(e_[0]), em_pago=round(e_[2]), em_pct=(e_[2] / e_[0] * 100) if e_[0] > 0 else None,
+            proj=(t_[1] + t_[2]) if tem_atu else None, pec=t_[2] if tem_atu else None, leis=t_[3] if tem_atu else None,
+            presenca=(min(100.0, t_[4] / t_[5] * 100) if t_[5] > 0 else None), votos=t_[4])
+    INDICADORES = [  # chave, rotulo, menor_e_melhor, formato
+        ("cota_mes", "Cota parlamentar por mês de mandato", True, "brl"),
+        ("em_pct", "Emendas pagas (% do empenhado)", False, "pct"),
+        ("presenca", "Presença em votações nominais", False, "pct"),
+        ("proj", "Projetos de lei e PEC de sua autoria", False, "int"),
+        ("leis", "Projetos de sua autoria que viraram norma", False, "int"),
+    ]
+
+    def mediana_(v_):
+        v_ = sorted(v_)
+        return (v_[len(v_) // 2] if len(v_) % 2 else (v_[len(v_) // 2 - 1] + v_[len(v_) // 2]) / 2) if v_ else None
+
+    def painel_de(x):
+        if x["id"] not in stats:
+            return None
+        pares = [y for y in lista if y["cargo"] == x["cargo"] and y["uf"] == x["uf"] and y["id"] in stats]
+        escopo = f"mesmo cargo no estado ({x['uf']})"
+        if len(pares) < 5:
+            pares = [y for y in lista if y["cargo"] == x["cargo"] and y["id"] in stats]
+            escopo = "mesmo cargo no país"
+        linhas_ = []
+        for k_, rot_, menor_, fmt_ in INDICADORES:
+            v_ = stats[x["id"]].get(k_)
+            vs_ = [stats[y["id"]][k_] for y in pares if stats[y["id"]].get(k_) is not None]
+            if v_ is None or len(vs_) < 3:
+                linhas_.append(dict(rot=rot_, fmt=fmt_, v=v_, mediana=None, pos=None, n=len(vs_), menor=menor_))
+                continue
+            melhores_ = sum(1 for w_ in vs_ if (w_ < v_ if menor_ else w_ > v_))
+            linhas_.append(dict(rot=rot_, fmt=fmt_, v=v_, mediana=mediana_(vs_), pos=melhores_ + 1, n=len(vs_), menor=menor_))
+        return dict(linhas=linhas_, escopo=escopo, n=len(pares), meses=stats[x["id"]]["meses"], periodo=PERIODO)
+
     (saida / "data" / "p").mkdir(parents=True)
+    pares_json = [[x["id"], x["nome"], x["url"], x["uf"] or "", x["partido"] or "", x["cod"]] + [
+        (round(stats[x["id"]][k_], 1) if stats[x["id"]].get(k_) is not None else None) for k_, _, _, _ in INDICADORES] + [stats[x["id"]]["meses"]]
+        for x in lista if x["id"] in stats and stats[x["id"]]["meses"] >= 3]
+    (saida / "data" / "pares.json").write_text(json.dumps(dict(periodo=PERIODO, ind=[[k_, r_, m_, f_] for k_, r_, m_, f_ in INDICADORES], linhas=pares_json),
+                                                           ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     for x in lista:
         pid = x["id"]
         profundidade = 2
@@ -370,7 +432,7 @@ def main():
         if tem_mes:
             (saida / "data" / "pm").mkdir(parents=True, exist_ok=True)
             (saida / "data" / "pm" / f"{pid}.json").write_text(json.dumps(pm[pid], ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        html = env.get_template("pessoa.html").render(tem_mes=tem_mes, anos_mes=sorted(pm[pid], reverse=True) if tem_mes else [],
+        html = env.get_template("pessoa.html").render(painel=painel_de(x), tem_mes=tem_mes, anos_mes=sorted(pm[pid], reverse=True) if tem_mes else [],
             **{**ctx_base, "raiz": "../../"}, titulo=f"{x['nome']}: gastos desde 2014", p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
@@ -554,6 +616,9 @@ def main():
     escrever("sem-autor", env.get_template("sem_autor.html").render(**{**ctx_base, "raiz": "../"}, titulo="Emendas sem autor identificado",
              descricao="Emendas que o site não consegue atribuir a um parlamentar, por quê, e quanto dinheiro representam.", cats=cats_sa, nomes=nomes_sa))
 
+    escrever("pares", env.get_template("pares.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar parlamentares entre pares",
+             descricao="Custo, execução de emendas e atuação legislativa de cada parlamentar, lado a lado com os pares.", ufs=sorted(UFS.items())))
+
     # ---- pontos de atencao: padroes factuais nos dados publicos (nao afirmam irregularidade) ----
     NORMAL = re.compile(r"AEREA|AIRLINES|\bGOL\b|\bTAM\b|AZUL|LATAM|CORREIOS|TELEFONICA|\bCLARO\b|\bVIVO\b|\bTIM\b|LOCALIZA|MOVIDA|UNIDAS|HOTEL|ENERGIA|COMPANHIA|PETROBRAS|POSTO|IPIRANGA|SHELL", re.I)
     at_obras, at_rec, at_forn = [], [], []
@@ -672,7 +737,7 @@ def main():
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "pares/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

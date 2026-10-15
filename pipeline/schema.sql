@@ -132,3 +132,12 @@ CREATE TABLE IF NOT EXISTS tce_funcao (slug TEXT, ano INTEGER, funcao TEXT, font
 CREATE INDEX IF NOT EXISTS ix_tce_funcao ON tce_funcao (slug, ano);
 CREATE TABLE IF NOT EXISTS tce_pagamento (slug TEXT, ano INTEGER, documento TEXT, fornecedor TEXT, funcao TEXT, fonte TEXT, emenda INTEGER, historico TEXT, pago REAL, n INTEGER);
 CREATE INDEX IF NOT EXISTS ix_tce_pag ON tce_pagamento (slug, ano);
+
+-- Atuacao legislativa por parlamentar e ano (Camara: arquivos abertos de proposicoes e votacoes; Senado: API de processos)
+CREATE TABLE IF NOT EXISTS atuacao (
+    pessoa_id INTEGER NOT NULL, ano INTEGER NOT NULL, fonte TEXT NOT NULL,
+    proposicoes INTEGER, pl INTEGER, pec INTEGER, normas INTEGER,   -- autoria principal; normas = viraram lei/norma
+    votos INTEGER, votacoes_janela INTEGER,                         -- votacoes nominais em que votou x ocorridas entre o primeiro e o ultimo voto dele no ano
+    PRIMARY KEY (pessoa_id, ano, fonte)
+);
+CREATE TABLE IF NOT EXISTS atuacao_carga (fonte TEXT, ano INTEGER, registros INTEGER, carregado TEXT, PRIMARY KEY (fonte, ano));
