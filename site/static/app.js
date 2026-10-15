@@ -358,6 +358,25 @@
 
 
   /* ---------- tela: todos os recebedores de uma emenda ---------- */
+  var RE_PUBLICO = /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i;
+  function trilhaEmenda(box, d, p, cod, linhas, cs) {
+    var i = d.i, tot = linhas.reduce(function (s, r) { return s + r[4]; }, 0), pub = 0, nPub = 0;
+    linhas.forEach(function (r) { if (RE_PUBLICO.test(r[0])) { pub += r[4]; nPub++; } });
+    var autor = p ? p.n : 'o parlamentar', fim = [];
+    var passos = [
+      ['1. Origem', autor + ' indicou esta emenda ' + (i[2] ? '(Pix, transferência especial)' : '(individual, com finalidade definida)') + ' no orçamento de ' + i[1] + '. Empenhado: ' + brl(i[6]) + ' · pago: ' + brl(i[7]) + '.'],
+      ['2. Finalidade declarada', ([i[5], i[8], i[9]].filter(Boolean).join(' · ') || 'a fonte não informa a finalidade') + (i[4] ? '. Destino: ' + i[4] : '') + '. É a intenção do repasse, não a prova do uso.'],
+      ['3. Quem recebeu', linhas.length ? (linhas.length + (linhas.length === 1 ? ' recebedor' : ' recebedores') + ', ' + brl(tot) + ' pagos. ' +
+        (nPub ? brl(pub) + ' foram para entes públicos ou fundos (prefeitura, secretaria, fundo): ali o rastreio federal termina.' : 'Nenhum é prefeitura ou fundo pelo nome.')) : 'Sem pagamento registrado ainda.'],
+      ['4. Execução', cs.length ? ('Há ' + cs.length + (cs.length === 1 ? ' convênio' : ' convênios') + ' registrado: veja objeto, valores e vigência logo abaixo.') :
+        (i[2] ? 'Emenda Pix não exige convênio nem projeto prévio: não há contrato federal para acompanhar.' : 'Sem convênio registrado na fonte.')],
+      ['5. A partir daqui', nPub ? 'O gasto é do município ou estado. Procure o empenho no portal de transparência dele, consulte SIOPS (saúde) ou SIOPE (educação) e o Tribunal de Contas do estado; ou use o modelo de pedido no fim desta página.' :
+        'Peça ao recebedor o objeto, a prestação de contas e as notas fiscais; o modelo de pedido está no fim desta página.']
+    ];
+    var ol = box.querySelector('[data-e-trilha-passos]');
+    passos.forEach(function (x) { ol.appendChild(el('li', {}, [el('strong', { text: x[0] + ' — ' }), document.createTextNode(x[1])])); });
+    box.hidden = false;
+  }
   function iniciarTelaEmenda(sec) {
     var cod = new URLSearchParams(location.search).get('c') || '', N = +sec.getAttribute('data-n');
     var lista = document.querySelector('[data-e-lista]'), vazio = document.querySelector('[data-e-vazio]');
@@ -424,6 +443,7 @@
       var tx = document.querySelector('[data-e-modelo]'); tx.value = mod.replace(/\\n/g, '\n');
       var ac = document.querySelector('[data-e-modelo-acoes]'); ac.appendChild(copiar(tx.value, 'Copiar modelo'));
       document.querySelector('[data-e-cobrar]').hidden = false;
+      trilhaEmenda(document.querySelector('[data-e-trilha]'), d, p, cod, linhas, cs);
       lista.querySelector('[data-e-cont]').textContent = linhas.length + ' recebedores';
       lista.hidden = false; render();
     }).catch(function () { vazio.hidden = false; });

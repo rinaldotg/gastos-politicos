@@ -166,3 +166,4 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .sit{display:inline-block;padding:.1rem .5rem;border-radius:999px;background:var(--acento-fundo);font-size:.85rem;white-space:nowrap}
 .sit-alerta{background:#fde8e4;color:#8a1c0b;font-weight:600}
 @media (prefers-color-scheme:dark){.sit-alerta{background:#4a1d16;color:#ffd5cc}}
+.trilha-passos{padding-left:1.2rem;max-width:75ch}.trilha-passos li{margin:.45rem 0}.trilha{border-left:4px solid var(--linha);padding-left:1rem}
