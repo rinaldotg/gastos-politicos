@@ -1,8 +1,12 @@
 """Populacao dos municipios (IBGE, API de agregados): para mostrar valores por habitante."""
 import sys
+import time
+
+import requests
 
 from . import common as c
 
+_VERIFY = None
 UFS = [11, 12, 13, 14, 15, 16, 17, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 41, 42, 43, 50, 51, 52, 53]
 BASE = "https://servicodados.ibge.gov.br/api/v3/agregados"
 FONTES = [
@@ -41,7 +45,7 @@ def _por_uf(agregado, periodo, var):
     for uf in UFS:
         url = f"{BASE}/{agregado}/periodos/{periodo}/variaveis/{var}?localidades=N6[N3[{uf}]]"
         try:
-            linhas.extend(_ler(c.get(url, tentativas=2, timeout=40).json()))
+            linhas.extend(_ler(_get(url, _VERIFY, 40).json()))
         except Exception as e:
             falhas += 1
             if falhas == 1:
@@ -51,12 +55,35 @@ def _por_uf(agregado, periodo, var):
     return linhas
 
 
+def _sessao_ibge():
+    """Verifica o TLS do IBGE completando a cadeia de certificados (o servidor nao envia o intermediario)."""
+    try:
+        return c.bundle_com_intermediarios("servicodados.ibge.gov.br")
+    except Exception as e:
+        print(f"  AVISO: nao consegui montar a cadeia de certificados do IBGE: {e}", file=sys.stderr)
+        return None
+
+
+def _get(url, verify, timeout):
+    for i in range(3):
+        try:
+            r = requests.get(url, headers=c.HEADERS, timeout=timeout, verify=verify if verify else True)
+            r.raise_for_status()
+            return r
+        except requests.RequestException as e:
+            if i == 2:
+                raise
+            time.sleep(3 * (i + 1))
+
+
 def rodar(con):
+    global _VERIFY
+    _VERIFY = _sessao_ibge()
     tentativas = [(None, url, rot) for url, rot in FONTES] + [
         ((6579, "-1", 9324), None, "estimativa por UF"), ((4714, "2022", 93), None, "censo 2022 por UF")]
     for por_uf, url, rotulo in tentativas:
         try:
-            linhas = _por_uf(*por_uf) if por_uf else _ler(c.get(url, tentativas=2, timeout=60).json())
+            linhas = _por_uf(*por_uf) if por_uf else _ler(_get(url, _VERIFY, 60).json())
         except Exception as e:
             print(f"  AVISO: populacao do IBGE ({rotulo}) indisponivel: {e}", file=sys.stderr)
             continue

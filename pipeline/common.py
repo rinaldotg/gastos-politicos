@@ -158,3 +158,56 @@ def data_iso(txt):
 def legislatura_de(ano, mes):
     """Legislaturas comecam em 1o de fevereiro de 2011, 2015, 2019, 2023..."""
     return 54 + (ano - (1 if mes == 1 else 0) - 2011) // 4
+
+
+def get_paciente(url, params=None, timeout=120, esperas=(20, 60, 120, 240), **kw):
+    """GET que respeita 429 (excesso de pedidos): espera e tenta de novo. Outros erros seguem a regra de get()."""
+    for i in range(len(esperas) + 1):
+        try:
+            return get(url, params, tentativas=2, timeout=timeout, **kw)
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 429 and i < len(esperas):
+                espera = int(e.response.headers.get("Retry-After") or 0) if str(e.response.headers.get("Retry-After") or "").isdigit() else 0
+                espera = max(espera, esperas[i])
+                print(f"  429 (excesso de pedidos): aguardando {espera}s", file=sys.stderr)
+                time.sleep(espera)
+                continue
+            raise
+
+
+def bundle_com_intermediarios(host, porta=443):
+    """Alguns servidores (ex.: IBGE) nao enviam o certificado intermediario e a verificacao falha com
+    'unable to get local issuer certificate'. Como os navegadores, buscamos o intermediario no endereco AIA do certificado
+    e montamos um bundle (certifi + intermediario). A verificacao continua ligada: a cadeia precisa terminar numa raiz confiavel."""
+    import socket, ssl, tempfile
+    import certifi
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.x509.oid import AuthorityInformationAccessOID, ExtensionOID
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE  # so para LER o certificado do servidor; nenhum dado e enviado nem aceito
+    with socket.create_connection((host, porta), timeout=30) as sock:
+        with ctx.wrap_socket(sock, server_hostname=host) as s:
+            der = s.getpeercert(binary_form=True)
+    cert = x509.load_der_x509_certificate(der)
+    extras = []
+    for _ in range(3):  # sobe a cadeia ate 3 niveis
+        try:
+            aia = cert.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_INFORMATION_ACCESS).value
+        except x509.ExtensionNotFound:
+            break
+        url = next((d.access_location.value for d in aia if d.access_method == AuthorityInformationAccessOID.CA_ISSUERS), None)
+        if not url:
+            break
+        r = requests.get(url, timeout=30)
+        r.raise_for_status()
+        try:
+            cert = x509.load_der_x509_certificate(r.content)
+        except ValueError:
+            cert = x509.load_pem_x509_certificate(r.content)
+        extras.append(cert.public_bytes(serialization.Encoding.PEM))
+    arq = tempfile.NamedTemporaryFile("wb", suffix=".pem", delete=False)
+    arq.write(open(certifi.where(), "rb").read() + b"\n" + b"\n".join(extras))
+    arq.close()
+    return arq.name

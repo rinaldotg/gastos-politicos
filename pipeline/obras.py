@@ -6,6 +6,7 @@ cujo executor aparece como recebedor de emenda de algum parlamentar.
 """
 import re
 import sys
+import time
 
 from . import common as c
 
@@ -53,7 +54,7 @@ def rodar(con, tamanhos=(100, 50, 20)):
     tam = None
     for t in tamanhos:
         try:
-            c.get(URL, {"pagina": 0, "tamanhoDaPagina": t}, tentativas=2, timeout=120).json()
+            c.get_paciente(URL, {"pagina": 0, "tamanhoDaPagina": t}, timeout=120).json()
             tam = t
             break
         except Exception as e:
@@ -64,7 +65,7 @@ def rodar(con, tamanhos=(100, 50, 20)):
     linhas, pagina, falhas, vistas, chaves = [], 0, 0, 0, set()
     while True:
         try:
-            j = c.get(URL, {"pagina": pagina, "tamanhoDaPagina": tam}, tentativas=3, timeout=180).json()
+            j = c.get_paciente(URL, {"pagina": pagina, "tamanhoDaPagina": tam}, timeout=180).json()
         except Exception as e:
             falhas += 1
             print(f"  AVISO: pagina {pagina} das obras falhou: {e}", file=sys.stderr)
@@ -74,6 +75,7 @@ def rodar(con, tamanhos=(100, 50, 20)):
             pagina += 1
             continue
         falhas = 0
+        time.sleep(1.5)  # a API limita pedidos (429)
         itens, tp = _lista(j)
         if pagina == 0:
             extra = {k: v for k, v in j.items() if not isinstance(v, (list, dict))} if isinstance(j, dict) else {}

@@ -19,6 +19,8 @@ from . import common as c
 BASE = "https://transparencia.tce.sp.gov.br/sites/default/files/csv/despesas-{slug}-{ano}.zip"
 PAGINA = "https://transparencia.tce.sp.gov.br/municipio/{slug}"
 RE_EMENDA = re.compile(r"EMENDAS? PARLAMENTAR|EMENDA (IMPOSITIVA|INDIVIDUAL|DE BANCADA|ESPECIAL|PIX)|TRANSFERENCIA ESPECIAL|EMENDAS? (DO|DA) (DEPUTAD|SENAD|VEREAD)")
+ALIAS = {"embu": "embu-das-artes"}  # nome no Portal da Transparencia federal x nome no TCE-SP
+LISTA = "https://transparencia.tce.sp.gov.br/api/json/municipios"
 ANO_MIN = 2023
 N_MUNICIPIOS = 12
 RETER = 300  # pagamentos de fonte federal guardados por municipio e ano (alem dos que citam emenda)
@@ -85,6 +87,25 @@ def _baixar(url):
             return c.decodificar(z.read(nome))
 
 
+def _slug_tce(nome):
+    """Slug do municipio no TCE-SP quando difere do nome informado nas emendas."""
+    sl = slug(nome)
+    if sl in ALIAS:
+        return ALIAS[sl]
+    try:
+        j = c.get(LISTA, tentativas=2, timeout=60).json()
+        nomes = []
+        for x in (j if isinstance(j, list) else j.get("municipios", [])):
+            nomes.append(x if isinstance(x, str) else next((v for v in x.values() if isinstance(v, str)), ""))
+        cand = [n for n in nomes if slug(n) == sl or slug(n).startswith(sl + "-")]
+        if len(cand) == 1:
+            return slug(cand[0])
+        print(f"  AVISO: {nome}: {len(cand)} candidatos no TCE-SP ({', '.join(cand[:4])}); ignorado", file=sys.stderr)
+    except Exception as e:
+        print(f"  AVISO: lista de municipios do TCE-SP indisponivel: {e}", file=sys.stderr)
+    return None
+
+
 def escolher_municipios(con, n=N_MUNICIPIOS):
     linhas = con.execute("""SELECT municipio, SUM(valor) v FROM emenda_favorecido
                             WHERE uf='SP' AND municipio IS NOT NULL AND municipio<>'' GROUP BY municipio ORDER BY v DESC""").fetchall()
@@ -121,20 +142,38 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
     feitos = {(r[0], r[1]) for r in con.execute("SELECT slug, ano FROM tce_carga")}
     total = falhas = 0
     for nome in municipios:
-        sl = slug(nome)
+        sl = slug(nome)      # chave no site (nome das emendas)
+        sl_tce = sl          # endereco no TCE-SP
+        corrigido = False
         for ano in range(desde, ate + 1):
             if (sl, ano) in feitos and ano < ate - 1:
                 continue  # anos fechados ja carregados nao mudam
             try:
-                texto = baixar(BASE.format(slug=sl, ano=ano))
+                texto = baixar(BASE.format(slug=sl_tce, ano=ano))
                 if ano == desde and not total:
                     print(f"  Colunas do TCE-SP: {texto.splitlines()[0][:400]}")
                 por_funcao, pag, n = agregar(texto)
                 if not n:
                     raise ValueError("arquivo sem linhas")
             except Exception as e:
+                if "404" in str(e) and not corrigido:
+                    corrigido = True
+                    novo = _slug_tce(nome)
+                    if novo and novo != sl_tce:
+                        sl_tce = novo
+                        try:
+                            texto = baixar(BASE.format(slug=sl_tce, ano=ano))
+                            por_funcao, pag, n = agregar(texto)
+                            salvar(con, sl, ano, nome, por_funcao, pag, n)
+                            total += 1
+                            print(f"  TCE-SP {nome} ({sl_tce}) {ano}: {n} linhas")
+                            continue
+                        except Exception as e2:
+                            e = e2
                 falhas += 1
                 print(f"  AVISO: TCE-SP {nome} {ano}: {e}", file=sys.stderr)
+                if "404" in str(e):
+                    break  # o municipio nao existe sob esse nome: nao insistir nos outros anos
                 continue
             salvar(con, sl, ano, nome, por_funcao, pag, n)
             total += 1
