@@ -125,3 +125,10 @@ CREATE TABLE IF NOT EXISTS emenda_convenio (
     publicacao TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_emenda_conv_codigo ON emenda_convenio (codigo);
+
+-- Piloto Sao Paulo: despesa paga dos municipios paulistas (TCE-SP, dados Audesp), agregada
+CREATE TABLE IF NOT EXISTS tce_carga (slug TEXT, ano INTEGER, municipio TEXT, linhas INTEGER, carregado TEXT, PRIMARY KEY (slug, ano));
+CREATE TABLE IF NOT EXISTS tce_funcao (slug TEXT, ano INTEGER, funcao TEXT, fonte TEXT, pago REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_tce_funcao ON tce_funcao (slug, ano);
+CREATE TABLE IF NOT EXISTS tce_pagamento (slug TEXT, ano INTEGER, documento TEXT, fornecedor TEXT, funcao TEXT, fonte TEXT, emenda INTEGER, historico TEXT, pago REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_tce_pag ON tce_pagamento (slug, ano);

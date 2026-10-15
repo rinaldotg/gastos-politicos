@@ -627,6 +627,36 @@
     }]]);
     get('data/municipios.json').then(function (d) { dados = d; render(); });
   }
+  function blocoTce(tc, ano) {
+    var box = document.querySelector('[data-mu-tce]');
+    if (!box || !tc) return;
+    var anos = ano ? [ano] : Object.keys(tc), fun = {}, pag = {};
+    anos.forEach(function (a) {
+      var t = tc[a]; if (!t) return;
+      t.f.forEach(function (x) { var k = x[0]; fun[k] = fun[k] || [0, 0, 0, 0]; for (var j = 0; j < 4; j++) fun[k][j] += x[j + 1]; });
+      t.p.forEach(function (x) { var k = x[0] + '|' + x[1] + '|' + x[2] + '|' + x[3] + '|' + x[4]; pag[k] = pag[k] || x.slice(0, 6).concat([0]); pag[k][6] += x[6]; });
+    });
+    var ks = Object.keys(fun).sort(function (a, b) { var s = function (k) { return fun[k].reduce(function (u, v) { return u + v; }, 0); }; return s(b) - s(a); });
+    box.hidden = !ks.length;
+    if (!ks.length) return;
+    var tot = [0, 0, 0, 0];
+    var tb = box.querySelector('[data-mu-tce-funcao]'); tb.textContent = '';
+    ks.forEach(function (k) {
+      var v = fun[k]; for (var j = 0; j < 4; j++) tot[j] += v[j];
+      tb.appendChild(el('tr', {}, [el('td', { text: k }), el('td', { class: 'num', text: brl(v[1]) }), el('td', { class: 'num', text: brl(v[2]) }),
+        el('td', { class: 'num', text: brl(v[0] + v[3]) }), el('td', { class: 'num', text: brl(v[0] + v[1] + v[2] + v[3]) })]));
+    });
+    var geral = tot[0] + tot[1] + tot[2] + tot[3];
+    box.querySelector('[data-mu-tce-resumo]').textContent = 'A prefeitura e seus órgãos pagaram ' + brl(geral) + (ano ? ' em ' + ano : ' nos anos carregados (' + anos.filter(function (a) { return tc[a]; }).join(', ') + ')') +
+      ', dos quais ' + brl(tot[1]) + ' (' + (geral ? Math.round(tot[1] / geral * 100) : 0) + '%) com recursos de transferências federais.';
+    var lp = Object.keys(pag).map(function (k) { return pag[k]; }).sort(function (a, b) { return b[4] - a[4] || b[6] - a[6]; }).slice(0, 60);
+    var tp = box.querySelector('[data-mu-tce-pag]'); tp.textContent = '';
+    lp.forEach(function (x) {
+      var nome = x[1] || 'Não informado';
+      tp.appendChild(el('tr', {}, [el('td', {}, [document.createTextNode(nome), el('small', { text: (x[0] ? 'CNPJ ' + x[0] : '') + (x[4] ? ' · cita emenda' : '') + (x[5] ? ' · ' + x[5].slice(0, 140) : '') })]),
+        el('td', { text: x[2] }), el('td', { text: x[3] === 'federal' ? 'Federal' : x[3] === 'estadual' ? 'Estadual' : 'Própria/outras' }), el('td', { class: 'num', text: brl(x[6]) })]));
+    });
+  }
   function iniciarMunicipio(sec) {
     var m = new URLSearchParams(location.search).get('m') || '';
     var corpo = document.querySelector('[data-mu-corpo]'), vazio = document.querySelector('[data-mu-vazio]'), selA = document.querySelector('[data-mu-ano]');
@@ -649,6 +679,7 @@
           el('td', {}, [p.url ? el('a', { href: RAIZ + p.url, text: p.n }) : document.createTextNode(p.n)]),
           el('td', { text: p.u || '' }), el('td', { text: p.p || '' }), el('td', { class: 'num', text: String(x[2]) }), el('td', { class: 'num', text: brl(x[1]) })]));
       });
+      blocoTce(d.tc, ano);
       document.querySelector('[data-mu-rec-tit]').textContent = 'Quem recebeu' + (d.nr > d.r.length ? ' (os ' + d.r.length + ' maiores de ' + d.nr + ' no total)' : '');
       var tr = document.querySelector('[data-mu-rec]'); tr.textContent = '';
       rs.slice(0, 200).forEach(function (x, i) {

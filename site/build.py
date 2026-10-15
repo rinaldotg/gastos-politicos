@@ -113,6 +113,16 @@ def main():
         mes_cat = ler(a.resumo, "gasto_mes_categoria")
     except FileNotFoundError:
         mes_cat = []
+    tc = defaultdict(lambda: dict(f={}, p={}))  # slug do municipio no site -> ano -> dados do TCE-SP (piloto Sao Paulo)
+    try:
+        for r in ler(a.resumo, "tce_funcao"):
+            y = tc[r["slug"] + "-sp"]["f"].setdefault(str(int(f(r["ano"]))), {}).setdefault(r["funcao"], dict(proprio=0, federal=0, estadual=0, outras=0))
+            y[r["fonte"]] = round(f(r["pago"]))
+        for r in ler(a.resumo, "tce_pagamento"):
+            tc[r["slug"] + "-sp"]["p"].setdefault(str(int(f(r["ano"]))), []).append(
+                [r["documento"], r["fornecedor"], r["funcao"], r["fonte"], int(f(r["emenda"])), r["historico"], round(f(r["pago"])), int(f(r["n"]))])
+    except FileNotFoundError:
+        pass
     pm = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # pid -> ano -> mes -> categoria -> total
     for r in mes_cat:
         if f(r["total"]) != 0 and r.get("mes"):
@@ -444,7 +454,7 @@ def main():
             por_ano = defaultdict(lambda: [0, set()])
             tot_ = [0, set()]
             for pid_, q in r_["p"].items():
-                for _, _, _, v_, ap_ in q[2]:
+                for _, _, _, v_, ap_, _ in q[2]:
                     por_ano[ap_][0] += v_; por_ano[ap_][1].add(pid_)
                     tot_[0] += v_; tot_[1].add(pid_)
             rank_ano[""][doc] = [r_["n"], doc, tot_[0], len(tot_[1])]
@@ -481,6 +491,10 @@ def main():
                 cm_[o_[2]] = cm_.get(o_[2], 0) + 1
             gravar(f"m/{sl}.json", dict(
                 pop=populacao.get(sl), ob=[cm_, om_[:40]], n=m_["n"],
+                tc=({a_: dict(f=[[fn_] + [v_.get(k_, 0) for k_ in ("proprio", "federal", "estadual", "outras")] for fn_, v_ in
+                                 sorted(d_.items(), key=lambda t: -sum(t[1].values()))],
+                              p=sorted(tc[sl]["p"].get(a_, []), key=lambda t: (-t[4], -t[6]))[:120])
+                     for a_, d_ in tc[sl]["f"].items()} if sl in tc else None),
                 p=sorted([[pid_, {str(ap_): [round(v_), len(cs_)] for ap_, (v_, cs_) in ys.items()}] for pid_, ys in m_["p"].items()],
                          key=lambda t: -sum(v[0] for v in t[1].values())),
                 r=[[k[1], k[0], {str(ap_): round(v_) for ap_, v_ in ys.items()}] for k, ys in rs[:1500]], nr=len(rs)))

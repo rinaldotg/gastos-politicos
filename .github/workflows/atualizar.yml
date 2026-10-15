@@ -56,6 +56,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so obras ibge
 
+      - name: Despesa dos municipios paulistas (TCE-SP, piloto)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so tcesp
+
       - name: Conferir e gerar resumo
         run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
 

@@ -1,0 +1,145 @@
+"""Piloto Sao Paulo: despesa PAGA dos municipios paulistas (TCE-SP, Portal da Transparencia Municipal, dados Audesp).
+
+Por municipio e ano o TCE-SP publica um ZIP com um CSV (latin-1, separador ';') com uma linha por evento da despesa
+(empenhado, liquidado, pago, anulacao). Contamos so o evento "Valor Pago". O arquivo traz funcao, programa, acao,
+fonte de recurso (ex.: "TRANSFERENCIAS E CONVENIOS FEDERAIS-VINCULADOS"), fornecedor e historico. NAO traz o codigo da
+emenda federal: a ligacao com a emenda e por texto do historico ("repasse de emenda parlamentar") e por fonte federal.
+A capital paulista e fiscalizada pelo TCM-SP e nao esta neste portal.
+"""
+import csv
+import io
+import re
+import sys
+import tempfile
+import zipfile
+from datetime import datetime
+
+from . import common as c
+
+BASE = "https://transparencia.tce.sp.gov.br/sites/default/files/csv/despesas-{slug}-{ano}.zip"
+PAGINA = "https://transparencia.tce.sp.gov.br/municipio/{slug}"
+RE_EMENDA = re.compile(r"EMENDAS? PARLAMENTAR|EMENDA (IMPOSITIVA|INDIVIDUAL|DE BANCADA|ESPECIAL|PIX)|TRANSFERENCIA ESPECIAL|EMENDAS? (DO|DA) (DEPUTAD|SENAD|VEREAD)")
+ANO_MIN = 2023
+N_MUNICIPIOS = 12
+RETER = 300  # pagamentos de fonte federal guardados por municipio e ano (alem dos que citam emenda)
+
+
+def slug(nome):
+    return re.sub(r"[^a-z0-9]+", "-", c.sem_acento(nome)).strip("-")
+
+
+def grupo_fonte(f):
+    f = c.sem_acento(f).upper()
+    if "FEDERA" in f:
+        return "federal"
+    if "ESTADUA" in f:
+        return "estadual"
+    if "TESOURO" in f or "PROPRIOS" in f:
+        return "proprio"
+    return "outras"
+
+
+def valor(t):
+    try:
+        return float((t or "0").replace(".", "").replace(",", "."))
+    except ValueError:
+        return 0.0
+
+
+def agregar(texto_csv):
+    """Devolve (por_funcao, pagamentos, linhas): agregados de 'Valor Pago'."""
+    leitor = csv.DictReader(io.StringIO(texto_csv), delimiter=";")
+    por_funcao, pag, n = {}, {}, 0
+    for r in leitor:
+        n += 1
+        if "PAGO" not in c.sem_acento(r.get("tp_despesa")).upper():
+            continue
+        v = valor(r.get("vl_despesa"))
+        if not v:
+            continue
+        fonte = grupo_fonte(r.get("ds_fonte_recurso"))
+        funcao = (r.get("ds_funcao_governo") or "Não informada").strip()
+        k = (funcao, fonte)
+        a = por_funcao.setdefault(k, [0.0, 0])
+        a[0] += v; a[1] += 1
+        hist = (r.get("historico_despesa") or "").strip()
+        emenda = 1 if RE_EMENDA.search(c.sem_acento(hist).upper()) else 0
+        if fonte == "federal" or emenda:
+            ident = r.get("identificador_despesa") or ""
+            doc = re.sub(r"\D", "", ident.split("-")[-1]) if "CNPJ" in ident else ""
+            nome = (r.get("ds_despesa") or "").strip()
+            kk = (doc, nome, funcao, fonte, emenda, hist[:220])
+            b = pag.setdefault(kk, [0.0, 0])
+            b[0] += v; b[1] += 1
+    return por_funcao, pag, n
+
+
+def _baixar(url):
+    r = c.get(url, tentativas=2, timeout=240, stream=True)
+    with tempfile.TemporaryFile() as tmp:
+        for parte in r.iter_content(1 << 20):
+            tmp.write(parte)
+        tmp.seek(0)
+        with zipfile.ZipFile(tmp) as z:
+            nome = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+            return c.decodificar(z.read(nome))
+
+
+def escolher_municipios(con, n=N_MUNICIPIOS):
+    linhas = con.execute("""SELECT municipio, SUM(valor) v FROM emenda_favorecido
+                            WHERE uf='SP' AND municipio IS NOT NULL AND municipio<>'' GROUP BY municipio ORDER BY v DESC""").fetchall()
+    vagos = ("multiplo", "sem informacao", "sao paulo")  # capital: TCM-SP
+    out = []
+    for m, _ in linhas:
+        if c.sem_acento(m) in vagos:
+            continue
+        out.append(m)
+        if len(out) >= n:
+            break
+    return out
+
+
+def salvar(con, sl, ano, nome, por_funcao, pag, n):
+    con.execute("DELETE FROM tce_funcao WHERE slug=? AND ano=?", (sl, ano))
+    con.execute("DELETE FROM tce_pagamento WHERE slug=? AND ano=?", (sl, ano))
+    con.executemany("INSERT INTO tce_funcao VALUES (?,?,?,?,?,?)", [(sl, ano, f, fo, round(v, 2), q) for (f, fo), (v, q) in por_funcao.items()])
+    itens = sorted(pag.items(), key=lambda t: -t[1][0])
+    emen = [t for t in itens if t[0][4]][:RETER]
+    resto = [t for t in itens if not t[0][4]][:RETER]
+    con.executemany("INSERT INTO tce_pagamento VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    [(sl, ano, k[0], k[1], k[2], k[3], k[4], k[5], round(v, 2), q) for k, (v, q) in emen + resto])
+    con.execute("INSERT OR REPLACE INTO tce_carga VALUES (?,?,?,?,?)", (sl, ano, nome, n, c.agora()))
+    con.commit()
+
+
+def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
+    ate = ate or datetime.now().year
+    municipios = municipios or escolher_municipios(con)
+    if not municipios:
+        print("  AVISO: sem municipios paulistas entre os recebedores de emendas; rode antes a etapa de emendas", file=sys.stderr)
+        return 0
+    feitos = {(r[0], r[1]) for r in con.execute("SELECT slug, ano FROM tce_carga")}
+    total = falhas = 0
+    for nome in municipios:
+        sl = slug(nome)
+        for ano in range(desde, ate + 1):
+            if (sl, ano) in feitos and ano < ate - 1:
+                continue  # anos fechados ja carregados nao mudam
+            try:
+                texto = baixar(BASE.format(slug=sl, ano=ano))
+                if ano == desde and not total:
+                    print(f"  Colunas do TCE-SP: {texto.splitlines()[0][:400]}")
+                por_funcao, pag, n = agregar(texto)
+                if not n:
+                    raise ValueError("arquivo sem linhas")
+            except Exception as e:
+                falhas += 1
+                print(f"  AVISO: TCE-SP {nome} {ano}: {e}", file=sys.stderr)
+                continue
+            salvar(con, sl, ano, nome, por_funcao, pag, n)
+            total += 1
+            print(f"  TCE-SP {nome} {ano}: {n} linhas")
+    c.log(con, "tcesp", "despesas", None, total)
+    con.commit()
+    print(f"TCE-SP: {total} arquivos municipio/ano carregados ({falhas} falhas); municipios: {', '.join(municipios)}")
+    return total
