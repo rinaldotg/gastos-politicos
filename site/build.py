@@ -734,10 +734,12 @@ def main():
                 d_["anos"][ano_] = d_["anos"].get(ano_, 0) + v_
             d_["comp"].setdefault(ano_, {})
             d_["comp"][ano_][bk_] = d_["comp"][ano_].get(bk_, 0) + v_
-        meses_ = {int(r_["ano"]): int(r_["ate_mes"]) for r_ in ler(a.resumo, "despesa_orgao_meses")}
+        mm_ = ler(a.resumo, "despesa_orgao_meses")
+        meses_ = {int(r_["ano"]): int(r_["ate_mes"]) for r_ in mm_}
+        faltam_ = {int(r_["ano"]): int(r_["ate_mes"]) - int(r_["meses"]) for r_ in mm_ if int(r_["ate_mes"]) - int(r_["meses"]) > 0}
         min_anos = sorted(meses_)
     except (FileNotFoundError, KeyError, ValueError):
-        meses_ = {}
+        meses_, faltam_ = {}, {}
     if min_anos:
         fechados_ = [y_ for y_ in min_anos if meses_.get(y_, 12) >= 12]
         ult_ = fechados_[-1] if fechados_ else min_anos[-1]
@@ -763,7 +765,7 @@ def main():
         linhas_min, tot_min, div_min, outros_, ult_ = [], {}, {}, {}, None
     escrever("ministerios", env.get_template("ministerios.html").render(**{**ctx_base, "raiz": "../"}, titulo="Quanto custa cada ministério",
              descricao="Despesa paga por ministério a cada ano e o total de todos os ministérios, com a parte que vai para pessoal, transferências e demais gastos.",
-             anos=min_anos, linhas=linhas_min, total=tot_min, divida=div_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, ult=ult_))
+             anos=min_anos, linhas=linhas_min, total=tot_min, divida=div_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, faltam=faltam_, ult=ult_))
 
     # ---- pontos de atencao: padroes factuais nos dados publicos (nao afirmam irregularidade) ----
     NORMAL = re.compile(r"AEREA|AIRLINES|\bGOL\b|\bTAM\b|AZUL|LATAM|CORREIOS|TELEFONICA|\bCLARO\b|\bVIVO\b|\bTIM\b|LOCALIZA|MOVIDA|UNIDAS|HOTEL|ENERGIA|COMPANHIA|PETROBRAS|POSTO|IPIRANGA|SHELL", re.I)

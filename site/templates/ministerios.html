@@ -8,14 +8,14 @@
 <section class="bloco">
   <h2>Valor pago por ministério, por ano</h2>
   <div class="tabela-rolavel"><table class="tabela">
-    <thead><tr><th>Ministério</th>{% for y in anos %}<th class="num">{{ y }}{% if parcial.get(y) %}<small>até o mês {{ parcial[y] }}</small>{% endif %}</th>{% endfor %}</tr></thead>
+    <thead><tr><th>Ministério</th>{% for y in anos %}<th class="num">{{ y }}{% if parcial.get(y) %}<small>até o mês {{ parcial[y] }}</small>{% endif %}{% if faltam.get(y) %}<small class="alerta">falta{{ 'm' if faltam[y] > 1 }} {{ faltam[y] }} {{ 'meses' if faltam[y] > 1 else 'mês' }}</small>{% endif %}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for l in linhas %}<tr><td>{{ l.nome }}</td>{% for v in l.anos %}<td class="num">{{ v | curto if v else "—" }}</td>{% endfor %}</tr>{% endfor %}
     <tr class="total"><td><strong>Total de todos os ministérios (sem juros e amortização da dívida)</strong></td>{% for y in anos %}<td class="num"><strong>{{ total[y] | curto }}</strong></td>{% endfor %}</tr>
     <tr><td>Juros e amortização da dívida (nos ministérios)</td>{% for y in anos %}<td class="num">{{ divida[y] | curto if divida[y] else "—" }}</td>{% endfor %}</tr>
     </tbody>
   </table></div>
-  <p class="nota"><a href="{{ raiz }}data/ministerios.csv">Baixar a tabela (CSV)</a>. Anos marcados com "até o mês" ainda estão em andamento e não são comparáveis com anos fechados.</p>
+  <p class="nota"><a href="{{ raiz }}data/ministerios.csv">Baixar a tabela (CSV)</a>. Anos marcados com "até o mês" ainda estão em andamento e não são comparáveis com anos fechados. Anos com "falta mês" tiveram um download recusado pelo Portal nesta atualização e ficam completos na próxima.</p>
 </section>
 <section class="bloco">
   <h2>Para onde vai o dinheiro de cada ministério ({{ ult }})</h2>
