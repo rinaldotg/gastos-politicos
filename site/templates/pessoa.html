@@ -166,11 +166,14 @@
   {% if fornecedores %}
   <section class="bloco">
     <h2>Com quem mais gastou</h2>
+    <div data-forn data-anos='{{ forn_anos }}'>
+    {% if forn_anos != '{}' %}<div class="controles"><label>Período <select data-forn-ano><option value="">Todo o período (desde {{ desde }})</option></select></label></div>{% endif %}
     <div class="tabela-rolavel">
     <table class="tabela">
-      <thead><tr><th>Fornecedor</th><th class="num">Total desde {{ desde }}</th><th class="num">Lançamentos</th></tr></thead>
-      <tbody>{% for nome, v, n in fornecedores %}<tr><td>{{ nome }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ n | milhar }}</td></tr>{% endfor %}</tbody>
+      <thead><tr><th>Fornecedor</th><th class="num" data-forn-cab>Total desde {{ desde }}</th><th class="num">Lançamentos</th></tr></thead>
+      <tbody data-forn-corpo>{% for nome, v, n in fornecedores %}<tr><td>{{ nome }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ n | milhar }}</td></tr>{% endfor %}</tbody>
     </table>
+    </div>
     </div>
     {% if p.cargo == 'presidente' %}<p class="nota">“Sigiloso”, “Sem informação” e “Não se aplica” indicam que o fornecedor não é divulgado.</p>{% endif %}
   </section>

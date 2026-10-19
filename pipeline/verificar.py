@@ -44,6 +44,9 @@ def main():
         "top_fornecedores": """SELECT * FROM (SELECT pessoa_id, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total, COUNT(*) n,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id ORDER BY SUM(valor) DESC) pos
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, fornecedor, cnpj_cpf) WHERE pos<=20""",
+        "fornecedor_ano_pessoa": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, ROUND(SUM(valor),2) total, COUNT(*) n,
+                       ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos
+                       FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, ano, fornecedor) WHERE pos<=15""",
         "gabinete_pessoa": "SELECT pessoa_id, nome, cargo, lotacao, nomeacao, fonte FROM gabinete_pessoa ORDER BY pessoa_id, cargo, nome",
         "top_fornecedores_ano": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos

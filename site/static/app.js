@@ -743,6 +743,30 @@
     render();
   }
 
+  /* ---------- fornecedores por ano ---------- */
+  function iniciarForn(box) {
+    var d = {};
+    try { d = JSON.parse(box.getAttribute('data-anos')); } catch (e) { d = {}; }
+    var sel = box.querySelector('[data-forn-ano]'); if (!sel) return;
+    var corpo = box.querySelector('[data-forn-corpo]'), cab = box.querySelector('[data-forn-cab]'), orig = corpo.innerHTML, cab0 = cab.textContent;
+    Object.keys(d).sort().reverse().forEach(function (a) { sel.appendChild(el('option', { value: a, text: a })); });
+    function render() {
+      if (!sel.value) { corpo.innerHTML = orig; cab.textContent = cab0; return; }
+      cab.textContent = 'Total em ' + sel.value;
+      corpo.textContent = '';
+      (d[sel.value] || []).forEach(function (r) {
+        corpo.appendChild(el('tr', {}, [el('td', { text: r[0] }), el('td', { class: 'num', text: brl(r[1]) }), el('td', { class: 'num', text: String(r[2]) })]));
+      });
+    }
+    sel.addEventListener('change', render);
+    document.addEventListener('change', function (e) {
+      var t = e.target, outro = t && t.hasAttribute && t.hasAttribute('data-pm-ano') ? sel : (t === sel ? document.querySelector('[data-pm-ano]') : null);
+      if (!outro || outro === t) return;
+      if (outro === sel) { if (Array.prototype.some.call(sel.options, function (o) { return o.value === t.value; })) { sel.value = t.value; render(); } }
+      else outro.value = sel.value || outro.value, outro.dispatchEvent(new Event('change'));
+    });
+  }
+
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
     var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]'), selAno = sec.querySelector('[data-p-ano]');
@@ -1015,6 +1039,7 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var fo_ = document.querySelector('[data-forn]'); if (fo_) iniciarForn(fo_);
   var cu_ = document.querySelector('[data-custo]'); if (cu_) iniciarCusto(cu_);
   var at_ = document.querySelector('[data-atencao]');
   if (at_) { var sel_ = at_.querySelector('[data-at-ano]'); sel_.addEventListener('change', function () { document.querySelectorAll('[data-at-visao]').forEach(function (d) { d.hidden = d.getAttribute('data-at-visao') !== sel_.value; }); }); }
