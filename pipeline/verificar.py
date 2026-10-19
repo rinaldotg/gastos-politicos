@@ -55,6 +55,8 @@ def main():
         "atuacao": "SELECT pessoa_id, ano, fonte, proposicoes, pl, pec, normas, votos, votacoes_janela FROM atuacao",
         "sancao": "SELECT documento, cadastro, categoria, inicio, fim, orgao, nome FROM sancao",
         "tce_fornecedor": "SELECT slug, ano, documento, fornecedor, classe, ROUND(pago,2) pago, ROUND(pago_federal,2) pago_federal, ROUND(pago_dispensa,2) pago_dispensa, n FROM tce_fornecedor",
+        "despesa_orgao": "SELECT ano, orgao, bucket, MAX(mes) ate_mes, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, ROUND(SUM(rap_pago),2) rap_pago FROM despesa_orgao GROUP BY ano, orgao, bucket",
+        "despesa_orgao_meses": "SELECT ano, COUNT(DISTINCT mes) meses, MAX(mes) ate_mes FROM despesa_orgao GROUP BY ano",
         "tce_funcao": "SELECT slug, ano, funcao, fonte, ROUND(pago,2) pago, n FROM tce_funcao",
         "tce_pagamento": "SELECT slug, ano, documento, fornecedor, funcao, fonte, emenda, modalidade, historico, ROUND(pago,2) pago, n FROM tce_pagamento",
         "tce_carga": "SELECT slug, ano, municipio, linhas, carregado FROM tce_carga",

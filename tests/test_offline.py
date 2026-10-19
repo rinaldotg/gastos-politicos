@@ -61,5 +61,8 @@ ex = ("Nome Órgão Superior;Nome Órgão;Nome Programa Orçamentário;Nome Aç�
       "Presidência da República;Secom;Comunicação;Publicidade;1.000,00;500,00;400,00\n"
       "Presidência da República;Secom;Comunicação;Publicidade;200,00;0,00;0,00\n"
       "Ministério da Saúde;FNS;SUS;X;9,00;9,00;9,00\n")
+ex = ex.replace("Valor Pago (R$)", "Nome Grupo de Despesa;Modalidade da Despesa;Valor Pago (R$);Valor Restos a Pagar Pagos (R$)")
+ex = "\n".join(l if i == 0 else l.rsplit(";", 1)[0] + ";Outras Despesas Correntes;Transferências a Municípios;" + l.rsplit(";", 1)[1] + ";1,00" for i, l in enumerate(ex.splitlines())) + "\n"
 c.get = lambda *a, **k: zipar("202301_Despesas.csv", ex, "latin-1")
 print(orcamento.carregar_mes(con, ids, 2023, 1)[0], con.execute("select pessoa_id,programa,acao,empenhado,pago from orcamento_acao").fetchall())
+print(con.execute("select ano,mes,orgao,bucket,pago,rap_pago from despesa_orgao").fetchall())

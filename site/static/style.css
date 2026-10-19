@@ -168,3 +168,6 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 @media (prefers-color-scheme:dark){.sit-alerta{background:#4a1d16;color:#ffd5cc}}
 .trilha-passos{padding-left:1.2rem;max-width:75ch}.trilha-passos li{margin:.45rem 0}.trilha{border-left:4px solid var(--linha);padding-left:1rem}
 .alerta{color:#a4410b;font-weight:600}.chip{display:inline-block;border-radius:999px;padding:.05rem .55rem;font-size:.78rem;border:1px solid var(--linha);margin-left:.4rem}.chip-priv{background:#fff4e5;border-color:#e0a050;color:#7a4300}
+
+.tabela tr.total td{background:var(--fundo);border-top:2px solid var(--linha)}
+.tabela th small{display:block;font-weight:400;color:var(--tinta-2)}

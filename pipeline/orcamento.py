@@ -13,7 +13,20 @@ from datetime import date
 from . import common as c
 from .presidencia import eh_presidencia, garantir_presidentes, ocupante
 
+ANO_MIN_MINISTERIOS = 2019  # custo por ministerio: a partir deste ano (cada mes e um download grande; amplie aqui se quiser mais anos)
 URL = "https://portaldatransparencia.gov.br/download-de-dados/despesas-execucao/{ano}{mes:02d}"
+
+
+def bucket(grupo, modalidade):
+    """Classifica o gasto em pessoal, divida, transferencias, ou demais despesas (compras, servicos, beneficios pagos direto, investimentos)."""
+    g, m = c.sem_acento(grupo), c.sem_acento(modalidade)
+    if "pessoal" in g:
+        return "pessoal"
+    if "juros" in g or "amortiza" in g or "divida" in g:
+        return "divida"
+    if "transfer" in m:
+        return "transferencias"
+    return "demais"
 
 
 def carregar_mes(con, ids, ano, mes):
@@ -28,7 +41,17 @@ def carregar_mes(con, ids, ano, mes):
     colunas, linhas, col = c.ler_csv(bruto)
     pid = ocupante(ids, f"{ano}-{mes:02d}-15")
     agg = defaultdict(lambda: [0.0, 0.0, 0.0])
+    org = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0])  # (orgao superior, bucket) -> empenhado, liquidado, pago, restos a pagar pagos
+    guarda_org = ano >= ANO_MIN_MINISTERIOS
     for l in linhas:
+        if guarda_org:
+            sup = col(l, "Nome Órgão Superior", "Nome Orgao Superior")
+            if sup:
+                b = org[(sup, bucket(col(l, "Nome Grupo de Despesa"), col(l, "Modalidade da Despesa", "Nome Modalidade da Despesa")))]
+                b[0] += c.numero(col(l, "Valor Empenhado (R$)", "Valor Empenhado"))
+                b[1] += c.numero(col(l, "Valor Liquidado (R$)", "Valor Liquidado"))
+                b[2] += c.numero(col(l, "Valor Pago (R$)", "Valor Pago"))
+                b[3] += c.numero(col(l, "Valor Restos a Pagar Pagos (R$)", "Valor Restos a Pagar Pagos"))
         if not eh_presidencia(col(l, "Nome Órgão Superior", "Nome Orgao Superior")):
             continue
         k = (col(l, "Nome Órgão Subordinado", "Nome Orgao Subordinado"), col(l, "Nome Programa Orçamentário", "Nome Programa Orcamentario"),
@@ -42,6 +65,10 @@ def carregar_mes(con, ids, ano, mes):
         con.executemany("""INSERT INTO orcamento_acao (pessoa_id, ano, mes, orgao, programa, acao, empenhado, liquidado, pago, arquivo)
                            VALUES (?,?,?,?,?,?,?,?,?,?)""",
                         [(pid, ano, mes, o, p, a, *v, lote) for (o, p, a), v in agg.items()])
+    con.execute("DELETE FROM despesa_orgao WHERE arquivo=?", (lote,))
+    if guarda_org and org:
+        con.executemany("INSERT INTO despesa_orgao (ano, mes, orgao, bucket, empenhado, liquidado, pago, rap_pago, arquivo) VALUES (?,?,?,?,?,?,?,?,?)",
+                        [(ano, mes, o, bk, *v, lote) for (o, bk), v in org.items()])
     con.commit()
     return len(agg), colunas
 
@@ -57,7 +84,9 @@ def rodar(con, anos, recarregar_desde=None):
             if (ano, mes) > (hoje.year, hoje.month):
                 break
             lote = f"orcamento:{ano}{mes:02d}"
-            if ano < recarregar_desde and con.execute("SELECT 1 FROM orcamento_acao WHERE arquivo=? LIMIT 1", (lote,)).fetchone():
+            tem_pres = con.execute("SELECT 1 FROM orcamento_acao WHERE arquivo=? LIMIT 1", (lote,)).fetchone()
+            tem_min = ano < ANO_MIN_MINISTERIOS or con.execute("SELECT 1 FROM despesa_orgao WHERE arquivo=? LIMIT 1", (lote,)).fetchone()
+            if ano < recarregar_desde and tem_pres and tem_min:
                 continue
             res = carregar_mes(con, ids, ano, mes)
             if res is None:

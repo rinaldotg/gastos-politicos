@@ -148,3 +148,11 @@ CREATE INDEX IF NOT EXISTS ix_sancao_doc ON sancao (documento);
 -- Fornecedores privados pagos pelos municipios do piloto (TCE-SP), por municipio e ano
 CREATE TABLE IF NOT EXISTS tce_fornecedor (slug TEXT, ano INTEGER, documento TEXT, fornecedor TEXT, classe TEXT, pago REAL, pago_federal REAL, pago_dispensa REAL, n INTEGER);
 CREATE INDEX IF NOT EXISTS ix_tce_forn ON tce_fornecedor (slug, ano);
+
+-- Despesa paga por orgao superior (ministerios etc.), por mes e tipo de gasto (Portal da Transparencia, execucao da despesa)
+CREATE TABLE IF NOT EXISTS despesa_orgao (
+    ano INTEGER NOT NULL, mes INTEGER NOT NULL, orgao TEXT NOT NULL, bucket TEXT NOT NULL,   -- pessoal, divida, transferencias, demais
+    empenhado REAL, liquidado REAL, pago REAL, rap_pago REAL, arquivo TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_desp_org ON despesa_orgao (ano, orgao);
+CREATE INDEX IF NOT EXISTS ix_desp_org_arq ON despesa_orgao (arquivo);
