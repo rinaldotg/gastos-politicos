@@ -8,6 +8,12 @@
   <div class="acoes" data-acoes></div>
   <div class="controles"><label>Ano do pagamento <select data-r-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
+<section class="bloco" data-r-priv hidden>
+  <h2>Recebedor privado: o dinheiro foi pago direto a ele</h2>
+  <p data-r-priv-tipo></p>
+  <p class="alerta" data-r-priv-sanc hidden></p>
+  <p>O que conferir: data de abertura, atividade e sócios do CNPJ na <a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" target="_blank" rel="noopener">Receita ↗</a>; o objeto de cada emenda (clique em "ver emendas"); se há convênio, plano de trabalho e prestação de contas; e quantos parlamentares enviaram recursos. Receber direto é permitido e comum, e <strong>isso não indica irregularidade</strong>. <a href="{{ raiz }}privados/">Ver todos os recebedores privados</a>.</p>
+</section>
 <section class="bloco aviso-rastreio" data-r-publico hidden>
   <h2>Onde o rastreio federal termina</h2>
   <p>Este recebedor é um ente público ou um fundo. Os dados federais mostram que o dinheiro <strong>chegou</strong> aqui, mas o gasto a partir deste ponto é registrado pelo próprio município ou estado. <span data-r-publico-fundo hidden>No caso de fundos (saúde, educação, assistência), o valor se mistura ao orçamento do fundo.</span> Para saber no que foi usado:</p>

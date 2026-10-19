@@ -362,6 +362,15 @@
 
 
   /* ---------- tela: todos os recebedores de uma emenda ---------- */
+  var ROTULO_CLASSE = { publico: 'Ente público ou fundo', empresa: 'Empresa privada', entidade: 'Entidade sem fins lucrativos', privado_outro: 'Entidade privada (tipo não identificado)', pf: 'Pessoa física', banco: 'Banco público (intermediário)' };
+  function ehPriv(c) { return c === 'empresa' || c === 'entidade' || c === 'privado_outro'; }
+  function chipClasse(c, sanc) {
+    if (!ehPriv(c) && !(sanc && sanc.length)) return document.createTextNode('');
+    var out = [];
+    if (ehPriv(c)) out.push(el('span', { class: 'chip chip-priv', text: ROTULO_CLASSE[c] }));
+    if (sanc && sanc.length) out.push(el('span', { class: 'chip alerta', title: 'Consta em cadastro de sanções do Portal da Transparência', text: '⚠ cadastro de sanções: ' + sanc[0][0] }));
+    return el('span', {}, out);
+  }
   var TCE = null;
   function carregarTce() {
     if (TCE) return Promise.resolve(TCE);
@@ -369,14 +378,20 @@
   }
   var RE_PUBLICO = /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i;
   function trilhaEmenda(box, d, p, cod, linhas, cs) {
-    var i = d.i, tot = linhas.reduce(function (s, r) { return s + r[4]; }, 0), pub = 0, nPub = 0;
-    linhas.forEach(function (r) { if (RE_PUBLICO.test(r[0])) { pub += r[4]; nPub++; } });
+    var i = d.i, tot = linhas.reduce(function (s, r) { return s + r[4]; }, 0), pub = 0, nPub = 0, priv = 0, nPriv = 0, nSanc = 0;
+    linhas.forEach(function (r) {
+      if (r[5] === 'publico' || (!r[5] && RE_PUBLICO.test(r[0]))) { pub += r[4]; nPub++; }
+      if (ehPriv(r[5])) { priv += r[4]; nPriv++; }
+      if (r[6]) nSanc++;
+    });
     var autor = p ? p.n : 'o parlamentar', fim = [];
     var passos = [
       ['1. Origem', autor + ' indicou esta emenda ' + (i[2] ? '(Pix, transferência especial)' : '(individual, com finalidade definida)') + ' no orçamento de ' + i[1] + '. Empenhado: ' + brl(i[6]) + ' · pago: ' + brl(i[7]) + '.'],
       ['2. Finalidade declarada', ([i[5], i[8], i[9]].filter(Boolean).join(' · ') || 'a fonte não informa a finalidade') + (i[4] ? '. Destino: ' + i[4] : '') + '. É a intenção do repasse, não a prova do uso.'],
       ['3. Quem recebeu', linhas.length ? (linhas.length + (linhas.length === 1 ? ' recebedor' : ' recebedores') + ', ' + brl(tot) + ' pagos. ' +
-        (nPub ? brl(pub) + ' foram para entes públicos ou fundos (prefeitura, secretaria, fundo): ali o rastreio federal termina.' : 'Nenhum é prefeitura ou fundo pelo nome.')) : 'Sem pagamento registrado ainda.'],
+        (nPub ? brl(pub) + ' foram para entes públicos ou fundos (prefeitura, secretaria, fundo): ali o rastreio federal termina. ' : 'Nenhum é prefeitura ou fundo pelo nome. ') +
+        (nPriv ? brl(priv) + ' (' + (tot ? Math.round(priv / tot * 100) : 0) + '%) foram direto para ' + nPriv + (nPriv === 1 ? ' empresa ou entidade privada' : ' empresas ou entidades privadas') + ' (marcadas na lista abaixo).' : 'Nada foi pago direto a empresa ou entidade privada.') +
+        (nSanc ? ' ATENÇÃO: ' + nSanc + (nSanc === 1 ? ' recebedor consta' : ' recebedores constam') + ' em cadastro de sanções.' : '')) : 'Sem pagamento registrado ainda.'],
       ['4. Execução', cs.length ? ('Há ' + cs.length + (cs.length === 1 ? ' convênio' : ' convênios') + ' registrado: veja objeto, valores e vigência logo abaixo.') :
         (i[2] ? 'Emenda Pix não exige convênio nem projeto prévio: não há contrato federal para acompanhar.' : 'Sem convênio registrado na fonte.')],
       ['5. A partir daqui', nPub ? 'O gasto é do município ou estado. Procure o empenho no portal de transparência dele, consulte SIOPS (saúde) ou SIOPE (educação) e o Tribunal de Contas do estado; ou use o modelo de pedido no fim desta página.' :
@@ -406,7 +421,7 @@
       f.slice(0, limite).forEach(function (r, i) {
         var nome = r[1] ? el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]), text: r[0] }) : document.createTextNode(r[0]);
         corpo.appendChild(el('tr', {}, [el('td', { class: 'pos', text: String(i + 1) }),
-          el('td', {}, [nome, el('small', { text: r[1] })]), el('td', { text: r[2] }), el('td', {}, [locLink(r[3])]),
+          el('td', {}, [nome, chipClasse(r[5], r[6] ? [['sanção']] : null), el('small', { text: r[1] })]), el('td', { text: r[2] }), el('td', {}, [locLink(r[3])]),
           el('td', { class: 'num', text: brl(r[4]) })]));
       });
       mais.hidden = f.length <= limite;
@@ -562,8 +577,18 @@
       fr.appendChild(el('a', { href: CNPJ_RECEITA, target: '_blank', rel: 'noopener', text: 'Consulta de CNPJ na Receita ↗' }));
       fr.appendChild(document.createTextNode(' · '));
       fr.appendChild(el('a', { href: PORTAL_EMENDAS, target: '_blank', rel: 'noopener', text: 'Emendas no Portal da Transparência ↗' }));
+      var pv = document.querySelector('[data-r-priv]');
+      if (pv && !dados.b && (ehPriv(dados.g) || (dados.s && dados.s.length))) {
+        pv.hidden = false;
+        pv.querySelector('[data-r-priv-tipo]').textContent = (ROTULO_CLASSE[dados.g] || 'Recebedor') + ' (classificação pelo nome; pode haver erro).';
+        var al = pv.querySelector('[data-r-priv-sanc]');
+        if (dados.s && dados.s.length) {
+          al.hidden = false;
+          al.textContent = 'Consta em cadastro de sanções do Portal da Transparência: ' + dados.s.map(function (x) { return x[0] + (x[1] ? ' (' + x[1] + ')' : '') + (x[2] ? ', desde ' + x[2] : '') + (x[3] ? ' até ' + x[3] : '') + (x[4] ? ', órgão: ' + x[4] : ''); }).join('; ') + '. Confira as datas: a sanção pode ser posterior ou anterior ao pagamento.';
+        }
+      }
       var pub = document.querySelector('[data-r-publico]');
-      if (pub && !dados.b && /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i.test(dados.n)) {
+      if (pub && !dados.b && !ehPriv(dados.g) && /\b(FUNDO|PREFEITURA|MUNICIPIO|MUNICÍPIO|SECRETARIA|ESTADO|GOVERNO|CAMARA|CÂMARA)\b/i.test(dados.n)) {
         pub.hidden = false;
         if (/FUNDO/i.test(dados.n)) pub.querySelector('[data-r-publico-fundo]').hidden = false;
       }
@@ -616,6 +641,52 @@
     }).catch(function () { sec.hidden = true; });
   }
 
+  /* ---------- privados ---------- */
+  function iniciarPrivados(sec) {
+    var aba = sec.querySelector('[data-v-aba]'), tipo = sec.querySelector('[data-v-tipo]'), uf = sec.querySelector('[data-v-uf]'), sanc = sec.querySelector('[data-v-sanc]'), q = sec.querySelector('[data-v-q]');
+    var cab = document.querySelector('[data-v-cab]'), corpo = document.querySelector('[data-v-corpo]'), mais = document.querySelector('[data-v-mais]');
+    var dados = null, limite = 50, atuais = [];
+    function render() {
+      if (!dados) return;
+      var nq = norm(q.value.trim()), rec = aba.value === 'rec', lista;
+      sec.querySelectorAll('[data-v-tipo]').forEach(function (x) { x.parentNode.hidden = !rec; });
+      sanc.parentNode.hidden = !rec;
+      cab.textContent = ''; corpo.textContent = '';
+      if (rec) {
+        cab.appendChild(el('tr', {}, [el('th', { text: 'Recebedor' }), el('th', { text: 'Local' }), el('th', { class: 'num', text: 'Parlamentares' }), el('th', { class: 'num', text: 'Total recebido' })]));
+        lista = dados.rec.filter(function (r) {
+          return (!tipo.value || r[2] === tipo.value) && (!uf.value || (r[5] || '').slice(-2) === uf.value) && (!sanc.checked || r[6].length) &&
+            (!nq || norm(r[0] + ' ' + r[1]).indexOf(nq) >= 0);
+        });
+        lista.slice(0, limite).forEach(function (r) {
+          corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + 'recebedor/?d=' + encodeURIComponent(r[1]), text: r[0] }), chipClasse(r[2], r[6].length ? r[6] : null), el('small', { text: r[1] })]),
+            el('td', {}, [locLink(r[5])]), el('td', { class: 'num', text: String(r[4]) }), el('td', { class: 'num', text: brl(r[3]) })]));
+        });
+      } else {
+        cab.appendChild(el('tr', {}, [el('th', { text: 'Parlamentar' }), el('th', { text: 'UF' }), el('th', { text: 'Partido' }), el('th', { class: 'num', text: 'Pago a privados' }), el('th', { class: 'num', text: 'Total pago em emendas' }), el('th', { class: 'num', text: '% privado' })]));
+        lista = dados.parl.filter(function (r) { return (!uf.value || r[2] === uf.value) && (!nq || norm(r[0]).indexOf(nq) >= 0); });
+        lista.slice(0, limite).forEach(function (r) {
+          corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + r[1], text: r[0] })]), el('td', { text: r[2] }), el('td', { text: r[3] }),
+            el('td', { class: 'num', text: brl(r[5]) }), el('td', { class: 'num', text: brl(r[6]) }), el('td', { class: 'num', text: Math.round(r[7]) + '%' })]));
+        });
+      }
+      atuais = lista;
+      mais.hidden = lista.length <= limite; mais.textContent = 'Mostrar mais (' + (lista.length - limite) + ')';
+    }
+    mais.addEventListener('click', function () { limite += 100; render(); });
+    [aba, tipo, uf, sanc].forEach(function (x) { x.addEventListener('change', function () { limite = 50; render(); }); });
+    q.addEventListener('input', function () { limite = 50; render(); });
+    get('data/privados.json').then(function (d) {
+      dados = d;
+      sec.querySelector('[data-v-resumo]').textContent = 'Das emendas pagas desde 2014 (' + brl(d.total) + ', sem bancos intermediários), ' + brl(d.total_priv) + ' (' + (d.total ? Math.round(d.total_priv / d.total * 100) : 0) + '%) foram pagos direto a empresas e entidades privadas.';
+      acoes(document.querySelector('[data-acoes]'), [['Baixar lista (CSV)', 'privados.csv', function () {
+        return aba.value === 'rec' ? [['recebedor', 'cnpj', 'tipo', 'local', 'parlamentares', 'total', 'sancao'], atuais.map(function (r) { return [r[0], r[1], ROTULO_CLASSE[r[2]], r[5], r[4], r[3], r[6].length ? r[6][0][0] : '']; })]
+          : [['parlamentar', 'uf', 'partido', 'pago_a_privados', 'total_emendas', 'pct_privado'], atuais.map(function (r) { return [r[0], r[2], r[3], r[5], r[6], r[7]]; })];
+      }]]);
+      render();
+    });
+  }
+
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
     var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]');
@@ -631,7 +702,7 @@
       cab.textContent = '';
       var tr = el('tr', {}, [el('th', { text: 'Parlamentar' }), el('th', { text: 'UF' }), el('th', { text: 'Partido' })]);
       ind.forEach(function (x, i) {
-        var th = el('th', { class: 'num', title: x[2] ? 'menor valor = gasta menos' : 'maior valor = mais', 'aria-sort': ordem === 6 + i ? (asc ? 'ascending' : 'descending') : 'none' });
+        var th = el('th', { class: 'num', title: x[2] === null ? 'sem juízo de valor' : x[2] ? 'menor valor = gasta menos' : 'maior valor = mais', 'aria-sort': ordem === 6 + i ? (asc ? 'ascending' : 'descending') : 'none' });
         var b = el('button', { type: 'button', class: 'botao-th', text: x[1] + (ordem === 6 + i ? (asc ? ' ↑' : ' ↓') : '') });
         b.addEventListener('click', function () { if (ordem === 6 + i) asc = !asc; else { ordem = 6 + i; asc = !!x[2]; } limite = 60; render(); });
         th.appendChild(b); tr.appendChild(th);
@@ -717,6 +788,20 @@
     var geral = tot[0] + tot[1] + tot[2] + tot[3];
     box.querySelector('[data-mu-tce-resumo]').textContent = 'A prefeitura e seus órgãos pagaram ' + brl(geral) + (ano ? ' em ' + ano : ' nos anos carregados (' + anos.filter(function (a) { return tc[a]; }).join(', ') + ')') +
       ', dos quais ' + brl(tot[1]) + ' (' + (geral ? Math.round(tot[1] / geral * 100) : 0) + '%) com recursos de transferências federais.';
+    var fr = {};
+    anos.forEach(function (a) {
+      var t = tc[a]; if (!t || !t.r) return;
+      t.r.forEach(function (x) { var k = x[0] + '|' + x[1]; fr[k] = fr[k] || [x[0], x[1], x[2], 0, 0, 0, x[6]]; fr[k][3] += x[3]; fr[k][4] += x[4]; fr[k][5] += x[5]; });
+    });
+    var tf = box.querySelector('[data-mu-tce-forn]');
+    if (tf) {
+      tf.textContent = '';
+      Object.keys(fr).map(function (k) { return fr[k]; }).sort(function (a, b) { return b[3] - a[3]; }).slice(0, 40).forEach(function (x) {
+        tf.appendChild(el('tr', {}, [el('td', {}, [document.createTextNode(x[1]), chipClasse(x[2], x[6] && x[6].length ? x[6] : null), el('small', { text: 'CNPJ ' + x[0] })]),
+          el('td', { class: 'num', text: brl(x[3]) }), el('td', { class: 'num', text: brl(x[4]) }),
+          el('td', { class: 'num', text: x[3] ? Math.round(x[5] / x[3] * 100) + '%' : '—' })]));
+      });
+    }
     var lp = Object.keys(pag).map(function (k) { return pag[k]; }).sort(function (a, b) { return b[4] - a[4] || b[6] - a[6]; }).slice(0, 60);
     var tp = box.querySelector('[data-mu-tce-pag]'); tp.textContent = '';
     lp.forEach(function (x) {
@@ -870,6 +955,7 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var pv_ = document.querySelector('[data-privados]'); if (pv_) iniciarPrivados(pv_);
   var pa_ = document.querySelector('[data-pares]'); if (pa_) iniciarPares(pa_);
   var pm_ = document.querySelector('[data-pm]'); if (pm_) iniciarMeses(pm_);
   var tr_ = document.querySelector('[data-recebedor]'); if (tr_) iniciarTelaRecebedor(tr_);

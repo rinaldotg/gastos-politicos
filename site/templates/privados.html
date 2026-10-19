@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta" data-privados>
+  <h1>Emendas para empresas e entidades privadas</h1>
+  <p class="apoio">A maior parte das emendas vai para prefeituras, governos e fundos públicos, onde o rastreio federal termina. Aqui está a parte que vai <strong>direto para empresas e entidades privadas</strong>: quem recebeu, de quais parlamentares e com que sinais públicos vale conferir. Receber direto é permitido e comum, e <strong>não indica irregularidade</strong>.</p>
+  <p class="apoio" data-v-resumo></p>
+  <div class="controles">
+    <label>Ver <select data-v-aba><option value="rec">Quem recebeu</option><option value="parl">Parlamentares (maior parcela privada)</option></select></label>
+    <label>Tipo <select data-v-tipo><option value="">Todos</option><option value="empresa">Empresas privadas</option><option value="entidade">Entidades sem fins lucrativos</option><option value="privado_outro">Tipo não identificado</option></select></label>
+    <label data-v-uf-l>Estado <select data-v-uf><option value="">Todos</option>{% for s, n in ufs %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></label>
+    <label><input type="checkbox" data-v-sanc> Só com sanção cadastrada</label>
+    <label>Buscar <input type="search" data-v-q placeholder="Nome ou CNPJ"></label>
+  </div>
+</section>
+<section class="ranking">
+  <div class="tabela-rolavel"><table class="tabela"><thead data-v-cab></thead><tbody data-v-corpo></tbody></table></div>
+  <button type="button" class="botao botao-leve" data-v-mais hidden>Mostrar mais</button>
+  <div class="acoes" data-acoes></div>
+</section>
+<section class="bloco">
+  <h2>Como conferir um recebedor privado</h2>
+  <ol>
+    <li><strong>Quem é e há quanto tempo existe.</strong> Consulte o CNPJ na <a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" target="_blank" rel="noopener">Receita ↗</a>: data de abertura, atividade, capital social e sócios. Uma empresa aberta pouco antes do pagamento, ou com atividade sem relação com o objeto, merece pergunta.</li>
+    <li><strong>O objeto.</strong> Na página da emenda, veja a finalidade e o convênio. Pagamento direto a fabricante de veículos ou máquinas pode ser compra de equipamentos para municípios; a ONG deve ter plano de trabalho e prestação de contas.</li>
+    <li><strong>Sanções.</strong> O site marca quem consta no CEIS, CNEP ou CEPIM. Também vale checar o <a href="https://portaldatransparencia.gov.br" target="_blank" rel="noopener">Portal da Transparência ↗</a>.</li>
+    <li><strong>Quantos parlamentares.</strong> Um mesmo recebedor procurado por muitos parlamentares é comum em hospitais e universidades, mas vale ver se cada repasse tem objeto e prestação de contas próprios.</li>
+    <li><strong>Pergunte.</strong> Use o modelo de pedido pela Lei de Acesso na página da emenda, e leve indícios ao Ministério Público ou ao Tribunal de Contas.</li>
+  </ol>
+  <p class="nota">A classificação em empresa, entidade sem fins lucrativos ou tipo não identificado é feita pelo nome do recebedor, porque a fonte não informa a natureza jurídica; pode haver erros. Bancos públicos intermediários ficam fora dos totais. Os valores somam todos os anos pagos desde 2014 que constam na base; para ver por ano, abra a página do recebedor.</p>
+</section>
+{% endblock %}

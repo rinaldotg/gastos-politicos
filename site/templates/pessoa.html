@@ -12,6 +12,24 @@
     {% if uf_url %}<a class="botao botao-leve" href="{{ raiz }}{{ uf_url }}">Ver o estado {{ p.uf }}</a>{% endif %}
     {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
   </header>
+  {% if destino and destino.total >= 1000000 %}
+  <section class="bloco destino-emendas">
+    <h2>Para quem foi o dinheiro das emendas: público ou privado?</h2>
+    <p>Das emendas de {{ p.nome }} pagas desde {{ em_desde }} (<strong>{{ destino.total | brl }}</strong>, sem contar bancos intermediários), <strong>{{ destino.privado | brl }} ({{ destino.pct | round(0) | int }}%)</strong> foram pagos <strong>direto a empresas ou entidades privadas</strong>; o restante foi para prefeituras, governos e fundos públicos.</p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Tipo de recebedor</th><th class="num">Valor pago</th><th class="num">%</th></tr></thead>
+      <tbody>{% for rot, v, pc in destino.grupos %}<tr><td>{{ rot }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ pc | round(1) }}%</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if destino.top %}
+    <h3>Maiores recebedores privados</h3>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Recebedor</th><th>Tipo</th><th class="num">Emendas</th><th class="num">Valor pago</th></tr></thead>
+      <tbody>{% for nome, doc, cl, v, n, sn in destino.top %}<tr><td><a href="{{ raiz }}recebedor/?d={{ doc | urlencode }}">{{ nome }}</a><small>CNPJ {{ doc }}{% if sn %} · <span class="alerta">consta no cadastro de sanções ({{ sn[0][0] }})</span>{% endif %}</small></td><td>{{ 'Empresa' if cl == 'empresa' else 'Entidade sem fins lucrativos' if cl == 'entidade' else 'Privado (tipo não identificado)' }}</td><td class="num">{{ n }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+    <p class="nota">Pagar direto a entidade privada é permitido e comum (hospitais filantrópicos, fundações de apoio a universidades, associações, compra de equipamentos). Não indica irregularidade, mas é o ponto em que vale conferir: objeto do repasse, prestação de contas, tempo de existência e sócios do CNPJ (<a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" target="_blank" rel="noopener">Receita ↗</a>) e se a entidade tem sanção. A classificação é feita pelo nome do recebedor; veja a <a href="{{ raiz }}privados/">lista geral</a>.</p>
+  </section>
+  {% endif %}
   {% if painel %}
   <section class="bloco painel-pares">
     <h2>O voto está valendo a pena? Compare com os pares</h2>
@@ -20,7 +38,7 @@
       <thead><tr><th>Indicador</th><th class="num">{{ p.nome }}</th><th class="num">Mediana dos pares</th><th class="num">Posição entre os pares</th></tr></thead>
       <tbody>
       {% for l in painel.linhas %}
-      <tr><td>{{ l.rot }}<small>{{ 'menor valor = gasta menos' if l.menor else 'maior valor = mais' }}</small></td>
+      <tr><td>{{ l.rot }}<small>{% if l.menor is none %}sem juízo de valor: depende do tipo de política{% elif l.menor %}menor valor = gasta menos{% else %}maior valor = mais{% endif %}</small></td>
         <td class="num">{% if l.v is none %}—{% elif l.fmt == 'brl' %}{{ l.v | brl }}{% elif l.fmt == 'pct' %}{{ l.v | round(0) | int }}%{% else %}{{ l.v | int }}{% endif %}</td>
         <td class="num">{% if l.mediana is none %}—{% elif l.fmt == 'brl' %}{{ l.mediana | brl }}{% elif l.fmt == 'pct' %}{{ l.mediana | round(0) | int }}%{% else %}{{ l.mediana | round(1) }}{% endif %}</td>
         <td class="num">{% if l.pos %}{{ l.pos }}º {{ 'menor' if l.menor else 'maior' }} de {{ l.n }}{% else %}sem dados suficientes{% endif %}</td></tr>

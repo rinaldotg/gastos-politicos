@@ -5,6 +5,26 @@
   <p class="apoio">Padrões que aparecem nos dados públicos e que valem uma pergunta ao responsável. <strong>Nenhum deles indica irregularidade</strong>: cada um tem explicações normais, e a lista serve para saber o que perguntar, não para acusar.</p>
 </section>
 <section class="bloco">
+  <h2>Recebedores de emendas que constam em cadastros de sanções</h2>
+  {% if sancionados %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Recebedor</th><th>Cadastro</th><th class="num">Parlamentares</th><th class="num">Recebeu em emendas</th></tr></thead>
+    <tbody>{% for n in sancionados %}<tr><td><a href="{{ raiz }}recebedor/?d={{ n[1] }}">{{ n[0] }}</a><small>CNPJ {{ n[1] }}</small></td><td>{{ n[5][0] }}{% if n[5][1] %}<small>{{ n[5][1] }}{% if n[5][3] %} · até {{ n[5][3] }}{% endif %}</small>{% endif %}</td><td class="num">{{ n[4] }}</td><td class="num">{{ n[3] | brl }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">CEIS (empresas sancionadas), CNEP (Lei Anticorrupção) e CEPIM (entidades impedidas de receber recursos federais), do Portal da Transparência. Constar no cadastro é um fato público sobre o CNPJ; a sanção pode ter começado depois ou terminado antes do pagamento, então confira as datas e o objeto da emenda antes de qualquer conclusão.</p>
+  {% else %}<p class="nota">Nenhum caso nesta atualização, ou o cadastro de sanções não foi carregado.</p>{% endif %}
+</section>
+<section class="bloco">
+  <h2>Empresas e entidades pagas quase só sem licitação (municípios do piloto de São Paulo)</h2>
+  {% if dispensas %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Município</th><th>Fornecedor</th><th class="num">Pago (anos carregados)</th><th class="num">% sem licitação</th></tr></thead>
+    <tbody>{% for d in dispensas %}<tr><td>{{ d[0] }}</td><td>{{ d[1] }}<small>CNPJ {{ d[2] }}</small></td><td class="num">{{ d[3] | brl }}</td><td class="num">{{ d[4] | round(0) | int }}%</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Pagamentos feitos pela prefeitura e seus órgãos, segundo o TCE-SP, em que 80% ou mais do valor veio de dispensa ou inexigibilidade de licitação. A lei permite essas modalidades em casos específicos (emergência, fornecedor exclusivo, valores pequenos, contratos com entidades sem fins lucrativos). A pergunta útil é qual foi a justificativa e se houve cotação.</p>
+  {% else %}<p class="nota">Sem casos nesta atualização.</p>{% endif %}
+</section>
+<section class="bloco">
   <h2>Obras paralisadas em quem recebeu emendas</h2>
   {% if obras %}
   <div class="tabela-rolavel"><table class="tabela">

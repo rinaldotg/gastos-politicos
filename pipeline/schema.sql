@@ -141,3 +141,10 @@ CREATE TABLE IF NOT EXISTS atuacao (
     PRIMARY KEY (pessoa_id, ano, fonte)
 );
 CREATE TABLE IF NOT EXISTS atuacao_carga (fonte TEXT, ano INTEGER, registros INTEGER, carregado TEXT, PRIMARY KEY (fonte, ano));
+
+-- Cadastros de sancoes do Portal da Transparencia (CEIS, CNEP, CEPIM), so de quem aparece como recebedor de emendas
+CREATE TABLE IF NOT EXISTS sancao (documento TEXT, cadastro TEXT, categoria TEXT, inicio TEXT, fim TEXT, orgao TEXT, nome TEXT);
+CREATE INDEX IF NOT EXISTS ix_sancao_doc ON sancao (documento);
+-- Fornecedores privados pagos pelos municipios do piloto (TCE-SP), por municipio e ano
+CREATE TABLE IF NOT EXISTS tce_fornecedor (slug TEXT, ano INTEGER, documento TEXT, fornecedor TEXT, classe TEXT, pago REAL, pago_federal REAL, pago_dispensa REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_tce_forn ON tce_fornecedor (slug, ano);

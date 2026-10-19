@@ -60,6 +60,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so tcesp
 
+      - name: Cadastros de sancoes (CEIS, CNEP, CEPIM)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so sancoes
+
       - name: Atuacao legislativa (projetos, normas, votacoes)
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao

@@ -78,6 +78,8 @@ def abrir_banco(caminho):
         con.execute("ALTER TABLE emenda_favorecido ADD COLUMN ano INTEGER")
     if "publicacao" not in {r[1] for r in con.execute("PRAGMA table_info(emenda_convenio)")}:
         con.execute("ALTER TABLE emenda_convenio ADD COLUMN publicacao TEXT")
+    if "modalidade" not in {r[1] for r in con.execute("PRAGMA table_info(tce_pagamento)")}:
+        con.execute("ALTER TABLE tce_pagamento ADD COLUMN modalidade TEXT")
     con.commit()
     return con
 

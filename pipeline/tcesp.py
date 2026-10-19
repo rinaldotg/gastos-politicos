@@ -15,6 +15,7 @@ import zipfile
 from datetime import datetime
 
 from . import common as c
+from .classe import classificar
 
 BASE = "https://transparencia.tce.sp.gov.br/sites/default/files/csv/despesas-{slug}-{ano}.zip"
 PAGINA = "https://transparencia.tce.sp.gov.br/municipio/{slug}"
@@ -48,10 +49,19 @@ def valor(t):
         return 0.0
 
 
+def modalidade(t):
+    t = c.sem_acento(t).upper()
+    if "DISPENSA" in t or "INEXIG" in t:
+        return "dispensa"
+    if any(x in t for x in ("PREGAO", "CONCORRENCIA", "TOMADA", "CONVITE", "LEILAO", "RDC")):
+        return "licitacao"
+    return "outros"
+
+
 def agregar(texto_csv):
-    """Devolve (por_funcao, pagamentos, linhas): agregados de 'Valor Pago'."""
+    """Devolve (por_funcao, pagamentos, linhas, fornecedores): agregados de 'Valor Pago'."""
     leitor = csv.DictReader(io.StringIO(texto_csv), delimiter=";")
-    por_funcao, pag, n = {}, {}, 0
+    por_funcao, pag, n, forn = {}, {}, 0, {}
     for r in leitor:
         n += 1
         if "PAGO" not in c.sem_acento(r.get("tp_despesa")).upper():
@@ -66,14 +76,22 @@ def agregar(texto_csv):
         a[0] += v; a[1] += 1
         hist = (r.get("historico_despesa") or "").strip()
         emenda = 1 if RE_EMENDA.search(c.sem_acento(hist).upper()) else 0
+        ident = r.get("identificador_despesa") or ""
+        doc = re.sub(r"\D", "", ident.split("-")[-1]) if "CNPJ" in ident else ""
+        nome = (r.get("ds_despesa") or "").strip()
+        mod = modalidade(r.get("ds_modalidade_lic"))
+        classe = classificar(nome, doc) if doc else "pf"
+        if classe in ("empresa", "entidade"):
+            fo = forn.setdefault((doc, nome, classe), [0.0, 0.0, 0.0, 0])
+            fo[0] += v
+            fo[1] += v if fonte == "federal" else 0
+            fo[2] += v if mod == "dispensa" else 0
+            fo[3] += 1
         if fonte == "federal" or emenda:
-            ident = r.get("identificador_despesa") or ""
-            doc = re.sub(r"\D", "", ident.split("-")[-1]) if "CNPJ" in ident else ""
-            nome = (r.get("ds_despesa") or "").strip()
-            kk = (doc, nome, funcao, fonte, emenda, hist[:220])
+            kk = (doc, nome, funcao, fonte, emenda, hist[:220], mod)
             b = pag.setdefault(kk, [0.0, 0])
             b[0] += v; b[1] += 1
-    return por_funcao, pag, n
+    return por_funcao, pag, n, forn
 
 
 def _baixar(url):
@@ -120,15 +138,19 @@ def escolher_municipios(con, n=N_MUNICIPIOS):
     return out
 
 
-def salvar(con, sl, ano, nome, por_funcao, pag, n):
+def salvar(con, sl, ano, nome, por_funcao, pag, n, forn=None):
     con.execute("DELETE FROM tce_funcao WHERE slug=? AND ano=?", (sl, ano))
     con.execute("DELETE FROM tce_pagamento WHERE slug=? AND ano=?", (sl, ano))
     con.executemany("INSERT INTO tce_funcao VALUES (?,?,?,?,?,?)", [(sl, ano, f, fo, round(v, 2), q) for (f, fo), (v, q) in por_funcao.items()])
     itens = sorted(pag.items(), key=lambda t: -t[1][0])
     emen = [t for t in itens if t[0][4]][:RETER]
     resto = [t for t in itens if not t[0][4]][:RETER]
-    con.executemany("INSERT INTO tce_pagamento VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    [(sl, ano, k[0], k[1], k[2], k[3], k[4], k[5], round(v, 2), q) for k, (v, q) in emen + resto])
+    con.executemany("INSERT INTO tce_pagamento (slug, ano, documento, fornecedor, funcao, fonte, emenda, historico, pago, n, modalidade) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    [(sl, ano, k[0], k[1], k[2], k[3], k[4], k[5], round(v, 2), q, k[6]) for k, (v, q) in emen + resto])
+    con.execute("DELETE FROM tce_fornecedor WHERE slug=? AND ano=?", (sl, ano))
+    top = sorted((forn or {}).items(), key=lambda t: -t[1][0])[:200]
+    con.executemany("INSERT INTO tce_fornecedor VALUES (?,?,?,?,?,?,?,?,?)",
+                    [(sl, ano, k[0], k[1], k[2], round(v[0], 2), round(v[1], 2), round(v[2], 2), v[3]) for k, v in top])
     con.execute("INSERT OR REPLACE INTO tce_carga VALUES (?,?,?,?,?)", (sl, ano, nome, n, c.agora()))
     con.commit()
 
@@ -139,7 +161,7 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
     if not municipios:
         print("  AVISO: sem municipios paulistas entre os recebedores de emendas; rode antes a etapa de emendas", file=sys.stderr)
         return 0
-    feitos = {(r[0], r[1]) for r in con.execute("SELECT slug, ano FROM tce_carga")}
+    feitos = {(r[0], r[1]) for r in con.execute("SELECT DISTINCT slug, ano FROM tce_fornecedor")}  # anos sem fornecedores (carga antiga) sao baixados de novo
     total = falhas = 0
     for nome in municipios:
         sl = slug(nome)      # chave no site (nome das emendas)
@@ -152,7 +174,7 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
                 texto = baixar(BASE.format(slug=sl_tce, ano=ano))
                 if ano == desde and not total:
                     print(f"  Colunas do TCE-SP: {texto.splitlines()[0][:400]}")
-                por_funcao, pag, n = agregar(texto)
+                por_funcao, pag, n, forn = agregar(texto)
                 if not n:
                     raise ValueError("arquivo sem linhas")
             except Exception as e:
@@ -163,8 +185,8 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
                         sl_tce = novo
                         try:
                             texto = baixar(BASE.format(slug=sl_tce, ano=ano))
-                            por_funcao, pag, n = agregar(texto)
-                            salvar(con, sl, ano, nome, por_funcao, pag, n)
+                            por_funcao, pag, n, forn = agregar(texto)
+                            salvar(con, sl, ano, nome, por_funcao, pag, n, forn)
                             total += 1
                             print(f"  TCE-SP {nome} ({sl_tce}) {ano}: {n} linhas")
                             continue
@@ -175,7 +197,7 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
                 if "404" in str(e):
                     break  # o municipio nao existe sob esse nome: nao insistir nos outros anos
                 continue
-            salvar(con, sl, ano, nome, por_funcao, pag, n)
+            salvar(con, sl, ano, nome, por_funcao, pag, n, forn)
             total += 1
             print(f"  TCE-SP {nome} {ano}: {n} linhas")
     c.log(con, "tcesp", "despesas", None, total)
