@@ -727,8 +727,11 @@ def main():
         for r_ in ler(a.resumo, "despesa_orgao"):
             ano_, org_, bk_ = int(r_["ano"]), r_["orgao"], r_["bucket"]
             v_ = f(r_["pago"]) + f(r_["rap_pago"])
-            d_ = min_orgaos.setdefault(org_, dict(tipo=tipo_orgao(org_), anos={}, comp={}))
-            d_["anos"][ano_] = d_["anos"].get(ano_, 0) + v_
+            d_ = min_orgaos.setdefault(org_, dict(tipo=tipo_orgao(org_), anos={}, comp={}, div={}))
+            if bk_ == "divida":
+                d_["div"][ano_] = d_["div"].get(ano_, 0) + v_
+            else:
+                d_["anos"][ano_] = d_["anos"].get(ano_, 0) + v_
             d_["comp"].setdefault(ano_, {})
             d_["comp"][ano_][bk_] = d_["comp"][ano_].get(bk_, 0) + v_
         meses_ = {int(r_["ano"]): int(r_["ate_mes"]) for r_ in ler(a.resumo, "despesa_orgao_meses")}
@@ -740,25 +743,27 @@ def main():
         ult_ = fechados_[-1] if fechados_ else min_anos[-1]
         mins = sorted([(n_, d_) for n_, d_ in min_orgaos.items() if d_["tipo"] == "ministerio"], key=lambda t: -t[1]["anos"].get(ult_, 0))
         tot_min = {y_: sum(d_["anos"].get(y_, 0) for _, d_ in mins) for y_ in min_anos}
+        div_min = {y_: sum(d_["div"].get(y_, 0) for _, d_ in mins) for y_ in min_anos}
         outros_ = {}
         for rot_, tp_ in (("Presidência da República", "presidencia"), ("Encargos e transferências gerais da União", "encargos"), ("Poderes e órgãos de controle (Legislativo, Judiciário, MP, Defensoria)", "poderes"), ("Outros órgãos do Executivo", "outros")):
             outros_[rot_] = {y_: sum(d_["anos"].get(y_, 0) for d_ in min_orgaos.values() if d_["tipo"] == tp_) for y_ in min_anos}
         linhas_min = []
         for n_, d_ in mins:
             cp_ = d_["comp"].get(ult_, {})
-            t_ = sum(cp_.values()) or 0
+            t_ = sum(v_ for k_, v_ in cp_.items() if k_ != "divida") or 0
             linhas_min.append(dict(nome=n_, anos=[d_["anos"].get(y_, 0) for y_ in min_anos],
-                                   comp={k_: (cp_.get(k_, 0) / t_ * 100 if t_ else 0) for k_ in ("pessoal", "transferencias", "demais", "divida")}))
+                                   comp={k_: (cp_.get(k_, 0) / t_ * 100 if t_ else 0) for k_ in ("pessoal", "transferencias", "demais")}))
         csv_min = "ministerio," + ",".join(str(y_) for y_ in min_anos) + "\n" + "\n".join(
             '"' + l_["nome"].replace('"', "") + '",' + ",".join(f"{v_:.2f}" for v_ in l_["anos"]) for l_ in linhas_min) + \
-            "\nTOTAL," + ",".join(f"{tot_min[y_]:.2f}" for y_ in min_anos) + "\n"
+            "\nTOTAL sem juros e amortizacao da divida," + ",".join(f"{tot_min[y_]:.2f}" for y_ in min_anos) + \
+            "\nJuros e amortizacao da divida," + ",".join(f"{div_min[y_]:.2f}" for y_ in min_anos) + "\n"
         (saida / "data").mkdir(parents=True, exist_ok=True)
         (saida / "data" / "ministerios.csv").write_text(csv_min, encoding="utf-8")
     else:
-        linhas_min, tot_min, outros_, ult_ = [], {}, {}, None
+        linhas_min, tot_min, div_min, outros_, ult_ = [], {}, {}, {}, None
     escrever("ministerios", env.get_template("ministerios.html").render(**{**ctx_base, "raiz": "../"}, titulo="Quanto custa cada ministério",
              descricao="Despesa paga por ministério a cada ano e o total de todos os ministérios, com a parte que vai para pessoal, transferências e demais gastos.",
-             anos=min_anos, linhas=linhas_min, total=tot_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, ult=ult_))
+             anos=min_anos, linhas=linhas_min, total=tot_min, divida=div_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, ult=ult_))
 
     # ---- pontos de atencao: padroes factuais nos dados publicos (nao afirmam irregularidade) ----
     NORMAL = re.compile(r"AEREA|AIRLINES|\bGOL\b|\bTAM\b|AZUL|LATAM|CORREIOS|TELEFONICA|\bCLARO\b|\bVIVO\b|\bTIM\b|LOCALIZA|MOVIDA|UNIDAS|HOTEL|ENERGIA|COMPANHIA|PETROBRAS|POSTO|IPIRANGA|SHELL", re.I)
