@@ -24,24 +24,6 @@
       <p class="nota">Links para busca em veículos jornalísticos, sem opinião de leitores nem redes sociais; o site não escolhe nem resume as matérias. Colunas e editoriais são excluídos pela busca, mas alguns textos de opinião podem passar: confira o selo da matéria.</p>
     </details>
   </header>
-  {% if destino and destino.total >= 1000000 %}
-  <section class="bloco destino-emendas">
-    <h2>Para quem foi o dinheiro das emendas: público ou privado?</h2>
-    <p>Das emendas de {{ p.nome }} pagas desde {{ em_desde }} (<strong>{{ destino.total | brl }}</strong>, sem contar bancos intermediários), <strong>{{ destino.privado | brl }} ({{ destino.pct | round(0) | int }}%)</strong> foram pagos <strong>direto a empresas ou entidades privadas</strong>; o restante foi para prefeituras, governos e fundos públicos.</p>
-    <div class="tabela-rolavel"><table class="tabela">
-      <thead><tr><th>Tipo de recebedor</th><th class="num">Valor pago</th><th class="num">%</th></tr></thead>
-      <tbody>{% for rot, v, pc in destino.grupos %}<tr><td>{{ rot }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ pc | round(1) }}%</td></tr>{% endfor %}</tbody>
-    </table></div>
-    {% if destino.top %}
-    <h3>Maiores recebedores privados</h3>
-    <div class="tabela-rolavel"><table class="tabela">
-      <thead><tr><th>Recebedor</th><th>Tipo</th><th class="num">Emendas</th><th class="num">Valor pago</th></tr></thead>
-      <tbody>{% for nome, doc, cl, v, n, sn in destino.top %}<tr><td><a href="{{ raiz }}recebedor/?d={{ doc | urlencode }}">{{ nome }}</a><small>CNPJ {{ doc }}{% if sn %} · <span class="alerta">consta no cadastro de sanções ({{ sn[0][0] }})</span>{% endif %}</small></td><td>{{ 'Empresa' if cl == 'empresa' else 'Entidade sem fins lucrativos' if cl == 'entidade' else 'Privado (tipo não identificado)' }}</td><td class="num">{{ n }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
-    </table></div>
-    {% endif %}
-    <p class="nota">Pagar direto a entidade privada é permitido e comum (hospitais filantrópicos, fundações de apoio a universidades, associações, compra de equipamentos). Não indica irregularidade, mas é o ponto em que vale conferir: objeto do repasse, prestação de contas, tempo de existência e sócios do CNPJ (<a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" target="_blank" rel="noopener">Receita ↗</a>) e se a entidade tem sanção. A classificação é feita pelo nome do recebedor; veja a <a href="{{ raiz }}privados/">lista geral</a>.</p>
-  </section>
-  {% endif %}
   {% if painel %}
   <section class="bloco painel-pares">
     <h2>O voto está valendo a pena? Compare com os pares</h2>
@@ -179,6 +161,29 @@
   </section>
   {% endif %}
 
+
+  {% if emendas or (destino and destino.total >= 1000000) %}
+  <details class="emendas-bloco" id="emendas">
+    <summary>Emendas parlamentares de {{ p.nome }}{% if em_tot %} <small>{{ em_tot[2] | brl }} pagos desde {{ em_desde }}</small>{% endif %}</summary>
+    <p class="apoio">Emendas são indicações de {{ p.nome }} para o orçamento federal: um assunto à parte da cota e do mandato mostrados acima.</p>
+  {% if destino and destino.total >= 1000000 %}
+  <section class="bloco destino-emendas">
+    <h2>Para quem foi o dinheiro das emendas: público ou privado?</h2>
+    <p>Das emendas de {{ p.nome }} pagas desde {{ em_desde }} (<strong>{{ destino.total | brl }}</strong>, sem contar bancos intermediários), <strong>{{ destino.privado | brl }} ({{ destino.pct | round(0) | int }}%)</strong> foram pagos <strong>direto a empresas ou entidades privadas</strong>; o restante foi para prefeituras, governos e fundos públicos.</p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Tipo de recebedor</th><th class="num">Valor pago</th><th class="num">%</th></tr></thead>
+      <tbody>{% for rot, v, pc in destino.grupos %}<tr><td>{{ rot }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ pc | round(1) }}%</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if destino.top %}
+    <h3>Maiores recebedores privados</h3>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Recebedor</th><th>Tipo</th><th class="num">Emendas</th><th class="num">Valor pago</th></tr></thead>
+      <tbody>{% for nome, doc, cl, v, n, sn in destino.top %}<tr><td><a href="{{ raiz }}recebedor/?d={{ doc | urlencode }}">{{ nome }}</a><small>CNPJ {{ doc }}{% if sn %} · <span class="alerta">consta no cadastro de sanções ({{ sn[0][0] }})</span>{% endif %}</small></td><td>{{ 'Empresa' if cl == 'empresa' else 'Entidade sem fins lucrativos' if cl == 'entidade' else 'Privado (tipo não identificado)' }}</td><td class="num">{{ n }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+    <p class="nota">Pagar direto a entidade privada é permitido e comum (hospitais filantrópicos, fundações de apoio a universidades, associações, compra de equipamentos). Não indica irregularidade, mas é o ponto em que vale conferir: objeto do repasse, prestação de contas, tempo de existência e sócios do CNPJ (<a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" target="_blank" rel="noopener">Receita ↗</a>) e se a entidade tem sanção. A classificação é feita pelo nome do recebedor; veja a <a href="{{ raiz }}privados/">lista geral</a>.</p>
+  </section>
+  {% endif %}
   {% if emendas %}
   <section class="bloco">
     <h2>Emendas individuais</h2>
@@ -223,6 +228,8 @@
     {% include "_como_cobrar.html" %}
     <p class="nota">Empenhado é o valor reservado; liquidado, o serviço ou obra já confirmado; pago, o que saiu do caixa. Emendas sem autor identificado na fonte não entram aqui (<a href="{{ raiz }}sem-autor/">entenda</a>).</p>
   </section>
+  {% endif %}
+  </details>
   {% endif %}
 
   {% if orc %}

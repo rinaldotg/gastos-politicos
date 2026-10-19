@@ -767,6 +767,15 @@
     });
   }
 
+  /* abre blocos recolhidos quando o link aponta para dentro deles */
+  function abrirHash() {
+    var h = location.hash && location.hash.slice(1); if (!h) return;
+    var t = document.getElementById(h);
+    for (var n = t; n; n = n.parentElement) if (n.tagName === 'DETAILS') n.open = true;
+    if (t) t.scrollIntoView();
+  }
+  window.addEventListener('hashchange', abrirHash); abrirHash();
+
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
     var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]'), selAno = sec.querySelector('[data-p-ano]');

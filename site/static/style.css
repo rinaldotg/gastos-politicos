@@ -196,3 +196,12 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .abertura-curta:has(.controles){max-width:none}
 .abertura-curta:has(.controles)>h1,.abertura-curta:has(.controles)>.apoio{max-width:760px}
 .controles{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+
+/* emendas recolhidas na pagina do parlamentar */
+.emendas-bloco { margin: 1.5rem 0; }
+.emendas-bloco > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem .75rem; padding: .9rem 1.1rem; border-radius: 12px; background: var(--papel); border: 1px solid var(--linha); font-weight: 700; }
+.emendas-bloco > summary::-webkit-details-marker { display: none; }
+.emendas-bloco > summary::after { content: "Mostrar ▾"; font-weight: 600; font-size: .9rem; color: var(--acento); margin-left: auto; }
+.emendas-bloco[open] > summary::after { content: "Ocultar ▴"; }
+.emendas-bloco > summary small { font-weight: 400; color: var(--tinta-2); }
+.emendas-bloco > .apoio { margin: .9rem 0 0; }
