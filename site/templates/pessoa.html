@@ -11,6 +11,18 @@
     <a class="botao botao-leve" href="{{ raiz }}comparar/?p={{ p.id }}">Comparar com outra pessoa</a>
     {% if uf_url %}<a class="botao botao-leve" href="{{ raiz }}{{ uf_url }}">Ver o estado {{ p.uf }}</a>{% endif %}
     {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
+    {% set sites = "site:g1.globo.com OR site:folha.uol.com.br OR site:estadao.com.br OR site:oglobo.globo.com OR site:cnnbrasil.com.br OR site:poder360.com.br OR site:agenciabrasil.ebc.com.br OR site:camara.leg.br OR site:senado.leg.br OR site:bbc.com OR site:valor.globo.com" %}
+    {% set termo = '"' ~ p.nome ~ '" ' ~ ('deputado' if p.cod == 'deputado' else 'senador' if p.cod == 'senador' else 'presidente') %}
+    <details class="noticias">
+      <summary class="botao botao-leve">Notícias sobre {{ p.nome.split()[0] }} ▾</summary>
+      <ul>
+        <li><a href="https://news.google.com/search?q={{ (termo ~ ' (' ~ sites ~ ') -opinião -colunista -editorial') | urlencode }}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Reportagens nos principais veículos jornalísticos ↗</a></li>
+        {% if p.cod == 'deputado' %}<li><a href="https://www.camara.leg.br/busca-portal/noticias/ultimas?q={{ p.nome | urlencode }}" target="_blank" rel="noopener">Agência Câmara de Notícias (oficial) ↗</a></li>{% endif %}
+        {% if p.cod == 'senador' %}<li><a href="https://www12.senado.leg.br/noticias/busca?q={{ p.nome | urlencode }}" target="_blank" rel="noopener">Agência Senado (oficial) ↗</a></li>{% endif %}
+        <li><a href="https://news.google.com/search?q={{ (termo ~ ' (site:lupa.news OR site:aosfatos.org OR site:g1.globo.com/fato-ou-fake)') | urlencode }}&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Checagens de fatos (Lupa, Aos Fatos, Fato ou Fake) ↗</a></li>
+      </ul>
+      <p class="nota">Links para busca em veículos jornalísticos, sem opinião de leitores nem redes sociais; o site não escolhe nem resume as matérias. Colunas e editoriais são excluídos pela busca, mas alguns textos de opinião podem passar: confira o selo da matéria.</p>
+    </details>
   </header>
   {% if destino and destino.total >= 1000000 %}
   <section class="bloco destino-emendas">

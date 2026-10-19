@@ -171,3 +171,9 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 
 .tabela tr.total td{background:var(--fundo);border-top:2px solid var(--linha)}
 .tabela th small{display:block;font-weight:400;color:var(--tinta-2)}
+.noticias{display:inline-block;vertical-align:top;margin:.25rem 0}
+.noticias summary{cursor:pointer;list-style:none}
+.noticias summary::-webkit-details-marker{display:none}
+.noticias[open]{display:block}
+.noticias ul{margin:.6rem 0 .2rem;padding-left:1.1rem}
+.noticias li{margin:.25rem 0}
