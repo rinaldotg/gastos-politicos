@@ -17,7 +17,7 @@ a{color:var(--acento)}
 .pular{position:absolute;left:-999px;top:0;background:var(--papel);padding:.5rem 1rem;z-index:10}
 .pular:focus{left:0}
 .topo{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem max(16px,calc((100vw - 1040px)/2));border-bottom:1px solid var(--linha);background:var(--papel)}
-.marca{font:700 1.15rem var(--titulo);color:var(--tinta);text-decoration:none;letter-spacing:-.01em}
+.marca{display:inline-flex;align-items:center;gap:.6rem;font:700 1.15rem var(--titulo);color:var(--tinta);text-decoration:none;letter-spacing:-.01em}
 .topo nav{display:flex;gap:1.25rem}
 .topo nav a{color:var(--tinta-2);text-decoration:none;font-weight:500}
 .topo nav a:hover{color:var(--acento)}
@@ -177,3 +177,9 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .noticias[open]{display:block}
 .noticias ul{margin:.6rem 0 .2rem;padding-left:1.1rem}
 .noticias li{margin:.25rem 0}
+
+.marca img{border-radius:9px;display:block}
+.topo{flex-wrap:wrap}
+.marca{white-space:nowrap}
+.topo nav{flex-wrap:wrap;gap:.35rem 1rem}
+.topo nav a{white-space:nowrap}
