@@ -648,6 +648,12 @@
           el('td', { class: 'num', text: brl(l.total) }), el('td', { class: 'num', text: l.cats[0] ? l.cats[0][0] : '' })]);
         corpo.appendChild(tr);
       });
+      if (ls.length) {
+        var cat = {};
+        ls.forEach(function (l) { l.cats.forEach(function (c) { cat[c[0]] = (cat[c[0]] || 0) + c[1]; }); });
+        var top = Object.keys(cat).sort(function (a, b) { return cat[b] - cat[a]; })[0];
+        corpo.appendChild(el('tr', { class: 'total' }, [el('td', { text: 'Total em ' + ano }), el('td', { class: 'num', text: brl(tot) }), el('td', { class: 'num', text: top || '' })]));
+      }
     }
     get('data/pm/' + pid + '.json').then(function (d) {
       dados = d; selA.addEventListener('change', render); render();

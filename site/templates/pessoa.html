@@ -133,6 +133,7 @@
     </table></div>
   </section>
   {% endif %}
+  {% if not tem_mes or mand %}
   <section class="bloco">
     <h2>{% if mand %}Detalhe por ano (apoio){% else %}Gastos por ano{% endif %}</h2>
     {% if not linhas_ano %}<p>Nenhuma despesa registrada desde 2014 nas fontes oficiais para este nome.</p>{% else %}
@@ -160,6 +161,7 @@
     </div>
     {% endif %}
   </section>
+  {% endif %}
 
   {% if fornecedores %}
   <section class="bloco">
