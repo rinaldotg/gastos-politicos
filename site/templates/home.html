@@ -22,7 +22,7 @@
     <div class="cartao"><strong>Como está meu estado?</strong><span>Bancada, gastos e emendas por área.</span>
       <select data-uf-select aria-label="Escolha o estado"><option value="">Escolher estado…</option>{% for s, n in ufs %}<option value="{{ s | lower }}">{{ n }}</option>{% endfor %}</select></div>
     <a class="cartao" href="atencao/"><strong>O que vale perguntar?</strong><span>Obras paralisadas, recebedores muito procurados e concentração de fornecedores: fatos, sem acusação.</span></a>
-    <a class="cartao" href="ministerios/"><strong>Quanto custa cada ministério?</strong><span>Despesa paga por ministério a cada ano e o total de todos eles.</span></a>
+    <a class="cartao" href="ministerios/"><strong>Quanto custa manter cada ministério?</strong><span>Custo de funcionamento (pessoal e custeio) por ministério a cada ano, e o total de todos eles.</span></a>
     <a class="cartao" href="emendas-pix/"><strong>Quem usa a emenda Pix?</strong><span>Transferência direta, sem convênio nem projeto prévio.</span></a>
     {% if presidentes %}<a class="cartao" href="{{ presidentes[-1].url }}"><strong>E a Presidência?</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
     <a class="cartao" href="novidades/"><strong>O que mudou?</strong><span>Novidades desde a última atualização.</span></a>

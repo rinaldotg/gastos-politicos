@@ -44,6 +44,11 @@ def main():
         "top_fornecedores": """SELECT * FROM (SELECT pessoa_id, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total, COUNT(*) n,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id ORDER BY SUM(valor) DESC) pos
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, fornecedor, cnpj_cpf) WHERE pos<=20""",
+        "top_fornecedores_ano": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total,
+                       ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos
+                       FROM gasto WHERE fonte NOT LIKE 'pres%' AND fornecedor IS NOT NULL AND fornecedor<>''
+                       AND LENGTH(REPLACE(REPLACE(REPLACE(COALESCE(cnpj_cpf,''),'.',''),'/',''),'-',''))=14
+                       GROUP BY pessoa_id, ano, fornecedor, cnpj_cpf) WHERE pos<=3""",
         "presidencia_unidades": "SELECT pessoa_id, fonte, ano, unidade, categoria, ROUND(SUM(valor),2) total, COUNT(*) n FROM gasto WHERE fonte LIKE 'pres%' GROUP BY 1,2,3,4,5",
         "emenda_agregado": "SELECT pessoa_id, tipo, ano, ROUND(SUM(empenhado),2) empenhado, ROUND(SUM(liquidado),2) liquidado, ROUND(SUM(pago),2) pago, COUNT(*) n, ROUND(SUM(rap_inscrito),2) rap_inscrito, ROUND(SUM(rap_cancelado),2) rap_cancelado, ROUND(SUM(rap_pago),2) rap_pago FROM emenda GROUP BY 1,2,3",
         "emenda_detalhe": """SELECT pessoa_id, codigo, numero, tipo, ano, uf, municipio, localidade, funcao, subfuncao, programa, acao,

@@ -5,6 +5,7 @@ Atribuido ao ocupante do cargo no mes. Agregado por mes/orgao/programa/acao para
 Colunas escritas de memoria: o log imprime as reais.
 """
 import io
+import re
 import sys
 import zipfile
 from collections import defaultdict
@@ -17,16 +18,22 @@ ANO_MIN_MINISTERIOS = 2019  # custo por ministerio: a partir deste ano (cada mes
 URL = "https://portaldatransparencia.gov.br/download-de-dados/despesas-execucao/{ano}{mes:02d}"
 
 
-def bucket(grupo, modalidade):
-    """Classifica o gasto em pessoal, divida, transferencias, ou demais despesas (compras, servicos, beneficios pagos direto, investimentos)."""
-    g, m = c.sem_acento(grupo), c.sem_acento(modalidade)
-    if "pessoal" in g:
-        return "pessoal"
+CUSTEIO = re.compile(r"material de consumo|passagens|consultoria|terceiros|locacao de mao|arrendamento mercantil|diarias|auxilio.alimentacao|auxilio.transporte|"
+                     r"obrigacoes tributarias|tecnologia da informacao|exercicios anteriores|indenizacoes e restituicoes")
+INATIVOS = re.compile(r"aposentadoria|reserva remunerada|reformas|pensoes|pensao")
+
+
+def bucket(grupo, modalidade, elemento=""):
+    """Classifica o gasto: pessoal_ativo e custeio (= custo de funcionamento), inativos (aposentados e pensionistas),
+    divida (juros e amortizacao) e programas (transferencias, beneficios, investimentos e demais gastos finalisticos)."""
+    g, m, e = c.sem_acento(grupo).lower(), c.sem_acento(modalidade).lower(), c.sem_acento(elemento).lower()
     if "juros" in g or "amortiza" in g or "divida" in g:
         return "divida"
-    if "transfer" in m:
-        return "transferencias"
-    return "demais"
+    if "pessoal" in g:
+        return "inativos" if INATIVOS.search(e) else "pessoal_ativo"
+    if "outras despesas correntes" in g and "transfer" not in m and CUSTEIO.search(e):
+        return "custeio"
+    return "programas"
 
 
 def carregar_mes(con, ids, ano, mes):
@@ -47,7 +54,7 @@ def carregar_mes(con, ids, ano, mes):
         if guarda_org:
             sup = col(l, "Nome Órgão Superior", "Nome Orgao Superior")
             if sup:
-                b = org[(sup, bucket(col(l, "Nome Grupo de Despesa"), col(l, "Modalidade da Despesa", "Nome Modalidade da Despesa")))]
+                b = org[(sup, bucket(col(l, "Nome Grupo de Despesa"), col(l, "Modalidade da Despesa", "Nome Modalidade da Despesa"), col(l, "Nome Elemento de Despesa")))]
                 b[0] += c.numero(col(l, "Valor Empenhado (R$)", "Valor Empenhado"))
                 b[1] += c.numero(col(l, "Valor Liquidado (R$)", "Valor Liquidado"))
                 b[2] += c.numero(col(l, "Valor Pago (R$)", "Valor Pago"))
@@ -85,7 +92,8 @@ def rodar(con, anos, recarregar_desde=None):
                 break
             lote = f"orcamento:{ano}{mes:02d}"
             tem_pres = con.execute("SELECT 1 FROM orcamento_acao WHERE arquivo=? LIMIT 1", (lote,)).fetchone()
-            tem_min = ano < ANO_MIN_MINISTERIOS or con.execute("SELECT 1 FROM despesa_orgao WHERE arquivo=? LIMIT 1", (lote,)).fetchone()
+            # classificacao v2 (funcionamento x programas): meses carregados com a classificacao antiga sao baixados de novo
+            tem_min = ano < ANO_MIN_MINISTERIOS or con.execute("SELECT 1 FROM despesa_orgao WHERE arquivo=? AND bucket IN ('pessoal_ativo','custeio','programas') LIMIT 1", (lote,)).fetchone()
             if ano < recarregar_desde and tem_pres and tem_min:
                 continue
             res = carregar_mes(con, ids, ano, mes)

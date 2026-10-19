@@ -183,3 +183,16 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .marca{white-space:nowrap}
 .topo nav{flex-wrap:wrap;gap:.35rem 1rem}
 .topo nav a{white-space:nowrap}
+/* pares: grade mais compacta e legivel */
+.controles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.8rem 1rem;align-items:end;max-width:1040px}
+.controles select,.controles input[type=search]{width:100%;min-width:0;box-sizing:border-box}
+.controles label:has(input[type=checkbox]){flex-direction:row;align-items:center;gap:.5rem;padding-bottom:.55rem}
+.botao-th{font:inherit;font-weight:600;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:right;white-space:normal;line-height:1.2}
+.botao-th:hover{color:var(--acento)}
+[data-p-tabela] th.num{white-space:normal;vertical-align:bottom;min-width:5.5rem}
+[data-p-tabela] td:first-child,[data-p-tabela] th:first-child{min-width:10rem}
+[data-p-tabela] td.num{font-variant-numeric:tabular-nums}
+@media (max-width:640px){[data-p-tabela] td:first-child,[data-p-tabela] th:first-child{position:sticky;left:0;background:var(--papel);z-index:1;min-width:8.5rem}}
+.abertura-curta:has(.controles){max-width:none}
+.abertura-curta:has(.controles)>h1,.abertura-curta:has(.controles)>.apoio{max-width:760px}
+.controles{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}

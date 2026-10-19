@@ -5,6 +5,7 @@
   <p class="apoio">A maior parte das emendas vai para prefeituras, governos e fundos públicos, onde o rastreio federal termina. Aqui está a parte que vai <strong>direto para empresas e entidades privadas</strong>: quem recebeu, de quais parlamentares e com que sinais públicos vale conferir. Receber direto é permitido e comum, e <strong>não indica irregularidade</strong>.</p>
   <p class="apoio" data-v-resumo></p>
   <div class="controles">
+    <label>Ano do pagamento <select data-v-ano><option value="">Todos os anos</option>{% for a in anos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label>
     <label>Ver <select data-v-aba><option value="rec">Quem recebeu</option><option value="parl">Parlamentares (maior parcela privada)</option></select></label>
     <label>Tipo <select data-v-tipo><option value="">Todos</option><option value="empresa">Empresas privadas</option><option value="entidade">Entidades sem fins lucrativos</option><option value="privado_outro">Tipo não identificado</option></select></label>
     <label data-v-uf-l>Estado <select data-v-uf><option value="">Todos</option>{% for s, n in ufs %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></label>
@@ -26,6 +27,6 @@
     <li><strong>Quantos parlamentares.</strong> Um mesmo recebedor procurado por muitos parlamentares é comum em hospitais e universidades, mas vale ver se cada repasse tem objeto e prestação de contas próprios.</li>
     <li><strong>Pergunte.</strong> Use o modelo de pedido pela Lei de Acesso na página da emenda, e leve indícios ao Ministério Público ou ao Tribunal de Contas.</li>
   </ol>
-  <p class="nota">A classificação em empresa, entidade sem fins lucrativos ou tipo não identificado é feita pelo nome do recebedor, porque a fonte não informa a natureza jurídica; pode haver erros. Bancos públicos intermediários ficam fora dos totais. Os valores somam todos os anos pagos desde 2014 que constam na base; para ver por ano, abra a página do recebedor.</p>
+  <p class="nota">A classificação em empresa, entidade sem fins lucrativos ou tipo não identificado é feita pelo nome do recebedor, porque a fonte não informa a natureza jurídica; pode haver erros. Bancos públicos intermediários ficam fora dos totais. O filtro de ano usa o ano em que o pagamento foi feito (não o ano da emenda); sem filtro, somam todos os anos pagos desde 2014 que constam na base. O ranking mostra os 400 maiores recebedores de cada período.</p>
 </section>
 {% endblock %}

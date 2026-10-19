@@ -369,23 +369,48 @@ def main():
 
     # ---- indicadores comparaveis (periodo da legislatura atual) e pares ----
     PERIODO = 2023
-    stats = {}
-    for x in lista:
-        if x["cargo"] == "presidente":
+    cl_pa = {}
+    def classe_pa(nome_, doc_):
+        k_ = (nome_, doc_)
+        if k_ not in cl_pa:
+            cl_pa[k_] = classificar(nome_, doc_) if doc_ else "pf"
+        return cl_pa[k_]
+    priv_pa = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))  # pid -> ano de pagamento -> [privado, total sem bancos]
+    for cod_, rows_ in favs_raw.items():
+        pid_ = cod_pid.get(cod_)
+        if pid_ is None:
             continue
-        pid_ = x["id"]
-        meses_p = sum(n_ for y_, n_ in meses[pid_].items() if y_ >= PERIODO)
-        cota_p = sum(sum(anos[pid_][y_].values()) for y_ in anos[pid_] if y_ >= PERIODO)
-        e_ = [sum(v_[i_] for y_, v_ in emendas.get(pid_, {}).items() if y_ >= PERIODO) for i_ in range(3)]
-        t_ = [sum(v_[i_] for y_, v_ in atu.get(pid_, {}).items() if y_ >= PERIODO) for i_ in range(6)]
-        tem_atu = any(y_ >= PERIODO for y_ in atu.get(pid_, {}))
-        stats[pid_] = dict(
-            meses=meses_p, cota=round(cota_p),
-            cota_mes=(cota_p / meses_p) if meses_p >= 3 else None,
-            em_emp=round(e_[0]), em_pago=round(e_[2]), em_pct=(e_[2] / e_[0] * 100) if e_[0] > 0 else None,
-            proj=(t_[1] + t_[2]) if tem_atu else None, pec=t_[2] if tem_atu else None, leis=t_[3] if tem_atu else None,
-            presenca=(min(100.0, t_[4] / t_[5] * 100) if t_[5] > 0 else None), votos=t_[4],
-            priv_pct=(destino[pid_]["pct"] if pid_ in destino and destino[pid_]["total"] >= 1000000 else None))
+        for nome_, doc_, tipo_, loc_, valor_, ano_p in rows_:
+            cl_ = classe_pa(nome_, doc_)
+            if cl_ == "banco":
+                continue
+            z_ = priv_pa[pid_][ano_p]
+            z_[1] += valor_
+            if cl_ in PRIVADOS:
+                z_[0] += valor_
+
+    def calcular_stats(no_periodo, minimo_priv):
+        st_ = {}
+        for x in lista:
+            if x["cargo"] == "presidente":
+                continue
+            pid_ = x["id"]
+            meses_p = sum(n_ for y_, n_ in meses[pid_].items() if no_periodo(y_))
+            cota_p = sum(sum(anos[pid_][y_].values()) for y_ in anos[pid_] if no_periodo(y_))
+            e_ = [sum(v_[i_] for y_, v_ in emendas.get(pid_, {}).items() if no_periodo(y_)) for i_ in range(3)]
+            t_ = [sum(v_[i_] for y_, v_ in atu.get(pid_, {}).items() if no_periodo(y_)) for i_ in range(6)]
+            tem_atu = any(no_periodo(y_) for y_ in atu.get(pid_, {}))
+            pv_ = [sum(v_[0] for y_, v_ in priv_pa[pid_].items() if no_periodo(y_)), sum(v_[1] for y_, v_ in priv_pa[pid_].items() if no_periodo(y_))] if pid_ in priv_pa else [0, 0]
+            st_[pid_] = dict(
+                meses=meses_p, cota=round(cota_p),
+                cota_mes=(cota_p / meses_p) if meses_p >= 3 else None,
+                em_emp=round(e_[0]), em_pago=round(e_[2]), em_pct=(e_[2] / e_[0] * 100) if e_[0] > 0 else None,
+                proj=(t_[1] + t_[2]) if tem_atu else None, pec=t_[2] if tem_atu else None, leis=t_[3] if tem_atu else None,
+                presenca=(min(100.0, t_[4] / t_[5] * 100) if t_[5] > 0 else None), votos=t_[4],
+                priv_pct=(pv_[0] / pv_[1] * 100 if pv_[1] >= minimo_priv else None))
+        return st_
+    stats = calcular_stats(lambda y_: y_ >= PERIODO, 1000000)
+    CURTO = {"cota_mes": "Cota por mês", "em_pct": "Emendas pagas", "presenca": "Presença", "proj": "Projetos", "leis": "Viraram norma", "priv_pct": "Emendas a privados"}
     INDICADORES = [  # chave, rotulo, menor_e_melhor, formato
         ("cota_mes", "Cota parlamentar por mês de mandato", True, "brl"),
         ("em_pct", "Emendas pagas (% do empenhado)", False, "pct"),
@@ -419,11 +444,17 @@ def main():
         return dict(linhas=linhas_, escopo=escopo, n=len(pares), meses=stats[x["id"]]["meses"], periodo=PERIODO)
 
     (saida / "data" / "p").mkdir(parents=True)
-    pares_json = [[x["id"], x["nome"], x["url"], x["uf"] or "", x["partido"] or "", x["cod"]] + [
-        (round(stats[x["id"]][k_], 1) if stats[x["id"]].get(k_) is not None else None) for k_, _, _, _ in INDICADORES] + [stats[x["id"]]["meses"]]
-        for x in lista if x["id"] in stats and stats[x["id"]]["meses"] >= 3]
-    (saida / "data" / "pares.json").write_text(json.dumps(dict(periodo=PERIODO, ind=[[k_, r_, m_, f_] for k_, r_, m_, f_ in INDICADORES], linhas=pares_json),
-                                                           ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    def linhas_pares(st_):
+        return [[x["id"], x["nome"], x["url"], x["uf"] or "", x["partido"] or "", x["cod"]] + [
+            (round(st_[x["id"]][k_], 1) if st_[x["id"]].get(k_) is not None else None) for k_, _, _, _ in INDICADORES] + [st_[x["id"]]["meses"]]
+            for x in lista if x["id"] in st_ and st_[x["id"]]["meses"] >= 3]
+    ind_json = [[k_, r_, m_, f_, CURTO.get(k_, r_)] for k_, r_, m_, f_ in INDICADORES]
+    def gravar_pares(nome_, st_, rotulo_):
+        (saida / "data" / nome_).write_text(json.dumps(dict(periodo=rotulo_, ind=ind_json, linhas=linhas_pares(st_)), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    gravar_pares("pares.json", stats, f"desde {PERIODO}")
+    anos_pares = sorted({y_ for x in lista if x["cargo"] != "presidente" for y_ in meses[x["id"]] if y_ >= 2015}, reverse=True)
+    for y_ in anos_pares:
+        gravar_pares(f"pares-{y_}.json", calcular_stats(lambda a_, y_=y_: a_ == y_, 200000), f"em {y_}")
     pres_datas = {int(r["pessoa_id"]): (r["data_inicio"], r["data_fim"]) for r in mand if r["cargo"] == "presidente"}
     pres_resumo = []
     for x in lista:
@@ -604,23 +635,60 @@ def main():
         gravar("rec-rank.json", rank_json)
         gravar("rec-busca.json", [[r_["n"], doc, round(sum(q[1] for q in r_["p"].values()))]
                                   for doc, r_ in sorted(rec.items(), key=lambda t: -sum(q[1] for q in t[1]["p"].values()))])
-        priv_rec = []
-        for doc_, r_ in rec.items():
-            cl_ = classificar(r_["n"], doc_)
-            if cl_ not in PRIVADOS:
-                continue
-            dg_ = re.sub(r"\D", "", doc_).zfill(14)
-            tot_ = sum(q_[1] for q_ in r_["p"].values())
-            priv_rec.append([r_["n"], doc_, cl_, round(tot_), len(r_["p"]), r_["l"], sanc.get(dg_, []),
-                             sorted({ap_ for q_ in r_["p"].values() for *_, ap_, _ in q_[2] if ap_})[-1:] or [0]])
-        priv_rec = sorted(priv_rec, key=lambda t: -t[3])[:400]
-        priv_parl = [[x["nome"], x["url"], x["uf"] or "", x["partido"] or "", x["cod"], round(destino[x["id"]]["privado"]), round(destino[x["id"]]["total"]), round(destino[x["id"]]["pct"], 1)]
-                     for x in lista if x["id"] in destino and destino[x["id"]]["total"] >= 1000000 and x["cargo"] != "presidente"]
-        tot_rec_ = {doc_: sum(q_[1] for q_ in r_["p"].values()) for doc_, r_ in rec.items()}
-        cls_rec_ = {doc_: classificar(r_["n"], doc_) for doc_, r_ in rec.items()}
-        gravar("privados.json", dict(rec=priv_rec, parl=sorted(priv_parl, key=lambda t: -t[5])[:600],
-                                      total_priv=round(sum(v_ for d_, v_ in tot_rec_.items() if cls_rec_[d_] in PRIVADOS)),
-                                      total=round(sum(v_ for d_, v_ in tot_rec_.items() if cls_rec_[d_] != "banco"))))
+        cl_cache = {}
+        def cl_de(nome_, doc_):
+            k_ = (nome_, doc_)
+            if k_ not in cl_cache:
+                cl_cache[k_] = classificar(nome_, doc_) if doc_ else "pf"
+            return cl_cache[k_]
+
+        def priv_ano(ano_f):
+            """Recebedores privados e parlamentares, no ano de pagamento ano_f (None = todos os anos)."""
+            rec_l = []
+            for doc_, r_ in rec.items():
+                if cl_de(r_["n"], doc_) not in PRIVADOS:
+                    continue
+                tot_, ps_, ult_ = 0, set(), 0
+                for pid_, q_ in r_["p"].items():
+                    for e_ in q_[2]:
+                        if ano_f and e_[4] != ano_f:
+                            continue
+                        tot_ += e_[3]; ps_.add(pid_); ult_ = max(ult_, e_[4] or 0)
+                if not ps_:
+                    continue
+                rec_l.append([r_["n"], doc_, cl_de(r_["n"], doc_), round(tot_), len(ps_), r_["l"], sanc.get(re.sub(r"\D", "", doc_).zfill(14), []), [ult_]])
+            gp_ = defaultdict(lambda: defaultdict(float))
+            tot_priv_ = tot_geral_ = 0
+            for cod_, rows_ in favs_raw.items():
+                pid_ = cod_pid.get(cod_)
+                for nome_, doc_, tipo_, loc_, valor_, ano_p in rows_:
+                    if ano_f and ano_p != ano_f:
+                        continue
+                    cl_ = cl_de(nome_, doc_)
+                    if cl_ == "banco":
+                        continue
+                    tot_geral_ += valor_
+                    if cl_ in PRIVADOS:
+                        tot_priv_ += valor_
+                    if pid_ is not None:
+                        gp_[pid_][cl_] += valor_
+            minimo_ = 1000000 if not ano_f else 200000
+            parl_l = []
+            for x in lista:
+                g_ = gp_.get(x["id"])
+                if not g_ or x["cargo"] == "presidente":
+                    continue
+                t_ = sum(g_.values())
+                if t_ < minimo_:
+                    continue
+                pr_ = sum(g_.get(k_, 0) for k_ in PRIVADOS)
+                parl_l.append([x["nome"], x["url"], x["uf"] or "", x["partido"] or "", x["cod"], round(pr_), round(t_), round(pr_ / t_ * 100, 1)])
+            return dict(rec=sorted(rec_l, key=lambda t: -t[3])[:400], parl=sorted(parl_l, key=lambda t: -t[5])[:600],
+                        total_priv=round(tot_priv_), total=round(tot_geral_), ano=ano_f or 0)
+        gravar("privados.json", priv_ano(None))
+        anos_priv = sorted({a_ for a_ in anos_pag if a_}, reverse=True)
+        for a_ in anos_priv:
+            gravar(f"privados-{a_}.json", priv_ano(a_))
         obras_muni = defaultdict(list)
         for doc, r_ in rec.items():
             dg_ = re.sub(r"\D", "", doc)
@@ -703,10 +771,10 @@ def main():
              descricao="Emendas que o site não consegue atribuir a um parlamentar, por quê, e quanto dinheiro representam.", cats=cats_sa, nomes=nomes_sa))
 
     escrever("pares", env.get_template("pares.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar parlamentares entre pares",
-             descricao="Custo, execução de emendas e atuação legislativa de cada parlamentar, lado a lado com os pares.", ufs=sorted(UFS.items())))
+             descricao="Custo, execução de emendas e atuação legislativa de cada parlamentar, lado a lado com os pares.", ufs=sorted(UFS.items()), anos=anos_pares, periodo=PERIODO))
 
     escrever("privados", env.get_template("privados.html").render(**{**ctx_base, "raiz": "../"}, titulo="Emendas para empresas e entidades privadas",
-             descricao="Quanto das emendas foi pago direto a empresas e entidades privadas, quem recebeu e de quais parlamentares.", ufs=sorted(UFS.items())))
+             descricao="Quanto das emendas foi pago direto a empresas e entidades privadas, quem recebeu e de quais parlamentares.", ufs=sorted(UFS.items()), anos=anos_priv))
 
     # ---- custo dos ministerios por ano (execucao da despesa por orgao superior) ----
     def tipo_orgao(n_):
@@ -723,15 +791,20 @@ def main():
             return "poderes"
         return "outros"
     min_anos, min_orgaos = [], {}
+    FUNC_ = ("pessoal_ativo", "custeio", "pessoal")  # "pessoal" e o bucket da classificacao antiga
     try:
         for r_ in ler(a.resumo, "despesa_orgao"):
             ano_, org_, bk_ = int(r_["ano"]), r_["orgao"], r_["bucket"]
             v_ = f(r_["pago"]) + f(r_["rap_pago"])
-            d_ = min_orgaos.setdefault(org_, dict(tipo=tipo_orgao(org_), anos={}, comp={}, div={}))
+            d_ = min_orgaos.setdefault(org_, dict(tipo=tipo_orgao(org_), anos={}, comp={}, div={}, inat={}, prog={}))
             if bk_ == "divida":
                 d_["div"][ano_] = d_["div"].get(ano_, 0) + v_
-            else:
+            elif bk_ in FUNC_:
                 d_["anos"][ano_] = d_["anos"].get(ano_, 0) + v_
+            elif bk_ == "inativos":
+                d_["inat"][ano_] = d_["inat"].get(ano_, 0) + v_
+            else:
+                d_["prog"][ano_] = d_["prog"].get(ano_, 0) + v_
             d_["comp"].setdefault(ano_, {})
             d_["comp"][ano_][bk_] = d_["comp"][ano_].get(bk_, 0) + v_
         mm_ = ler(a.resumo, "despesa_orgao_meses")
@@ -745,31 +818,39 @@ def main():
         ult_ = fechados_[-1] if fechados_ else min_anos[-1]
         mins = sorted([(n_, d_) for n_, d_ in min_orgaos.items() if d_["tipo"] == "ministerio"], key=lambda t: -t[1]["anos"].get(ult_, 0))
         tot_min = {y_: sum(d_["anos"].get(y_, 0) for _, d_ in mins) for y_ in min_anos}
-        div_min = {y_: sum(d_["div"].get(y_, 0) for _, d_ in mins) for y_ in min_anos}
+        todo_min = {y_: sum(d_["anos"].get(y_, 0) + d_["inat"].get(y_, 0) + d_["prog"].get(y_, 0) for _, d_ in mins) for y_ in min_anos}
         outros_ = {}
         for rot_, tp_ in (("Presidência da República", "presidencia"), ("Encargos e transferências gerais da União", "encargos"), ("Poderes e órgãos de controle (Legislativo, Judiciário, MP, Defensoria)", "poderes"), ("Outros órgãos do Executivo", "outros")):
             outros_[rot_] = {y_: sum(d_["anos"].get(y_, 0) for d_ in min_orgaos.values() if d_["tipo"] == tp_) for y_ in min_anos}
         linhas_min = []
         for n_, d_ in mins:
             cp_ = d_["comp"].get(ult_, {})
-            t_ = sum(v_ for k_, v_ in cp_.items() if k_ != "divida") or 0
-            linhas_min.append(dict(nome=n_, anos=[d_["anos"].get(y_, 0) for y_ in min_anos],
-                                   comp={k_: (cp_.get(k_, 0) / t_ * 100 if t_ else 0) for k_ in ("pessoal", "transferencias", "demais")}))
+            fun_ = d_["anos"].get(ult_, 0)
+            todo_ = fun_ + d_["inat"].get(ult_, 0) + d_["prog"].get(ult_, 0)
+            linhas_min.append(dict(nome=n_, anos=[d_["anos"].get(y_, 0) for y_ in min_anos], func=fun_, todo=todo_,
+                                   pct=(fun_ / todo_ * 100 if todo_ else 0),
+                                   pessoal=cp_.get("pessoal_ativo", cp_.get("pessoal", 0)), custeio=cp_.get("custeio", 0),
+                                   inat=d_["inat"].get(ult_, 0), prog=d_["prog"].get(ult_, 0)))
         csv_min = "ministerio," + ",".join(str(y_) for y_ in min_anos) + "\n" + "\n".join(
             '"' + l_["nome"].replace('"', "") + '",' + ",".join(f"{v_:.2f}" for v_ in l_["anos"]) for l_ in linhas_min) + \
-            "\nTOTAL sem juros e amortizacao da divida," + ",".join(f"{tot_min[y_]:.2f}" for y_ in min_anos) + \
-            "\nJuros e amortizacao da divida," + ",".join(f"{div_min[y_]:.2f}" for y_ in min_anos) + "\n"
+            "\nTOTAL custo de funcionamento," + ",".join(f"{tot_min[y_]:.2f}" for y_ in min_anos) + "\n"
         (saida / "data").mkdir(parents=True, exist_ok=True)
         (saida / "data" / "ministerios.csv").write_text(csv_min, encoding="utf-8")
     else:
-        linhas_min, tot_min, div_min, outros_, ult_ = [], {}, {}, {}, None
-    escrever("ministerios", env.get_template("ministerios.html").render(**{**ctx_base, "raiz": "../"}, titulo="Quanto custa cada ministério",
-             descricao="Despesa paga por ministério a cada ano e o total de todos os ministérios, com a parte que vai para pessoal, transferências e demais gastos.",
-             anos=min_anos, linhas=linhas_min, total=tot_min, divida=div_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, faltam=faltam_, ult=ult_))
+        linhas_min, tot_min, todo_min, outros_, ult_ = [], {}, {}, {}, None
+    escrever("ministerios", env.get_template("ministerios.html").render(**{**ctx_base, "raiz": "../"}, titulo="Quanto custa manter cada ministério",
+             descricao="Custo de funcionamento de cada ministério por ano (pessoal e despesas de custeio) e o total de todos os ministérios.",
+             anos=min_anos, linhas=linhas_min, total=tot_min, todo=todo_min, outros=outros_, parcial={y_: meses_.get(y_, 12) for y_ in min_anos if meses_.get(y_, 12) < 12}, faltam=faltam_, ult=ult_))
 
     # ---- pontos de atencao: padroes factuais nos dados publicos (nao afirmam irregularidade) ----
     NORMAL = re.compile(r"AEREA|AIRLINES|\bGOL\b|\bTAM\b|AZUL|LATAM|CORREIOS|TELEFONICA|\bCLARO\b|\bVIVO\b|\bTIM\b|LOCALIZA|MOVIDA|UNIDAS|HOTEL|ENERGIA|COMPANHIA|PETROBRAS|POSTO|IPIRANGA|SHELL", re.I)
-    at_obras, at_rec, at_forn, at_sanc, at_disp = [], [], [], [], []
+    forn_ano = defaultdict(list)  # (pid, ano) -> [(fornecedor, total, documento)] so pessoas juridicas
+    try:
+        for r_ in ler(a.resumo, "top_fornecedores_ano"):
+            forn_ano[(int(r_["pessoa_id"]), int(r_["ano"]))].append((r_["fornecedor"], f(r_["total"]), re.sub(r"\D", "", r_.get("cnpj_cpf") or "")))
+    except FileNotFoundError:
+        pass
+    at_obras = []
     try:
         for doc_, r_ in rec.items():
             dg_ = re.sub(r"\D", "", doc_).zfill(14)
@@ -779,36 +860,64 @@ def main():
                 if o_[2] == "Paralisada":
                     at_obras.append([o_[1], r_["n"], r_["l"], o_[3], o_[4], o_[5], re.sub(r"\D", "", doc_)])
         at_obras = sorted(at_obras, key=lambda t: -t[4])[:40]
-        at_rec = [t for t in rank_json.get("", {}).get("q", []) if re.sub(r"\D", "", t[1]).zfill(14) not in BANCOS][:30]
-        for doc_, r_ in rec.items():
-            dg_ = re.sub(r"\D", "", doc_).zfill(14)
-            if sanc.get(dg_) and dg_ not in BANCOS:
-                at_sanc.append([r_["n"], re.sub(r"\D", "", doc_), classificar(r_["n"], doc_), round(sum(q_[1] for q_ in r_["p"].values())), len(r_["p"]), sanc[dg_][0]])
-        at_sanc = sorted(at_sanc, key=lambda t: -t[3])[:40]
-        agg_ = {}
-        for sl_, anos_ in tcf.items():
-            for a_, lst_ in anos_.items():
-                for doc_, nome_, cl_, pago_, fed_, disp_, n_ in lst_:
-                    z_ = agg_.setdefault((sl_, doc_), [nome_, 0, 0, 0])
-                    z_[1] += pago_; z_[2] += disp_; z_[3] += n_
-        at_disp = sorted(([muni.get(sl_, {}).get("n", sl_), z_[0], doc_, z_[1], z_[2] / z_[1] * 100, z_[3]] for (sl_, doc_), z_ in agg_.items()
-                          if z_[1] >= 1000000 and z_[2] / z_[1] >= 0.8), key=lambda t: -t[3])[:30]
     except NameError:
         pass
-    for x in lista:
-        if x["cargo"] == "presidente":
-            continue
-        tot_ = sum(x["anos"].values())
-        if tot_ < 200000:
-            continue
-        for nome_, v_, doc_ in sorted(forn_doc.get(x["id"], []), key=lambda t: -t[1])[:3]:
-            if len(doc_) == 14 and v_ / tot_ >= 0.25 and not NORMAL.search(sem_acento(nome_)):
-                at_forn.append([x["nome"], x["url"], x["uf"] or "", x["partido"] or "", nome_, doc_, round(v_), v_ / tot_])
-                break
-    at_forn = sorted(at_forn, key=lambda t: -t[6])[:40]
+
+    def visao_atencao(ano_f):
+        """Pontos de atencao num ano (None = todos os anos). Ano de pagamento nas emendas e do gasto na cota; do pagamento da prefeitura no TCE."""
+        v_ = dict(ano=str(ano_f or ""), recebedores=[], fornecedores=[], sancionados=[], dispensas=[])
+        try:
+            v_["recebedores"] = [t for t in rank_json.get(str(ano_f or ""), {}).get("q", []) if re.sub(r"\D", "", t[1]).zfill(14) not in BANCOS][:30]
+            for doc_, r_ in rec.items():
+                dg_ = re.sub(r"\D", "", doc_).zfill(14)
+                if not sanc.get(dg_) or dg_ in BANCOS:
+                    continue
+                tot_, ps_ = 0, set()
+                for pid_, q_ in r_["p"].items():
+                    for e_ in q_[2]:
+                        if ano_f and e_[4] != ano_f:
+                            continue
+                        tot_ += e_[3]; ps_.add(pid_)
+                if ps_:
+                    v_["sancionados"].append([r_["n"], re.sub(r"\D", "", doc_), classificar(r_["n"], doc_), round(tot_), len(ps_), sanc[dg_][0]])
+            v_["sancionados"] = sorted(v_["sancionados"], key=lambda t: -t[3])[:40]
+            agg_ = {}
+            for sl_, anos_ in tcf.items():
+                for a_, lst_ in anos_.items():
+                    if ano_f and a_ != str(ano_f):
+                        continue
+                    for doc_, nome_, cl_, pago_, fed_, disp_, n_ in lst_:
+                        z_ = agg_.setdefault((sl_, doc_), [nome_, 0, 0, 0])
+                        z_[1] += pago_; z_[2] += disp_; z_[3] += n_
+            minimo_ = 1000000 if not ano_f else 500000
+            v_["dispensas"] = sorted(([muni.get(sl_, {}).get("n", sl_), z_[0], doc_, z_[1], z_[2] / z_[1] * 100, z_[3]] for (sl_, doc_), z_ in agg_.items()
+                                      if z_[1] >= minimo_ and z_[2] / z_[1] >= 0.8), key=lambda t: -t[3])[:30]
+        except NameError:
+            pass
+        for x in lista:
+            if x["cargo"] == "presidente":
+                continue
+            if ano_f:
+                tot_ = x["anos"].get(ano_f, 0)
+                cand_ = forn_ano.get((x["id"], ano_f), [])
+                minimo_ = 100000
+            else:
+                tot_ = sum(x["anos"].values())
+                cand_ = sorted(forn_doc.get(x["id"], []), key=lambda t: -t[1])[:3]
+                minimo_ = 200000
+            if tot_ < minimo_:
+                continue
+            for nome_, vf_, doc_ in sorted(cand_, key=lambda t: -t[1])[:3]:
+                if len(doc_) == 14 and vf_ / tot_ >= 0.25 and not NORMAL.search(sem_acento(nome_)):
+                    v_["fornecedores"].append([x["nome"], x["url"], x["uf"] or "", x["partido"] or "", nome_, doc_, round(vf_), vf_ / tot_])
+                    break
+        v_["fornecedores"] = sorted(v_["fornecedores"], key=lambda t: -t[6])[:40]
+        return v_
+    anos_at = sorted({y_ for x in lista for y_ in x["anos"] if y_ >= 2015} | {a_ for a_ in locals().get("anos_pag", set()) if a_ and a_ >= 2015}, reverse=True)
+    visoes_at = [visao_atencao(None)] + [visao_atencao(y_) for y_ in anos_at]
     escrever("atencao", env.get_template("atencao.html").render(**{**ctx_base, "raiz": "../"}, titulo="Pontos de atenção",
              descricao="Padrões nos dados públicos que valem uma pergunta ao responsável. Não indicam irregularidade.",
-             obras=at_obras, recebedores=at_rec, fornecedores=at_forn, sancionados=at_sanc, dispensas=at_disp))
+             obras=at_obras, visoes=visoes_at, anos_at=anos_at))
 
     # ---- novidades: compara com a atualizacao anterior ----
     snap = dict(data=atualizado, ano=ano_atual,

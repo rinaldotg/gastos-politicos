@@ -1,45 +1,36 @@
 {% extends "base.html" %}
 {% block conteudo %}
 <section class="abertura abertura-curta">
-  <h1>Quanto custa cada ministério</h1>
-  <p class="apoio">Despesa <strong>paga</strong> por cada ministério em cada ano, e a soma de todos eles. Juros e amortização da dívida pública ficam separados, porque (principalmente no Ministério da Fazenda) incluem a rolagem da dívida e distorceriam a comparação. Fonte: execução da despesa do Portal da Transparência (pago no ano mais restos a pagar de anos anteriores pagos no ano).</p>
+  <h1>Quanto custa manter cada ministério</h1>
+  <p class="apoio">O <strong>custo de funcionamento</strong> de cada ministério em cada ano: o que ele paga para existir e operar, ou seja, <strong>salários e encargos de servidores em atividade</strong> mais <strong>despesas de custeio</strong> (material de consumo, serviços de terceiros, diárias e passagens, auxílios alimentação e transporte). Fica de fora o dinheiro dos programas que o ministério executa (repasses, benefícios, obras) e a dívida pública.</p>
 </section>
 {% if anos %}
 <section class="bloco">
-  <h2>Valor pago por ministério, por ano</h2>
+  <h2>Custo de funcionamento por ministério, por ano</h2>
   <div class="tabela-rolavel"><table class="tabela">
     <thead><tr><th>Ministério</th>{% for y in anos %}<th class="num">{{ y }}{% if parcial.get(y) %}<small>até o mês {{ parcial[y] }}</small>{% endif %}{% if faltam.get(y) %}<small class="alerta">falta{{ 'm' if faltam[y] > 1 }} {{ faltam[y] }} {{ 'meses' if faltam[y] > 1 else 'mês' }}</small>{% endif %}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for l in linhas %}<tr><td>{{ l.nome }}</td>{% for v in l.anos %}<td class="num">{{ v | curto if v else "—" }}</td>{% endfor %}</tr>{% endfor %}
-    <tr class="total"><td><strong>Total de todos os ministérios (sem juros e amortização da dívida)</strong></td>{% for y in anos %}<td class="num"><strong>{{ total[y] | curto }}</strong></td>{% endfor %}</tr>
-    <tr><td>Juros e amortização da dívida (nos ministérios)</td>{% for y in anos %}<td class="num">{{ divida[y] | curto if divida[y] else "—" }}</td>{% endfor %}</tr>
+    <tr class="total"><td><strong>Total de todos os ministérios</strong></td>{% for y in anos %}<td class="num"><strong>{{ total[y] | curto }}</strong></td>{% endfor %}</tr>
     </tbody>
   </table></div>
-  <p class="nota"><a href="{{ raiz }}data/ministerios.csv">Baixar a tabela (CSV)</a>. Anos marcados com "até o mês" ainda estão em andamento e não são comparáveis com anos fechados. Anos com "falta mês" tiveram um download recusado pelo Portal nesta atualização e ficam completos na próxima.</p>
+  <p class="nota"><a href="{{ raiz }}data/ministerios.csv">Baixar a tabela (CSV)</a>. Valores pagos no ano (inclui restos a pagar de anos anteriores pagos no ano), nominais, sem correção pela inflação. Anos marcados com "até o mês" ainda estão em andamento. Anos com "falta mês" tiveram um download recusado pelo Portal e ficam completos na próxima atualização.</p>
 </section>
 <section class="bloco">
-  <h2>Para onde vai o dinheiro de cada ministério ({{ ult }})</h2>
+  <h2>Quanto do que cada ministério paga é funcionamento ({{ ult }})</h2>
   <div class="tabela-rolavel"><table class="tabela">
-    <thead><tr><th>Ministério</th><th class="num">Pessoal</th><th class="num">Transferências</th><th class="num">Demais despesas</th></tr></thead>
-    <tbody>{% for l in linhas %}<tr><td>{{ l.nome }}</td><td class="num">{{ l.comp.pessoal | round(0) | int }}%</td><td class="num">{{ l.comp.transferencias | round(0) | int }}%</td><td class="num">{{ l.comp.demais | round(0) | int }}%</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Ministério</th><th class="num">Funcionamento</th><th class="num">Pessoal ativo</th><th class="num">Custeio</th><th class="num">Aposentados e pensionistas</th><th class="num">Programas e repasses</th><th class="num">Funcionamento no total</th></tr></thead>
+    <tbody>{% for l in linhas %}<tr><td>{{ l.nome }}</td><td class="num">{{ l.func | curto }}</td><td class="num">{{ l.pessoal | curto }}</td><td class="num">{{ l.custeio | curto }}</td><td class="num">{{ l.inat | curto }}</td><td class="num">{{ l.prog | curto }}</td><td class="num">{{ l.pct | round(0) | int }}%</td></tr>{% endfor %}</tbody>
   </table></div>
-  <p class="nota"><strong>Pessoal</strong>: salários e encargos de servidores. <strong>Transferências</strong>: repasses a estados, municípios, entidades e ao exterior (inclui o SUS e boa parte das emendas). <strong>Demais despesas</strong>: compras, serviços, benefícios pagos direto a pessoas (como aposentadorias) e investimentos.</p>
-</section>
-<section class="bloco">
-  <h2>Fora da soma dos ministérios</h2>
-  <div class="tabela-rolavel"><table class="tabela">
-    <thead><tr><th>Grupo</th>{% for y in anos %}<th class="num">{{ y }}</th>{% endfor %}</tr></thead>
-    <tbody>{% for nome, vals in outros.items() %}<tr><td>{{ nome }}</td>{% for y in anos %}<td class="num">{{ vals[y] | curto if vals[y] else "—" }}</td>{% endfor %}</tr>{% endfor %}</tbody>
-  </table></div>
+  <p class="nota"><strong>Funcionamento</strong> = pessoal ativo + custeio. <strong>Aposentados e pensionistas</strong> do próprio quadro ficam em coluna à parte e não entram no funcionamento. <strong>Programas e repasses</strong>: transferências a estados, municípios e entidades, benefícios pagos direto às pessoas, investimentos e demais gastos finalísticos. A última coluna mostra quanto do total pago pelo ministério (sem a dívida) é funcionamento.</p>
 </section>
 <section class="bloco">
   <h2>Como ler estes números</h2>
   <ul>
-    <li><strong>Custo do ministério não é custo de funcionamento.</strong> Quase todo o valor é o programa que ele executa: no Ministério da Saúde são os repasses do SUS; na Previdência, as aposentadorias. Para ver só a máquina administrativa, olhe a coluna Pessoal e as demais despesas.</li>
-    <li>A estrutura muda a cada governo: ministérios são criados, fundidos e renomeados, então um nome pode aparecer só em alguns anos. O total soma os ministérios existentes em cada ano.</li>
-    <li><strong>A dívida fica fora do total.</strong> Pagar juros e amortizar a dívida pública não é custo de ministério e, na rolagem, trilhões voltam a ser emitidos. Ela aparece numa linha separada logo abaixo do total.</li>
-    <li>Valores nominais, sem correção pela inflação.</li>
-    <li>Só entram órgãos cujo nome começa com "Ministério" (exceto o Ministério Público). Presidência, encargos gerais da União e os demais Poderes estão listados à parte e não entram no total.</li>
+    <li><strong>É uma aproximação.</strong> O Portal da Transparência classifica cada pagamento por natureza de despesa. Somamos pessoal ativo e os elementos de custeio administrativo. "Serviços de terceiros" pode incluir contratos ligados a programas (por exemplo, serviços de saúde contratados), então o custeio de ministérios que executam programas diretamente pode ficar superestimado.</li>
+    <li><strong>Órgãos vinculados entram no ministério.</strong> Hospitais federais, universidades, institutos e agências ligados ao ministério somam ao seu custo de funcionamento. Por isso Educação e Saúde têm valores altos.</li>
+    <li>A estrutura muda a cada governo: ministérios são criados, fundidos e renomeados, então um nome pode aparecer só em alguns anos.</li>
+    <li>Só entram órgãos cujo nome começa com "Ministério" (exceto o Ministério Público). Presidência, encargos gerais da União e os demais Poderes não entram no total.</li>
   </ul>
 </section>
 {% else %}

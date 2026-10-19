@@ -661,7 +661,7 @@
 
   /* ---------- privados ---------- */
   function iniciarPrivados(sec) {
-    var aba = sec.querySelector('[data-v-aba]'), tipo = sec.querySelector('[data-v-tipo]'), uf = sec.querySelector('[data-v-uf]'), sanc = sec.querySelector('[data-v-sanc]'), q = sec.querySelector('[data-v-q]');
+    var anoSel = sec.querySelector('[data-v-ano]'), aba = sec.querySelector('[data-v-aba]'), tipo = sec.querySelector('[data-v-tipo]'), uf = sec.querySelector('[data-v-uf]'), sanc = sec.querySelector('[data-v-sanc]'), q = sec.querySelector('[data-v-q]');
     var cab = document.querySelector('[data-v-cab]'), corpo = document.querySelector('[data-v-corpo]'), mais = document.querySelector('[data-v-mais]');
     var dados = null, limite = 50, atuais = [];
     function render() {
@@ -694,6 +694,14 @@
     mais.addEventListener('click', function () { limite += 100; render(); });
     [aba, tipo, uf, sanc].forEach(function (x) { x.addEventListener('change', function () { limite = 50; render(); }); });
     q.addEventListener('input', function () { limite = 50; render(); });
+    function carregar() {
+      get('data/privados' + (anoSel.value ? '-' + anoSel.value : '') + '.json').then(function (d) {
+        dados = d; limite = 50;
+        sec.querySelector('[data-v-resumo]').textContent = 'Das emendas pagas ' + (anoSel.value ? 'em ' + anoSel.value : 'desde 2014') + ' (' + brl(d.total) + ', sem bancos intermediários), ' + brl(d.total_priv) + ' (' + (d.total ? Math.round(d.total_priv / d.total * 100) : 0) + '%) foram pagos direto a empresas e entidades privadas.';
+        render();
+      });
+    }
+    anoSel.addEventListener('change', carregar);
     get('data/privados.json').then(function (d) {
       dados = d;
       sec.querySelector('[data-v-resumo]').textContent = 'Das emendas pagas desde 2014 (' + brl(d.total) + ', sem bancos intermediários), ' + brl(d.total_priv) + ' (' + (d.total ? Math.round(d.total_priv / d.total * 100) : 0) + '%) foram pagos direto a empresas e entidades privadas.';
@@ -707,7 +715,7 @@
 
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
-    var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]');
+    var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]'), selAno = sec.querySelector('[data-p-ano]');
     var cab = document.querySelector('[data-p-cab]'), corpo = document.querySelector('[data-p-corpo]'), mais = document.querySelector('[data-p-mais]');
     var dados = null, ordem = 6, asc = true, limite = 60, atuais = [];
     function fmt(v, f) { return v === null || v === undefined ? '—' : f === 'brl' ? brl(v) : f === 'pct' ? Math.round(v) + '%' : String(Math.round(v)); }
@@ -720,8 +728,8 @@
       cab.textContent = '';
       var tr = el('tr', {}, [el('th', { text: 'Parlamentar' }), el('th', { text: 'UF' }), el('th', { text: 'Partido' })]);
       ind.forEach(function (x, i) {
-        var th = el('th', { class: 'num', title: x[2] === null ? 'sem juízo de valor' : x[2] ? 'menor valor = gasta menos' : 'maior valor = mais', 'aria-sort': ordem === 6 + i ? (asc ? 'ascending' : 'descending') : 'none' });
-        var b = el('button', { type: 'button', class: 'botao-th', text: x[1] + (ordem === 6 + i ? (asc ? ' ↑' : ' ↓') : '') });
+        var th = el('th', { class: 'num', title: x[1] + (x[2] === null ? ' (sem juízo de valor)' : x[2] ? ' (menor valor = gasta menos)' : ' (maior valor = mais)'), 'aria-sort': ordem === 6 + i ? (asc ? 'ascending' : 'descending') : 'none' });
+        var b = el('button', { type: 'button', class: 'botao-th', text: (x[4] || x[1]) + (ordem === 6 + i ? (asc ? ' ↑' : ' ↓') : '') });
         b.addEventListener('click', function () { if (ordem === 6 + i) asc = !asc; else { ordem = 6 + i; asc = !!x[2]; } limite = 60; render(); });
         th.appendChild(b); tr.appendChild(th);
       });
@@ -734,7 +742,7 @@
       });
       atuais = lista;
       var medianas = ind.map(function (_, i) { return med(base.map(function (l) { return l[6 + i]; })); });
-      sec.querySelector('[data-p-resumo]').textContent = base.length + ' parlamentares' + (selU.value ? ' em ' + selU.value : '') + ' com ao menos 3 meses de cota registrada desde ' + dados.periodo + '.';
+      sec.querySelector('[data-p-resumo]').textContent = base.length + ' parlamentares' + (selU.value ? ' em ' + selU.value : '') + ' com ao menos 3 meses de cota registrada ' + dados.periodo + '.';
       corpo.textContent = '';
       corpo.appendChild(el('tr', { class: 'total' }, [el('td', { text: 'Mediana do grupo' }), el('td'), el('td')].concat(ind.map(function (x, i) { return el('td', { class: 'num', text: fmt(medianas[i], x[3]) }); })).concat([el('td')])));
       lista.slice(0, limite).forEach(function (l) {
@@ -747,10 +755,14 @@
     mais.addEventListener('click', function () { limite += 100; render(); });
     [selC, selU].forEach(function (s_) { s_.addEventListener('change', function () { limite = 60; render(); }); });
     q.addEventListener('input', function () { limite = 60; render(); });
+    function carregarPares() {
+      get('data/pares' + (selAno.value ? '-' + selAno.value : '') + '.json').then(function (d) { dados = d; limite = 60; render(); });
+    }
+    selAno.addEventListener('change', carregarPares);
     get('data/pares.json').then(function (d) {
       dados = d;
-      acoes(document.querySelector('[data-acoes]'), [['Baixar tabela (CSV)', 'pares.csv', function () {
-        return [['parlamentar', 'uf', 'partido'].concat(d.ind.map(function (x) { return x[1]; })), atuais.map(function (l) { return [l[1], l[3], l[4]].concat(d.ind.map(function (_, i) { return l[6 + i]; })); })];
+      acoes(document.querySelector('[data-acoes]'), [['Baixar tabela (CSV)', 'pares' + (selAno.value ? '-' + selAno.value : '') + '.csv', function () {
+        return [['parlamentar', 'uf', 'partido'].concat(dados.ind.map(function (x) { return x[1]; })), atuais.map(function (l) { return [l[1], l[3], l[4]].concat(dados.ind.map(function (_, i) { return l[6 + i]; })); })];
       }]]);
       render();
     });
@@ -973,6 +985,8 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var at_ = document.querySelector('[data-atencao]');
+  if (at_) { var sel_ = at_.querySelector('[data-at-ano]'); sel_.addEventListener('change', function () { document.querySelectorAll('[data-at-visao]').forEach(function (d) { d.hidden = d.getAttribute('data-at-visao') !== sel_.value; }); }); }
   var pv_ = document.querySelector('[data-privados]'); if (pv_) iniciarPrivados(pv_);
   var pa_ = document.querySelector('[data-pares]'); if (pa_) iniciarPares(pa_);
   var pm_ = document.querySelector('[data-pm]'); if (pm_) iniciarMeses(pm_);

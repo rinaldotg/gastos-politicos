@@ -4,6 +4,7 @@
   <h1>Comparar parlamentares entre pares</h1>
   <p class="apoio">Custo, execução de emendas e atuação legislativa, lado a lado. Não há nota única: clique no título de uma coluna para ordenar e escolha o estado para comparar quem tem o mesmo teto de cota.</p>
   <div class="controles">
+    <label>Período <select data-p-ano><option value="">Legislatura atual (desde {{ periodo }})</option>{% for a in anos %}<option value="{{ a }}">Só {{ a }}</option>{% endfor %}</select></label>
     <label>Cargo <select data-p-cargo><option value="deputado">Deputados federais</option><option value="senador">Senadores</option></select></label>
     <label>Estado <select data-p-uf><option value="">Todos</option>{% for s, n in ufs %}<option value="{{ s }}">{{ n }}</option>{% endfor %}</select></label>
     <label>Buscar nome <input type="search" data-p-q placeholder="Digite um nome"></label>
@@ -16,6 +17,6 @@
   </table></div>
   <button type="button" class="botao botao-leve" data-p-mais hidden>Mostrar mais</button>
   <div class="acoes" data-acoes></div>
-  <p class="nota">Período: desde 2023 (legislatura atual). Mediana: valor do meio entre os parlamentares mostrados. "Cota por mês" é o total pago com a cota dividido pelos meses com despesa; "Emendas pagas" é quanto do empenhado já foi pago; "Presença" são votações nominais entre o primeiro e o último voto no ano (só deputados por enquanto); "Projetos" são PL, PLP, PDL e PEC de autoria principal; "Viraram norma" são esses projetos que se tornaram lei ou norma. Quem exerceu poucos meses aparece com menos dados. Nenhum indicador sozinho diz se um mandato vale a pena: use-os juntos e pergunte ao gabinete o que está por trás de cada número.</p>
+  <p class="nota">Período: o escolhido acima (padrão: desde 2023, a legislatura atual). Em um ano isolado, o parlamentar precisa de ao menos 3 meses de cota para aparecer. Mediana: valor do meio entre os parlamentares mostrados. "Cota por mês" é o total pago com a cota dividido pelos meses com despesa; "Emendas pagas" é quanto do empenhado já foi pago; "Presença" são votações nominais entre o primeiro e o último voto no ano (só deputados por enquanto); "Projetos" são PL, PLP, PDL e PEC de autoria principal; "Viraram norma" são esses projetos que se tornaram lei ou norma. Quem exerceu poucos meses aparece com menos dados. Nenhum indicador sozinho diz se um mandato vale a pena: use-os juntos e pergunte ao gabinete o que está por trás de cada número.</p>
 </section>
 {% endblock %}
