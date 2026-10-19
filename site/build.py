@@ -424,6 +424,8 @@ def main():
         for x in lista if x["id"] in stats and stats[x["id"]]["meses"] >= 3]
     (saida / "data" / "pares.json").write_text(json.dumps(dict(periodo=PERIODO, ind=[[k_, r_, m_, f_] for k_, r_, m_, f_ in INDICADORES], linhas=pares_json),
                                                            ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    pres_datas = {int(r["pessoa_id"]): (r["data_inicio"], r["data_fim"]) for r in mand if r["cargo"] == "presidente"}
+    pres_resumo = []
     for x in lista:
         pid = x["id"]
         profundidade = 2
@@ -437,6 +439,20 @@ def main():
                                    parcial=(y == ano_atual), cats=[(c, v, (v / tot if tot > 0 else 0)) for c, v in cats],
                                    fora=fora[pid].get(y, 0) if x["cargo"] == "presidente" else 0))
         total_geral = sum(l["total"] for l in linhas_ano)
+        mand_x = None
+        if x["cargo"] == "presidente":
+            ini_, fim_ = pres_datas.get(pid, ("2014-01-01", "9999-12-31"))
+            ini_ef, fim_ef = max(ini_, "2014-01-01"), min(fim_, atualizado or "9999-12-31")
+            n_m = max(1, (int(fim_ef[:4]) - int(ini_ef[:4])) * 12 + int(fim_ef[5:7]) - int(ini_ef[5:7]) + 1)
+            cats_m = defaultdict(float)
+            for y_ in anos[pid]:
+                for c_, v_ in anos[pid][y_].items():
+                    cats_m[c_] += v_
+            cats_m = sorted(cats_m.items(), key=lambda t: -t[1])
+            mand_x = dict(ini=ini_ef, fim=fim_ef if fim_ < "9999" else None, ini_real=ini_, aberto=fim_ >= "9999", meses=n_m, total=total_geral,
+                          por_mes=total_geral / n_m, recorte=ini_ < "2014-01-01",
+                          cats=[(c_, v_, (v_ / total_geral if total_geral > 0 else 0)) for c_, v_ in cats_m])
+            pres_resumo.append(dict(x=x, **mand_x))
         forn_x = sorted(fornec.get(pid, []), key=lambda t: -t[1])[:15]
         em = sorted(emendas.get(pid, {}).items(), reverse=True)
         em_tot = [sum(e[i] for _, e in em) for i in range(3)]
@@ -467,6 +483,14 @@ def main():
                 normais = [(nome_bonito(p_), v) for p_, v in normais if v > 0]
                 orc_x.append(dict(ano=y, total=sum(v for _, v in normais), programas=normais[:12],
                                   financeiras=sum(v for _, v in financeiras), financeiras_det=financeiras[:5], orgaos=orgs))
+        orc_tot = None
+        if orc_x:
+            pg_ = defaultdict(float)
+            for o in orc_x:
+                for prog_, v_ in o["programas"]:
+                    pg_[prog_] += v_
+            orc_tot = dict(total=sum(o["total"] for o in orc_x), programas=sorted(pg_.items(), key=lambda t: -t[1])[:15],
+                           financeiras=sum(o["financeiras"] for o in orc_x))
         if orc_x:
             mx = max(o["total"] for o in orc_x) or 1
             for o in orc_x:
@@ -479,7 +503,7 @@ def main():
             **{**ctx_base, "raiz": "../../"}, titulo=f"{x['nome']}: gastos desde 2014", p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
-            em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x,
+            em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x, orc_tot=orc_tot, mand=mand_x,
             uf_url=(f"estado/{x['uf'].lower()}/" if x["uf"] in UFS else ""), pos=posicao.get(pid) if x["cargo"] != "presidente" else None, tem_detalhe=bool(detalhe.get(pid)), desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
                 f"{CARGOS[x['cargo']][1]} {x['nome']}: {brl_curto(total_geral)} em gastos desde 2014, por ano e por tipo de despesa."))
         escrever(f"{x['cod']}/{x['slug']}", html)
@@ -487,7 +511,8 @@ def main():
                      anos={str(y): [round(sum(anos[pid][y].values()), 2), meses[pid].get(y, 0),
                                     [[c, round(v, 2)] for c, v in sorted(anos[pid][y].items(), key=lambda t: -t[1])]]
                            for y in anos_ord},
-                     em={str(y): [round(v, 2) for v in e] for y, e in em})
+                     em={str(y): [round(v, 2) for v in e] for y, e in em},
+                     **({"m": [mand_x["meses"], mand_x["ini"], mand_x["fim"] or ""]} if mand_x else {}))
         (saida / "data" / "p" / f"{pid}.json").write_text(json.dumps(dados, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     if detalhe:
@@ -860,13 +885,16 @@ def main():
     escrever("index.html", env.get_template("home.html").render(**ctx_base, titulo="Gastos dos parlamentares e da Presidência",
              resumo=resumo_home, descricao="Quanto deputados federais, senadores e a Presidência da República gastaram desde 2014, com o quê e com quem. Busque e compare.",
              presidentes=[x for x in lista if x["cargo"] == "presidente"], ufs=sorted(UFS.items(), key=lambda t: t[1])))
+    escrever("presidentes", env.get_template("presidentes.html").render(**{**ctx_base, "raiz": "../"}, titulo="Presidentes: gasto no mandato inteiro",
+             descricao="Despesas da Presidência (cartão corporativo e viagens) em cada mandato, em valor total e por mês, para comparar presidentes.",
+             presidentes=sorted(pres_resumo, key=lambda r: r["ini"])))
     escrever("comparar", env.get_template("comparar.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar gastos",
              descricao="Compare lado a lado os gastos de parlamentares e presidentes, ano a ano e por tipo de despesa."))
     escrever("sobre", env.get_template("sobre.html").render(**{**ctx_base, "raiz": "../"}, titulo="De onde vêm os dados e o que cada gasto cobre",
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "glossario/", "comparar/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "presidentes/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

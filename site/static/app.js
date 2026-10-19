@@ -165,6 +165,24 @@
       })));
       var corpo = el('tbody');
       var totais = pessoas.map(function (p) { return Object.keys(p.anos).reduce(function (s, a) { return s + p.anos[a][0]; }, 0); });
+      var soPres = pessoas.every(function (p) { return p.c === 'presidente' && p.m; });
+      if (soPres) {
+        corpo.appendChild(linha('Total no mandato', totais, 'total', false));
+        corpo.appendChild(el('tr', {}, [el('td', { class: 'rotulo', text: 'Meses nos dados' })].concat(pessoas.map(function (p) { return el('td', { class: 'num', text: String(p.m[0]) }); }))));
+        corpo.appendChild(linha('Gasto por mês', pessoas.map(function (p, i) { return totais[i] / p.m[0]; }), 'total'));
+        var somaM = {};
+        pessoas.forEach(function (p) { Object.keys(p.anos).forEach(function (a) { p.anos[a][2].forEach(function (c) { somaM[c[0]] = (somaM[c[0]] || 0) + c[1]; }); }); });
+        Object.keys(somaM).sort(function (x, y) { return somaM[y] - somaM[x]; }).forEach(function (cat) {
+          corpo.appendChild(linha(cat, pessoas.map(function (p) {
+            var t = 0, ach = false;
+            Object.keys(p.anos).forEach(function (a) { p.anos[a][2].forEach(function (c) { if (c[0] === cat) { t += c[1]; ach = true; } }); });
+            return ach ? t : null;
+          }), 'cat-linha'));
+        });
+        wrap.textContent = '';
+        wrap.appendChild(el('table', { class: 'tabela comp' }, [el('thead', {}, [cab]), corpo]));
+        return;
+      }
       corpo.appendChild(linha('Total desde 2014', totais, 'total', false));
       var anos = {};
       pessoas.forEach(function (p) { Object.keys(p.anos).forEach(function (a) { anos[a] = 1; }); });

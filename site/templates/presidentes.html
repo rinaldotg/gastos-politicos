@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Presidentes: gasto no mandato inteiro</h1>
+  <p class="apoio">Só há um presidente por vez, então a comparação é entre mandatos, não entre anos. Como os mandatos têm durações diferentes, o número mais justo é o <strong>gasto por mês</strong>.</p>
+</section>
+<section class="bloco">
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Presidente</th><th>Período nos dados</th><th class="num">Meses</th><th class="num">Total no mandato</th><th class="num">Por mês</th><th>Maior tipo de despesa</th></tr></thead>
+    <tbody>{% for r in presidentes %}<tr>
+      <td><a href="{{ raiz }}{{ r.x.url }}">{{ r.x.nome }}</a><small>{{ r.x.partido }}</small></td>
+      <td>{{ r.ini[5:7] }}/{{ r.ini[:4] }} a {% if r.fim %}{{ r.fim[5:7] }}/{{ r.fim[:4] }}{% else %}hoje{% endif %}{% if r.recorte %}<small>mandato começou antes de 2014</small>{% endif %}</td>
+      <td class="num">{{ r.meses }}</td><td class="num">{{ r.total | brl }}</td><td class="num">{{ r.por_mes | brl }}</td>
+      <td>{% if r.cats %}{{ r.cats[0][0] }}<small>{{ r.cats[0][2] | pct }} do total</small>{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Não é gasto pessoal: são despesas de cartão corporativo e viagens a serviço de órgãos da Presidência, atribuídas a quem ocupava o cargo na data. Vice-Presidência, ABIN e EBC ficam de fora. Valores nominais, sem correção pela inflação. Os dados do Portal começam em 2014, então o mandato de Dilma Rousseff aparece só a partir daí. Quem é de sigilo no cartão corporativo e o detalhe de cada mandato estão na página de cada presidente. <a href="{{ raiz }}comparar/">Comparar lado a lado</a>.</p>
+</section>
+{% endblock %}

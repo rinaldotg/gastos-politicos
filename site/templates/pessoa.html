@@ -106,8 +106,19 @@
   </section>
   {% endif %}
 
+  {% if mand %}
   <section class="bloco">
-    <h2>Gastos por ano</h2>
+    <h2>Gasto no mandato inteiro</h2>
+    <p>Um presidente governa um período por vez, então o que faz sentido comparar é o <strong>mandato inteiro</strong>, não cada ano. De {{ mand.ini[8:10] }}/{{ mand.ini[5:7] }}/{{ mand.ini[:4] }} {% if mand.fim %}a {{ mand.fim[8:10] }}/{{ mand.fim[5:7] }}/{{ mand.fim[:4] }}{% else %}até o último mês carregado{% endif %} ({{ mand.meses }} meses): <strong>{{ mand.total | brl }}</strong> no total, ou <strong>{{ mand.por_mes | brl }} por mês</strong>. Para comparar com outros presidentes, veja a <a href="{{ raiz }}presidentes/">tabela de mandatos</a>.</p>
+    {% if mand.recorte %}<p class="nota">Os dados do Portal da Transparência começam em 2014; o mandato começou em {{ mand.ini_real[8:10] }}/{{ mand.ini_real[5:7] }}/{{ mand.ini_real[:4] }}, então o total cobre só a parte a partir de 2014.</p>{% endif %}
+    <div class="tabela-rolavel"><table class="tabela tabela-cats">
+      <thead><tr><th>Tipo de despesa</th><th class="num">Total no mandato</th><th class="num">% do total</th></tr></thead>
+      <tbody>{% for c, v, pc in mand.cats %}<tr><td>{{ c }}</td><td class="num">{{ v | brl }}</td><td class="num">{{ pc | pct }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+  <section class="bloco">
+    <h2>{% if mand %}Detalhe por ano (apoio){% else %}Gastos por ano{% endif %}</h2>
     {% if not linhas_ano %}<p>Nenhuma despesa registrada desde 2014 nas fontes oficiais para este nome.</p>{% else %}
     <p class="dica">Toque em um ano para ver o total de cada tipo de despesa.</p>
     <div class="anos">
@@ -196,7 +207,15 @@
   {% if orc %}
   <section class="bloco">
     <h2>Para onde foi o orçamento da Presidência</h2>
-    <p class="dica">Valor pago por programa pelos órgãos da Presidência, no período deste mandato.</p>
+    {% if orc_tot %}
+    <p>No período deste mandato, os órgãos da Presidência pagaram <strong>{{ orc_tot.total | brl }}</strong> em programas. Os maiores:</p>
+    <div class="tabela-rolavel"><table class="tabela tabela-cats">
+      <thead><tr><th>Programa</th><th class="num">Pago no mandato</th></tr></thead>
+      <tbody>{% for prog, v in orc_tot.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if orc_tot.financeiras %}<p class="nota">Fora da soma: {{ orc_tot.financeiras | brl }} em operações financeiras e encargos especiais.</p>{% endif %}
+    {% endif %}
+    <p class="dica">Detalhe por ano, para quem quiser ver a evolução dentro do mandato:</p>
     <div class="anos">
       {% for o in orc %}
       <details class="ano">

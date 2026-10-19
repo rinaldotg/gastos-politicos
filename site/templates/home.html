@@ -31,10 +31,10 @@
 
 <section class="grupos" aria-label="Quem está no site">
   {% for cargo, r in resumo.items() %}
-  <a class="grupo grupo-{{ r.cod }}" href="#ranking" data-cargo="{{ cargo }}">
+  <a class="grupo grupo-{{ r.cod }}" href="{{ 'presidentes/' if cargo == 'presidente' else '#ranking' }}" {% if cargo != 'presidente' %}data-cargo="{{ cargo }}"{% endif %}>
     <span class="grupo-nome">{{ r.rotulo }}</span>
     <span class="grupo-valor">{{ r.total_ref | curto }}</span>
-    <span class="grupo-nota">em {{ ano_ref }} · {{ r.n }} {{ 'perfis' if r.n != 1 else 'perfil' }}</span>
+    <span class="grupo-nota">{% if cargo == "presidente" %}ver por mandato · {% else %}em {{ ano_ref }} · {% endif %}{{ r.n }} {{ 'perfis' if r.n != 1 else 'perfil' }}</span>
   </a>
   {% endfor %}
 </section>
@@ -47,7 +47,6 @@
         <select data-r-cargo>
           <option value="deputado_federal">Deputados federais</option>
           <option value="senador">Senadores</option>
-          <option value="presidente">Presidentes</option>
         </select>
       </label>
       <label>Ano
