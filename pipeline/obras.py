@@ -10,6 +10,7 @@ import time
 
 from . import common as c
 
+LIMITE_SEGUNDOS = 25 * 60  # tempo maximo da leitura; depois disso segue o resto da atualizacao
 URL = "https://api.obrasgov.gestao.gov.br/obrasgov/api/projeto-investimento"
 
 
@@ -63,7 +64,13 @@ def rodar(con, tamanhos=(100, 50, 20)):
         print("  AVISO: nao consegui consultar a API do Obras.gov.br", file=sys.stderr)
         return 0
     linhas, pagina, falhas, vistas, chaves = [], 0, 0, 0, set()
+    inicio = time.monotonic()
+    completo = True
     while True:
+        if time.monotonic() - inicio > LIMITE_SEGUNDOS:
+            completo = False
+            print(f"  AVISO: limite de {LIMITE_SEGUNDOS // 60} min atingido na pagina {pagina} ({vistas} projetos lidos)", file=sys.stderr)
+            break
         try:
             j = c.get_paciente(URL, {"pagina": pagina, "tamanhoDaPagina": tam}, timeout=180).json()
         except Exception as e:
@@ -96,11 +103,14 @@ def rodar(con, tamanhos=(100, 50, 20)):
             break
         if pagina > 5000:
             break
+    if not completo and con.execute("SELECT 1 FROM obra LIMIT 1").fetchone():
+        print("  AVISO: leitura incompleta; mantive as obras da atualizacao anterior", file=sys.stderr)
+        return 0
     con.execute("DELETE FROM obra")
     con.executemany("""INSERT INTO obra (id_unico, nome, situacao, uf, especie, natureza, tipo, subtipo, valor, ini_prev, fim_prev,
                        ini_efetiva, fim_efetiva, data_situacao, executor_cnpj, executor_nome, repassador) VALUES
                        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", linhas)
     c.log(con, "obrasgov", "obras", None, len(linhas))
     con.commit()
-    print(f"Obras: {vistas} projetos lidos; {len(linhas)} de executores que receberam emendas")
+    print(f"Obras{'' if completo else ' (leitura parcial)'}: {vistas} projetos lidos; {len(linhas)} de executores que receberam emendas")
     return len(linhas)

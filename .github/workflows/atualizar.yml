@@ -54,6 +54,7 @@ jobs:
 
       - name: Obras (Obras.gov.br) e populacao dos municipios (IBGE)
         continue-on-error: true
+        timeout-minutes: 45
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so obras ibge
 
       - name: Despesa dos municipios paulistas (TCE-SP, piloto)
