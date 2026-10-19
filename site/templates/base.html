@@ -26,17 +26,7 @@
 <a class="pular" href="#conteudo">Ir para o conteúdo</a>
 <header class="topo">
   <a class="marca" href="{{ raiz or './' }}"><img src="{{ raiz }}static/logo.png" alt="" width="36" height="36">Gastos Públicos</a>
-  <nav aria-label="Principal">
-    <a href="{{ raiz }}privados/">Para privados</a>
-    <a href="{{ raiz }}pares/">Pares</a>
-    <a href="{{ raiz }}presidentes/">Presidentes</a>
-    <a href="{{ raiz }}ministerios/">Ministérios</a>
-    <a href="{{ raiz }}comparar/">Comparar</a>
-    <a href="{{ raiz }}municipios/">Municípios</a>
-    <a href="{{ raiz }}recebedores/">Recebedores</a>
-    <a href="{{ raiz }}emendas-pix/">Emendas Pix</a>
-    <a href="{{ raiz }}sobre/">Fontes e método</a>
-  </nav>
+  <nav aria-label="Principal"><a href="{{ raiz }}sobre/">Fontes e método</a></nav>
 </header>
 <main id="conteudo">
 {% block conteudo %}{% endblock %}
