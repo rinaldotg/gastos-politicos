@@ -24,26 +24,19 @@
       <p class="nota">Links para busca em veículos jornalísticos, sem opinião de leitores nem redes sociais; o site não escolhe nem resume as matérias. Colunas e editoriais são excluídos pela busca, mas alguns textos de opinião podem passar: confira o selo da matéria.</p>
     </details>
   </header>
-  {% if painel %}
-  <section class="bloco painel-pares">
-    <h2>O voto está valendo a pena? Compare com os pares</h2>
-    <p>Período: {{ painel.periodo }} até hoje ({{ painel.meses }} {{ 'mês' if painel.meses == 1 else 'meses' }} de mandato com cota registrada). Pares: {{ painel.escopo }}, {{ painel.n }} {{ 'parlamentares' }}. <strong>Cada linha mede uma coisa diferente e não há nota única</strong>: quem gasta menos nem sempre entrega mais, e o contrário também.</p>
-    <div class="tabela-rolavel"><table class="tabela">
-      <thead><tr><th>Indicador</th><th class="num">{{ p.nome }}</th><th class="num">Mediana dos pares</th><th class="num">Posição entre os pares</th></tr></thead>
-      <tbody>
-      {% for l in painel.linhas %}
-      <tr><td>{{ l.rot }}<small>{% if l.menor is none %}sem juízo de valor: depende do tipo de política{% elif l.menor %}menor valor = gasta menos{% else %}maior valor = mais{% endif %}</small></td>
-        <td class="num">{% if l.v is none %}—{% elif l.fmt == 'brl' %}{{ l.v | brl }}{% elif l.fmt == 'pct' %}{{ l.v | round(0) | int }}%{% else %}{{ l.v | int }}{% endif %}</td>
-        <td class="num">{% if l.mediana is none %}—{% elif l.fmt == 'brl' %}{{ l.mediana | brl }}{% elif l.fmt == 'pct' %}{{ l.mediana | round(0) | int }}%{% else %}{{ l.mediana | round(1) }}{% endif %}</td>
-        <td class="num">{% if l.pos %}{{ l.pos }}º {{ 'menor' if l.menor else 'maior' }} de {{ l.n }}{% else %}sem dados suficientes{% endif %}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table></div>
-    <p class="nota">Como ler: a cota varia com o estado (distância de Brasília), por isso a comparação é com pares do mesmo estado sempre que há ao menos 5. "Projetos" são só projetos de lei, PEC e decretos legislativos em que a pessoa é autora principal, sem contar requerimentos. "Viraram norma" mostra o resultado final de aprovação, que depende também do tema e da articulação política. A presença mede votações nominais entre o primeiro e o último voto da pessoa no ano; não inclui comissões. Dados de atuação da Câmara vêm dos arquivos abertos da Câmara e os do Senado, da API de processos; a presença só existe para deputados por enquanto. Veja a <a href="{{ raiz }}pares/">tabela completa dos pares</a>.</p>
-  </section>
-  {% endif %}
-
-
+  <div class="faixa-resumo">
+    {% if ano_ref_total %}<div><span>Cota em {{ ano_ref }}</span><strong>{{ ano_ref_total | brl }}</strong></div>{% endif %}
+    {% if pos %}<div><span>Posição em {{ ano_ref }}</span><strong>{{ pos[0] }}º de {{ pos[1] }}</strong></div>{% endif %}
+    {% if em_tot and em_tot[2] %}<div><span>Emendas pagas desde {{ em_desde }}</span><strong>{{ em_tot[2] | brl }}</strong></div>{% endif %}
+    {% if equipe %}<div><span>Equipe do gabinete</span><strong>{{ equipe | length }} {{ 'pessoa' if equipe | length == 1 else 'pessoas' }}</strong></div>{% endif %}
+  </div>
+  <nav class="abas-pessoa" data-abas hidden aria-label="Seções da página">
+    <button type="button" data-aba-btn="mandato" aria-pressed="true">{{ 'Gastos da Presidência' if p.cargo == 'presidente' else 'Cota e mandato' }}</button>
+    {% if equipe %}<button type="button" data-aba-btn="gabinete" aria-pressed="false">Gabinete</button>{% endif %}
+    {% if painel %}<button type="button" data-aba-btn="pares" aria-pressed="false">Comparar com pares</button>{% endif %}
+    {% if emendas or (destino and destino.total >= 1000000) %}<button type="button" data-aba-btn="emendas" aria-pressed="false">Emendas</button>{% endif %}
+  </nav>
+  <div class="aba-painel" data-aba="mandato" id="mandato">
   {% if p.cargo == 'presidente' %}
   <aside class="aviso">
     <h2>O que isto não é</h2>
@@ -56,7 +49,6 @@
   </section>
   {% endif %}
   {% endif %}
-
   {% if custo %}
   <section class="bloco" data-custo data-anos='{{ custo_anos }}' data-sub="{{ custo.subsidio }}" data-gab="{{ custo.gabinete or 0 }}" data-mor="{{ custo.moradia or 0 }}">
     <h2>Quanto custa um mandato</h2>
@@ -75,20 +67,6 @@
     <p class="nota">Meses do período: meses com ao menos uma despesa de cota registrada. Valores legais de 2026, não gasto efetivo. {% if p.cod == 'senador' %}No Senado, equipe e auxílios variam por gabinete e ainda não estão aqui. {% endif %}<a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
   </section>
   {% endif %}
-  {% if equipe %}
-  <section class="bloco">
-    <h2>Equipe do gabinete</h2>
-    <p>{{ equipe | length }} {{ 'pessoa' if equipe | length == 1 else 'pessoas' }} lotadas no gabinete de {{ p.nome }} na última coleta{% if p.cod == 'deputado' %} (o limite legal é de 25 secretários parlamentares){% endif %}. É a lista de hoje, sem histórico de quem já passou pelo gabinete.</p>
-    <details class="ano">
-      <summary><span class="ano-n">Ver os nomes e cargos</span><span class="ano-v">{{ equipe | length }}</span></summary>
-      <div class="tabela-rolavel"><table class="tabela">
-        <thead><tr><th>Nome</th><th>Cargo</th><th>Nomeação</th></tr></thead>
-        <tbody>{% for n, cg, dt in equipe %}<tr><td>{{ n }}</td><td>{{ cg or "—" }}</td><td>{{ dt or "—" }}</td></tr>{% endfor %}</tbody>
-      </table></div>
-    </details>
-    <p class="nota">Dados públicos de transparência da {{ 'Câmara dos Deputados' if p.cod == 'deputado' else 'Casa legislativa' }}. Nomes e cargos apenas; a remuneração individual não é mostrada aqui. Ter parentes ou aliados na equipe é objeto de regras próprias (a Súmula Vinculante 13 proíbe o nepotismo): para checar, consulte o órgão.</p>
-  </section>
-  {% endif %}
   {% if tem_mes %}
   <section class="bloco" data-pm data-pid="{{ p.id }}">
     <h2>Quanto está gastando: mês a mês</h2>
@@ -103,7 +81,6 @@
     <p class="nota">Clique em um mês para ver o valor de cada tipo de despesa. É a data da despesa informada pela fonte oficial; meses sem linha não tiveram despesa registrada. Isto é só a cota: subsídio, gabinete e auxílios estão na tabela acima como limites legais.</p>
   </section>
   {% endif %}
-
   {% if mand %}
   <section class="bloco">
     <h2>Gasto no mandato inteiro</h2>
@@ -144,7 +121,6 @@
     {% endif %}
   </section>
   {% endif %}
-
   {% if fornecedores %}
   <section class="bloco">
     <h2>Com quem mais gastou</h2>
@@ -160,12 +136,78 @@
     {% if p.cargo == 'presidente' %}<p class="nota">“Sigiloso”, “Sem informação” e “Não se aplica” indicam que o fornecedor não é divulgado.</p>{% endif %}
   </section>
   {% endif %}
-
-
+  {% if orc %}
+  <section class="bloco">
+    <h2>Para onde foi o orçamento da Presidência</h2>
+    {% if orc_tot %}
+    <p>No período deste mandato, os órgãos da Presidência pagaram <strong>{{ orc_tot.total | brl }}</strong> em programas. Os maiores:</p>
+    <div class="tabela-rolavel"><table class="tabela tabela-cats">
+      <thead><tr><th>Programa</th><th class="num">Pago no mandato</th></tr></thead>
+      <tbody>{% for prog, v in orc_tot.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if orc_tot.financeiras %}<p class="nota">Fora da soma: {{ orc_tot.financeiras | brl }} em operações financeiras e encargos especiais.</p>{% endif %}
+    {% endif %}
+    <p class="dica">Detalhe por ano, para quem quiser ver a evolução dentro do mandato:</p>
+    <div class="anos">
+      {% for o in orc %}
+      <details class="ano">
+        <summary><span class="ano-n">{{ o.ano }}</span><span class="ano-barra" aria-hidden="true"><i style="width: {{ o.largura | round(1) }}%"></i></span><span class="ano-v">{{ o.total | brl }}</span></summary>
+        <div class="tabela-rolavel">
+        <table class="tabela tabela-cats">
+          <thead><tr><th>Programa</th><th class="num">Pago em {{ o.ano }}</th></tr></thead>
+          <tbody>{% for prog, v in o.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
+        </table>
+        </div>
+        {% if o.orgaos %}<h3>Órgãos que mais pagaram</h3><ul class="lista-simples">{% for og, v in o.orgaos %}<li><span>{{ og }}</span><span class="num">{{ v | brl }}</span></li>{% endfor %}</ul>{% endif %}
+        {% if o.financeiras %}<p class="nota">Fora da soma: {{ o.financeiras | brl }} em operações financeiras e encargos especiais, como empréstimos com retorno.</p>{% endif %}
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  </div>
+  {% if equipe %}
+  <div class="aba-painel" data-aba="gabinete" id="gabinete">
+  {% if equipe %}
+  <section class="bloco">
+    <h2>Equipe do gabinete</h2>
+    <p>{{ equipe | length }} {{ 'pessoa' if equipe | length == 1 else 'pessoas' }} lotadas no gabinete de {{ p.nome }} na última coleta{% if p.cod == 'deputado' %} (o limite legal é de 25 secretários parlamentares){% endif %}. É a lista de hoje, sem histórico de quem já passou pelo gabinete.</p>
+    <details class="ano">
+      <summary><span class="ano-n">Ver os nomes e cargos</span><span class="ano-v">{{ equipe | length }}</span></summary>
+      <div class="tabela-rolavel"><table class="tabela">
+        <thead><tr><th>Nome</th><th>Cargo</th><th>Nomeação</th></tr></thead>
+        <tbody>{% for n, cg, dt in equipe %}<tr><td>{{ n }}</td><td>{{ cg or "—" }}</td><td>{{ dt or "—" }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </details>
+    <p class="nota">Dados públicos de transparência da {{ 'Câmara dos Deputados' if p.cod == 'deputado' else 'Casa legislativa' }}. Nomes e cargos apenas; a remuneração individual não é mostrada aqui. Ter parentes ou aliados na equipe é objeto de regras próprias (a Súmula Vinculante 13 proíbe o nepotismo): para checar, consulte o órgão.</p>
+  </section>
+  {% endif %}
+  </div>
+  {% endif %}
+  {% if painel %}
+  <div class="aba-painel" data-aba="pares" id="pares">
+  {% if painel %}
+  <section class="bloco painel-pares">
+    <h2>O voto está valendo a pena? Compare com os pares</h2>
+    <p>Período: {{ painel.periodo }} até hoje ({{ painel.meses }} {{ 'mês' if painel.meses == 1 else 'meses' }} de mandato com cota registrada). Pares: {{ painel.escopo }}, {{ painel.n }} {{ 'parlamentares' }}. <strong>Cada linha mede uma coisa diferente e não há nota única</strong>: quem gasta menos nem sempre entrega mais, e o contrário também.</p>
+    <div class="tabela-rolavel"><table class="tabela">
+      <thead><tr><th>Indicador</th><th class="num">{{ p.nome }}</th><th class="num">Mediana dos pares</th><th class="num">Posição entre os pares</th></tr></thead>
+      <tbody>
+      {% for l in painel.linhas %}
+      <tr><td>{{ l.rot }}<small>{% if l.menor is none %}sem juízo de valor: depende do tipo de política{% elif l.menor %}menor valor = gasta menos{% else %}maior valor = mais{% endif %}</small></td>
+        <td class="num">{% if l.v is none %}—{% elif l.fmt == 'brl' %}{{ l.v | brl }}{% elif l.fmt == 'pct' %}{{ l.v | round(0) | int }}%{% else %}{{ l.v | int }}{% endif %}</td>
+        <td class="num">{% if l.mediana is none %}—{% elif l.fmt == 'brl' %}{{ l.mediana | brl }}{% elif l.fmt == 'pct' %}{{ l.mediana | round(0) | int }}%{% else %}{{ l.mediana | round(1) }}{% endif %}</td>
+        <td class="num">{% if l.pos %}{{ l.pos }}º {{ 'menor' if l.menor else 'maior' }} de {{ l.n }}{% else %}sem dados suficientes{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="nota">Como ler: a cota varia com o estado (distância de Brasília), por isso a comparação é com pares do mesmo estado sempre que há ao menos 5. "Projetos" são só projetos de lei, PEC e decretos legislativos em que a pessoa é autora principal, sem contar requerimentos. "Viraram norma" mostra o resultado final de aprovação, que depende também do tema e da articulação política. A presença mede votações nominais entre o primeiro e o último voto da pessoa no ano; não inclui comissões. Dados de atuação da Câmara vêm dos arquivos abertos da Câmara e os do Senado, da API de processos; a presença só existe para deputados por enquanto. Veja a <a href="{{ raiz }}pares/">tabela completa dos pares</a>.</p>
+  </section>
+  {% endif %}
+  </div>
+  {% endif %}
   {% if emendas or (destino and destino.total >= 1000000) %}
-  <details class="emendas-bloco" id="emendas">
-    <summary>Emendas parlamentares de {{ p.nome }}{% if em_tot %} <small>{{ em_tot[2] | brl }} pagos desde {{ em_desde }}</small>{% endif %}</summary>
-    <p class="apoio">Emendas são indicações de {{ p.nome }} para o orçamento federal: um assunto à parte da cota e do mandato mostrados acima.</p>
+  <div class="aba-painel" data-aba="emendas" id="emendas">
   {% if destino and destino.total >= 1000000 %}
   <section class="bloco destino-emendas">
     <h2>Para quem foi o dinheiro das emendas: público ou privado?</h2>
@@ -229,37 +271,7 @@
     <p class="nota">Empenhado é o valor reservado; liquidado, o serviço ou obra já confirmado; pago, o que saiu do caixa. Emendas sem autor identificado na fonte não entram aqui (<a href="{{ raiz }}sem-autor/">entenda</a>).</p>
   </section>
   {% endif %}
-  </details>
-  {% endif %}
-
-  {% if orc %}
-  <section class="bloco">
-    <h2>Para onde foi o orçamento da Presidência</h2>
-    {% if orc_tot %}
-    <p>No período deste mandato, os órgãos da Presidência pagaram <strong>{{ orc_tot.total | brl }}</strong> em programas. Os maiores:</p>
-    <div class="tabela-rolavel"><table class="tabela tabela-cats">
-      <thead><tr><th>Programa</th><th class="num">Pago no mandato</th></tr></thead>
-      <tbody>{% for prog, v in orc_tot.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
-    </table></div>
-    {% if orc_tot.financeiras %}<p class="nota">Fora da soma: {{ orc_tot.financeiras | brl }} em operações financeiras e encargos especiais.</p>{% endif %}
-    {% endif %}
-    <p class="dica">Detalhe por ano, para quem quiser ver a evolução dentro do mandato:</p>
-    <div class="anos">
-      {% for o in orc %}
-      <details class="ano">
-        <summary><span class="ano-n">{{ o.ano }}</span><span class="ano-barra" aria-hidden="true"><i style="width: {{ o.largura | round(1) }}%"></i></span><span class="ano-v">{{ o.total | brl }}</span></summary>
-        <div class="tabela-rolavel">
-        <table class="tabela tabela-cats">
-          <thead><tr><th>Programa</th><th class="num">Pago em {{ o.ano }}</th></tr></thead>
-          <tbody>{% for prog, v in o.programas %}<tr><td>{{ prog }}</td><td class="num">{{ v | brl }}</td></tr>{% endfor %}</tbody>
-        </table>
-        </div>
-        {% if o.orgaos %}<h3>Órgãos que mais pagaram</h3><ul class="lista-simples">{% for og, v in o.orgaos %}<li><span>{{ og }}</span><span class="num">{{ v | brl }}</span></li>{% endfor %}</ul>{% endif %}
-        {% if o.financeiras %}<p class="nota">Fora da soma: {{ o.financeiras | brl }} em operações financeiras e encargos especiais, como empréstimos com retorno.</p>{% endif %}
-      </details>
-      {% endfor %}
-    </div>
-  </section>
+  </div>
   {% endif %}
 </article>
 {% endblock %}

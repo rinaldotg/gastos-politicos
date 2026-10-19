@@ -1,0 +1,10 @@
+{% set grupos = {
+ 'emendas': [('recebedores', 'Todos os recebedores', 'recebedores/'), ('privados', 'Só empresas e entidades privadas', 'privados/')],
+ 'pares': [('pares', 'Entre pares do mesmo grupo', 'pares/'), ('comparar', 'Duas pessoas lado a lado', 'comparar/')],
+ 'governo': [('presidentes', 'Presidentes', 'presidentes/'), ('ministerios', 'Ministérios', 'ministerios/')]
+} %}
+{% for g, itens in grupos.items() %}{% if atual in itens | map(attribute=0) %}
+<nav class="abas-tela" aria-label="Telas relacionadas">
+  {% for k, rot, href in itens %}<a href="{{ raiz }}{{ href }}"{% if k == atual %} class="ativa" aria-current="page"{% endif %}>{{ rot }}</a>{% endfor %}
+</nav>
+{% endif %}{% endfor %}

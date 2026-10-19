@@ -767,12 +767,32 @@
     });
   }
 
-  /* abre blocos recolhidos quando o link aponta para dentro deles */
+  /* abas da pagina do parlamentar + abre blocos recolhidos quando o link aponta para dentro deles */
+  var abasNav = document.querySelector('[data-abas]');
+  function mostrarAba(nome) {
+    if (!abasNav) return;
+    var ok = false;
+    abasNav.querySelectorAll('[data-aba-btn]').forEach(function (b) { if (b.getAttribute('data-aba-btn') === nome) ok = true; });
+    if (!ok) nome = 'mandato';
+    abasNav.querySelectorAll('[data-aba-btn]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-aba-btn') === nome ? 'true' : 'false'); });
+    document.querySelectorAll('.aba-painel').forEach(function (p) { p.hidden = p.getAttribute('data-aba') !== nome; });
+  }
+  if (abasNav) {
+    abasNav.hidden = abasNav.querySelectorAll('[data-aba-btn]').length < 2;
+    abasNav.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-aba-btn]'); if (!b) return;
+      mostrarAba(b.getAttribute('data-aba-btn'));
+      try { history.replaceState(null, '', '#' + b.getAttribute('data-aba-btn')); } catch (x) { /* sem historico */ }
+    });
+    mostrarAba('mandato');
+  }
   function abrirHash() {
     var h = location.hash && location.hash.slice(1); if (!h) return;
-    var t = document.getElementById(h);
+    var t = document.getElementById(h); if (!t) return;
+    var painel = t.closest ? t.closest('.aba-painel') : null;
+    if (painel) mostrarAba(painel.getAttribute('data-aba'));
     for (var n = t; n; n = n.parentElement) if (n.tagName === 'DETAILS') n.open = true;
-    if (t) t.scrollIntoView();
+    (painel === t && abasNav ? abasNav : t).scrollIntoView();
   }
   window.addEventListener('hashchange', abrirHash); abrirHash();
 
