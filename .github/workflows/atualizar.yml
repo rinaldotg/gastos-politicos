@@ -65,6 +65,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so sancoes
 
+      - name: Equipe dos gabinetes (assessores)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so gabinete
+
       - name: Atuacao legislativa (projetos, normas, votacoes)
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao

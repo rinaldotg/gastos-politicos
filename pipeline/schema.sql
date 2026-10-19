@@ -156,3 +156,9 @@ CREATE TABLE IF NOT EXISTS despesa_orgao (
 );
 CREATE INDEX IF NOT EXISTS ix_desp_org ON despesa_orgao (ano, orgao);
 CREATE INDEX IF NOT EXISTS ix_desp_org_arq ON despesa_orgao (arquivo);
+
+-- Equipe dos gabinetes (lista do dia da coleta; sem remuneracao individual)
+CREATE TABLE IF NOT EXISTS gabinete_pessoa (
+    pessoa_id INTEGER NOT NULL REFERENCES pessoa(id), nome TEXT NOT NULL, cargo TEXT, lotacao TEXT, nomeacao TEXT, fonte TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_gab_pessoa ON gabinete_pessoa (pessoa_id);

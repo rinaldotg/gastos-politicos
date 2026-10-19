@@ -713,6 +713,30 @@
     });
   }
 
+  /* ---------- quanto custa um mandato: periodo ---------- */
+  function iniciarCusto(box) {
+    var d = {};
+    try { d = JSON.parse(box.getAttribute('data-anos')); } catch (e) { d = {}; }
+    var sub = Number(box.getAttribute('data-sub')) || 0, gab = Number(box.getAttribute('data-gab')) || 0, mor = Number(box.getAttribute('data-mor')) || 0;
+    var sel = box.querySelector('[data-custo-ano]'), anos = Object.keys(d).sort().reverse();
+    anos.forEach(function (a) { sel.appendChild(el('option', { value: a, text: a })); });
+    function set(sel_, v) { var x = box.querySelector(sel_); if (x) x.textContent = v === null ? '—' : brl(v); }
+    function render() {
+      var usar = sel.value ? [sel.value] : anos, meses = 0, cota = 0;
+      usar.forEach(function (a) { meses += d[a][0]; cota += d[a][1]; });
+      box.querySelector('[data-custo-cab]').textContent = sel.value ? 'Em ' + sel.value : 'Em todos os anos';
+      set('[data-custo-sub]', meses ? sub * meses : null);
+      set('[data-custo-gab]', meses && gab ? gab * meses : null);
+      set('[data-custo-mor]', meses && mor ? mor * meses : null);
+      set('[data-custo-cota]', cota);
+      var tetos = (meses ? sub * meses + gab * meses + mor * meses : 0);
+      box.querySelector('[data-custo-resumo]').textContent = meses ?
+        meses + ' meses no período. Somando subsídio, tetos e cota, o limite legal é de ' + brl(tetos + cota) + ' (a cota é o gasto registrado; o restante são valores legais, não gasto efetivo).' : 'Sem meses com despesa registrada neste período.';
+    }
+    sel.addEventListener('change', render);
+    render();
+  }
+
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
     var selC = sec.querySelector('[data-p-cargo]'), selU = sec.querySelector('[data-p-uf]'), q = sec.querySelector('[data-p-q]'), selAno = sec.querySelector('[data-p-ano]');
@@ -985,6 +1009,7 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var cu_ = document.querySelector('[data-custo]'); if (cu_) iniciarCusto(cu_);
   var at_ = document.querySelector('[data-atencao]');
   if (at_) { var sel_ = at_.querySelector('[data-at-ano]'); sel_.addEventListener('change', function () { document.querySelectorAll('[data-at-visao]').forEach(function (d) { d.hidden = d.getAttribute('data-at-visao') !== sel_.value; }); }); }
   var pv_ = document.querySelector('[data-privados]'); if (pv_) iniciarPrivados(pv_);

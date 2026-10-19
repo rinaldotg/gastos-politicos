@@ -75,3 +75,19 @@ assert orcamento.bucket("Outras Despesas Correntes", "Aplicação Direta", "Bene
 assert orcamento.bucket("Juros e Encargos da Dívida", "Aplicação Direta", "Juros sobre a Dívida por Contrato") == "divida"
 assert orcamento.bucket("Investimentos", "Aplicação Direta", "Obras e Instalações") == "programas"
 print("bucket ok")
+
+from pipeline import gabinete
+con.execute("INSERT INTO pessoa (id, nome, cargo) VALUES (901, 'Delegado Francischini', 'deputado_federal'), (902, 'Beto Faro', 'senador')")
+cam = ("Nome;Cargo;Lotação;Data de Nomeação\n"
+       "ANA SOUZA;Secretário Parlamentar;GAB DEP DELEGADO FRANCISCHINI;01/03/2023\n"
+       "JOAO LIMA;Secretário Parlamentar;Gabinete do Deputado Fulano de Tal;15/05/2022\n"
+       "DELEGADO FRANCISCHINI;Deputado;GAB DEP DELEGADO FRANCISCHINI;01/02/2023\n"
+       "MARIA RH;Analista;Diretoria de Pessoal;01/01/2010\n"
+       "PEDRO X;Secretário Parlamentar;Gabinete do Deputado Inexistente;01/01/2024\n").encode("latin-1")
+sen = ("SERVIDOR;CARGO;LOTAÇÃO;ADMISSÃO\nCARLA M;Assessor Parlamentar;1.2.3.GSBFARO - GABINETE DO SENADOR BETO FARO;2023-02-01\n").encode("utf-8")
+resp = lambda b: types.SimpleNamespace(content=b)
+import types
+c.get = lambda u, *a, **k: resp(cam if "camara" in u else sen)
+gabinete.rodar(con)
+print(con.execute("select pessoa_id, nome, cargo, nomeacao, fonte from gabinete_pessoa order by 1,2").fetchall())
+assert len(con.execute("select * from gabinete_pessoa").fetchall()) == 3
