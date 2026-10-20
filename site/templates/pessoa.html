@@ -60,6 +60,7 @@
       <tbody>
         <tr><td>Subsídio (salário bruto)<small>Valor atual aplicado aos meses do período; em anos anteriores o subsídio foi menor.</small></td><td class="num" data-rot="Valor mensal">{{ custo.subsidio | brl2 }}</td><td class="num" data-rot="No período" data-custo-sub></td></tr>
         {% if custo.gabinete %}<tr><td>Verba de gabinete (teto, para até 25 assessores)<small>É um limite: o gasto efetivo depende da equipe contratada.</small></td><td class="num" data-rot="Valor mensal">até {{ custo.gabinete | brl2 }}</td><td class="num" data-rot="No período" data-custo-gab></td></tr>{% endif %}
+        {% if not tem_rem and p.cod in ('deputado', 'senador') %}<tr><td>Verba de gabinete usada<small>{% if p.cod == 'deputado' %}Não disponível: a Câmara não divulga, em dados abertos, quanto cada gabinete pagou à equipe. Só o teto legal é mostrado.{% else %}Ainda não disponível para este gabinete. Só o teto legal é mostrado.{% endif %}</small></td><td class="num" data-rot="Valor mensal">—</td><td class="num" data-rot="No período">Não disponível</td></tr>{% endif %}
         {% if tem_rem %}<tr><td>Verba de gabinete usada (remuneração bruta dos assessores)<small>Soma do que foi pago à equipe nos meses com dados (<span data-custo-gabmeses></span>). Fonte: remuneração publicada pelo Senado, dos assessores que estão hoje no gabinete (sem verbas indenizatórias).</small></td><td class="num" data-rot="Valor mensal">—</td><td class="num" data-rot="No período" data-custo-gabuso></td></tr>{% endif %}
         {% if custo.moradia %}<tr><td>Auxílio-moradia (quando não usa imóvel funcional)<small>Só recebe quem não ocupa imóvel funcional; o site não sabe quem recebe.</small></td><td class="num" data-rot="Valor mensal">{{ custo.moradia | brl2 }}</td><td class="num" data-rot="No período" data-custo-mor></td></tr>{% endif %}
         <tr><td>Cota parlamentar<small>Gasto registrado (Câmara e Senado).</small></td><td class="num" data-rot="Valor mensal">—</td><td class="num" data-rot="No período" data-custo-cota></td></tr>
@@ -173,7 +174,7 @@
   {% if equipe %}
   <section class="bloco">
     <h2>Equipe do gabinete</h2>
-    <p>{{ equipe | length }} {{ 'pessoa' if equipe | length == 1 else 'pessoas' }} lotadas no gabinete de {{ p.nome }} na última coleta{% if p.cod == 'deputado' %} (o limite legal é de 25 secretários parlamentares){% endif %}. É a lista de hoje, sem histórico de quem já passou pelo gabinete.</p>
+    <p>{{ equipe | length }} {{ 'pessoa' if equipe | length == 1 else 'pessoas' }} lotadas no gabinete de {{ p.nome }} na última coleta{% if p.cod == 'deputado' %} (o limite legal é de 25 secretários parlamentares){% endif %}. É a lista de hoje, sem histórico de quem já passou pelo gabinete.</p>{% if not tem_rem %}<p class="nota">Remuneração dos assessores: não disponível. {% if p.cod == 'deputado' %}A Câmara só publica a remuneração de forma consolidada, sem nome nem gabinete.{% else %}Ainda não foi possível ligar a remuneração a este gabinete.{% endif %}</p>{% endif %}
     <details class="ano">
       <summary><span class="ano-n">Ver os nomes e cargos</span><span class="ano-v">{{ equipe | length }}</span></summary>
       <div class="tabela-rolavel"><table class="tabela">
