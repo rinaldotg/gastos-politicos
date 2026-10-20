@@ -773,7 +773,7 @@
     if (!abasNav) return;
     var ok = false;
     abasNav.querySelectorAll('[data-aba-btn]').forEach(function (b) { if (b.getAttribute('data-aba-btn') === nome) ok = true; });
-    if (!ok) nome = 'mandato';
+    if (!ok) nome = abasNav.querySelector('[data-aba-btn]').getAttribute('data-aba-btn');
     abasNav.querySelectorAll('[data-aba-btn]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-aba-btn') === nome ? 'true' : 'false'); });
     document.querySelectorAll('.aba-painel').forEach(function (p) { p.hidden = p.getAttribute('data-aba') !== nome; });
   }
@@ -784,7 +784,7 @@
       mostrarAba(b.getAttribute('data-aba-btn'));
       try { history.replaceState(null, '', '#' + b.getAttribute('data-aba-btn')); } catch (x) { /* sem historico */ }
     });
-    mostrarAba('mandato');
+    mostrarAba(abasNav.querySelector('[data-aba-btn]').getAttribute('data-aba-btn'));
   }
   function abrirHash() {
     var h = location.hash && location.hash.slice(1); if (!h) return;
@@ -795,6 +795,76 @@
     (painel === t && abasNav ? abasNav : t).scrollIntoView();
   }
   window.addEventListener('hashchange', abrirHash); abrirHash();
+
+  /* ---------- partidos: tabela geral ---------- */
+  function iniciarPartidos(sec) {
+    var selA = sec.querySelector('[data-pt-ano]'), q = sec.querySelector('[data-pt-q]'), cab = document.querySelector('[data-pt-cab]'), corpo = document.querySelector('[data-pt-corpo]');
+    var dados = null, ordem = 1, desc = false;
+    var COLS = [['Partido', 1, 'txt'], ['Deputados', 2, 'n'], ['Senadores', 3, 'n'], ['Cota por parlamentar (mediana)', 4, 'brl'], ['Emendas pagas', 5, 'brl'],
+                ['Fundo Partidário recebido', 6, 'brl'], ['Fundo eleitoral recebido', 7, 'brl'], ['Receitas do partido', 8, 'brl'], ['Gasto com pessoal', 9, 'brl']];
+    function render() {
+      if (!dados) return;
+      var lista = (dados.linhas[selA.value] || []).slice(), nq = norm(q.value.trim());
+      lista = lista.filter(function (r) { return !nq || norm(r[1]).indexOf(nq) >= 0; });
+      var col = ordem, tipo = COLS[col - 1][2];
+      lista.sort(function (a, b) {
+        var x = a[col], y = b[col];
+        if (tipo === 'txt') return desc ? String(y).localeCompare(String(x), 'pt-BR') : String(x).localeCompare(String(y), 'pt-BR');
+        if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
+        return desc ? y - x : x - y;
+      });
+      cab.textContent = '';
+      cab.appendChild(el('tr', {}, COLS.map(function (c, i) {
+        var b = el('button', { type: 'button', class: 'botao-th', text: c[0] + (ordem === c[1] ? (desc ? ' ▼' : ' ▲') : '') });
+        b.addEventListener('click', function () { if (ordem === c[1]) desc = !desc; else { ordem = c[1]; desc = c[2] !== 'txt'; } render(); });
+        return el('th', { class: i ? 'num' : '' }, [b]);
+      })));
+      corpo.textContent = '';
+      lista.forEach(function (r) {
+        corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + 'partido/' + r[0] + '/', text: r[1] })])].concat([2, 3].map(function (i) { return el('td', { class: 'num', text: String(r[i]) }); }))
+          .concat([4, 5, 6, 7, 8, 9].map(function (i) { return el('td', { class: 'num', text: r[i] === null ? '—' : brl(r[i]) }); }))));
+      });
+      sec.querySelector('[data-pt-resumo]').textContent = lista.length + (lista.length === 1 ? ' partido' : ' partidos') + ' em ' + selA.value + '. "—" significa sem dado naquele ano (a prestação de contas do TSE sai com atraso e o fundo eleitoral só existe em anos de eleição).';
+    }
+    get('data/partidos.json').then(function (d) {
+      dados = d; selA.addEventListener('change', render); q.addEventListener('input', render); render();
+      acoes(document.querySelector('[data-acoes]'), [['Baixar tabela (CSV)', 'partidos-' + selA.value + '.csv', function () {
+        return [COLS.map(function (c) { return c[0]; }), (dados.linhas[selA.value] || []).map(function (r) { return [r[1]].concat(r.slice(2)); })];
+      }]]);
+    }).catch(function () { sec.querySelector('[data-pt-resumo]').textContent = 'Não foi possível carregar os dados.'; });
+  }
+
+  /* ---------- partido: dinheiro (TSE) ---------- */
+  function iniciarPartidoDados(sec) {
+    var slug = document.querySelector('[data-partido-pagina]').getAttribute('data-slug');
+    var selA = sec.querySelector('[data-pt-ano]'), selB = sec.querySelector('[data-pt-base]'), d = null;
+    var RE_P = /pessoal|sal[aá]ri|folha|remunera|encargos|f[eé]rias|13|rescis/i;
+    function tab(sel_, linhas, cols) {
+      var tb = sec.querySelector(sel_); tb.textContent = '';
+      if (!linhas.length) { tb.appendChild(el('tr', {}, [el('td', { colspan: String(cols), text: 'Sem dados neste ano e tipo de conta.' })])); return; }
+      linhas.forEach(function (tr) { tb.appendChild(tr); });
+    }
+    function render() {
+      var A = (d.anos[selA.value] || {})[selB.value] || { rec: [], des: [], rcb: [] };
+      var totR = A.rec.reduce(function (s, r) { return s + r[1]; }, 0), totD = A.des.reduce(function (s, r) { return s + r[1]; }, 0);
+      sec.querySelector('[data-pt-aviso]').textContent = (A.rec.length || A.des.length) ? 'Receitas somam ' + brl(totR) + ' e despesas somam ' + brl(totD) + ' (maiores linhas abaixo).' : 'Este tipo de conta não tem dados neste ano.';
+      tab('[data-pt-rec]', A.rec.map(function (r) { return el('tr', {}, [el('td', { text: r[0] }), el('td', { class: 'num', text: brl(r[1]) }), el('td', { class: 'num', text: String(r[2]) })]); }), 3);
+      tab('[data-pt-des]', A.des.map(function (r) { return el('tr', {}, [el('td', { text: r[0] }), el('td', { class: 'num', text: brl(r[1]) }), el('td', { class: 'num', text: String(r[2]) })]); }), 3);
+      var pes = A.des.filter(function (r) { return RE_P.test(r[0]); }).reduce(function (s, r) { return s + r[1]; }, 0);
+      sec.querySelector('[data-pt-pessoal]').textContent = pes ? 'Despesas que parecem ser com pessoal (salários, encargos e similares): ' + brl(pes) + ' no ano. Só o total é público; não há salário por funcionário.' : '';
+      tab('[data-pt-rcb]', A.rcb.map(function (r) { return el('tr', {}, [el('td', { text: r[0] }), el('td', { text: r[1] ? r[1] : '' }), el('td', { class: 'num', text: brl(r[3]) }), el('td', { class: 'num', text: String(r[4]) })]); }), 4);
+      var C = d.cand[selA.value] || [], blc = sec.querySelector('[data-pt-cand-bloco]');
+      blc.hidden = !C.length;
+      var tc = sec.querySelector('[data-pt-cand]'); tc.textContent = '';
+      C.forEach(function (r) { tc.appendChild(el('tr', {}, [el('td', { text: r[0] }), el('td', { text: r[1] }), el('td', { text: r[2] }), el('td', { class: 'num', text: brl(r[3]) }), el('td', { class: 'num', text: brl(r[4]) })])); });
+    }
+    get('data/partido-' + slug + '.json').then(function (j) {
+      d = j; Object.keys(d.anos).sort().reverse().forEach(function (y) { selA.appendChild(el('option', { value: y, text: y })); });
+      var anual = Object.keys(d.anos).filter(function (y) { return d.anos[y].anual; }).sort().reverse()[0];
+      if (anual) selA.value = anual;
+      selA.addEventListener('change', render); selB.addEventListener('change', render); render();
+    }).catch(function () { sec.querySelector('[data-pt-aviso]').textContent = 'Não foi possível carregar os dados deste partido.'; });
+  }
 
   /* ---------- pares ---------- */
   function iniciarPares(sec) {
@@ -1068,6 +1138,8 @@
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
+  var pts_ = document.querySelector('[data-partidos]'); if (pts_) iniciarPartidos(pts_);
+  var ptd_ = document.querySelector('[data-partido-dados]'); if (ptd_) iniciarPartidoDados(ptd_);
   var fo_ = document.querySelector('[data-forn]'); if (fo_) iniciarForn(fo_);
   var cu_ = document.querySelector('[data-custo]'); if (cu_) iniciarCusto(cu_);
   var at_ = document.querySelector('[data-atencao]');

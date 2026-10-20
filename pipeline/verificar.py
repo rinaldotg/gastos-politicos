@@ -47,6 +47,10 @@ def main():
         "fornecedor_ano_pessoa": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, ROUND(SUM(valor),2) total, COUNT(*) n,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos
                        FROM gasto WHERE fornecedor IS NOT NULL AND fornecedor<>'' GROUP BY pessoa_id, ano, fornecedor) WHERE pos<=15""",
+        "partido_receita": "SELECT ano, base, sigla, fonte, valor, n FROM partido_receita",
+        "partido_despesa": "SELECT ano, base, sigla, categoria, valor, n FROM partido_despesa",
+        "partido_recebedor": "SELECT ano, base, sigla, documento, nome, classe, valor, n FROM partido_recebedor",
+        "partido_candidato": "SELECT ano, sigla, candidato, cargo, uf, fefc, total FROM partido_candidato",
         "gabinete_pessoa": "SELECT pessoa_id, nome, cargo, lotacao, nomeacao, fonte FROM gabinete_pessoa ORDER BY pessoa_id, cargo, nome",
         "top_fornecedores_ano": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos

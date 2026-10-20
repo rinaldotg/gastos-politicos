@@ -91,3 +91,49 @@ c.get = lambda u, *a, **k: resp(cam if "camara" in u else sen)
 gabinete.rodar(con)
 print(con.execute("select pessoa_id, nome, cargo, nomeacao, fonte from gabinete_pessoa order by 1,2").fetchall())
 assert len(con.execute("select * from gabinete_pessoa").fetchall()) == 3
+
+# ---- partidos (TSE) ----
+import io as _io, zipfile as _zf
+from pipeline import partidos
+def _zip(arqs):
+    b = _io.BytesIO()
+    with _zf.ZipFile(b, "w") as z:
+        for n, t in arqs.items():
+            z.writestr(n, t.encode("latin-1"))
+    return b.getvalue()
+zorg = _zip({
+    "receitas_orgaos_partidarios_2022_BRASIL.csv": 'SG_PARTIDO;DS_FONTE_RECEITA;VR_RECEITA\n"PT";"Fundo Especial de Financiamento de Campanha";"1000000,50"\n"PMDB";"Fundo Partidário";"500,00"\n',
+    "despesas_contratadas_orgaos_partidarios_2022_BRASIL.csv": 'SG_PARTIDO;DS_ORIGEM_DESPESA;NM_FORNECEDOR;NR_CPF_CNPJ_FORNECEDOR;VR_DESPESA_CONTRATADA\n"PT";"Publicidade";"GRAFICA X LTDA";"11.222.333/0001-44";"200,00"\n"PT";"Serviços";"JOAO DA SILVA";"12345678901";"50,00"\n',
+    "despesas_pagas_orgaos_partidarios_2022_BRASIL.csv": 'SG_PARTIDO;DS_ORIGEM_DESPESA;VR_DESPESA_PAGA\n"PT";"Publicidade";"999,00"\n'})
+zcan = _zip({"receitas_candidatos_2022_BRASIL.csv": 'SG_PARTIDO;NM_CANDIDATO;DS_CARGO;SG_UF;SQ_CANDIDATO;DS_FONTE_RECEITA;VR_RECEITA\n"PT";"MARIA CAND";"Deputado Federal";"SP";"1";"Fundo Especial de Financiamento de Campanha";"300,00"\n"PT";"MARIA CAND";"Deputado Federal";"SP";"1";"Recursos de pessoas físicas";"100,00"\n',
+             "despesas_contratadas_candidatos_2022_BRASIL.csv": 'SG_PARTIDO;DS_ORIGEM_DESPESA;NM_FORNECEDOR;NR_CPF_CNPJ_FORNECEDOR;VR_DESPESA_CONTRATADA\n"PT";"Publicidade";"GRAFICA X LTDA";"11222333000144";"70,00"\n'})
+zanu = _zip({"receitas_partidos_2023.csv": 'SG_PARTIDO;DS_TIPO_RECEITA;VR_RECEITA\n"PL";"Fundo Partidário";"9000,00"\n',
+             "despesas_partidos_2023.csv": 'SG_PARTIDO;DS_TIPO_DESPESA;NM_FORNECEDOR;NR_CPF_CNPJ_FORNECEDOR;VR_DESPESA\n"PL";"Despesas com pessoal";"MARIA FUNC";"11122233344";"4000,00"\n"PL";"Serviços";"EMPRESA Z SA";"99888777000166";"500,00"\n'})
+class _R:
+    def __init__(s, b): s.b = b
+    def iter_content(s, n): yield s.b
+partidos.ANOS_CAMPANHA = (2022,); partidos.ANOS_ANUAL = (2023,)
+partidos._recursos = lambda q: [("https://x/anual_partidaria_2023.zip", "")] if "anual" in q or "partidaria" in q else []
+def _get(u, *a, **k):
+    if "anual_partidaria" in u: return _R(zanu)
+    if "candidatos" in u: return _R(zcan)
+    if "orgaos" in u: return _R(zorg)
+    raise Exception("404")
+c.get = _get
+assert partidos.rodar(con) == 2
+rec = {(r[0], r[1], r[2], r[3]): r[4] for r in con.execute("select ano, base, sigla, fonte, valor from partido_receita")}
+print(rec)
+assert rec[(2022, "campanha_orgao", "PT", "Fundo Especial de Financiamento de Campanha")] == 1000000.5
+assert (2022, "campanha_orgao", "MDB", "Fundo Partidário") in rec  # PMDB renomeado
+assert rec[(2023, "anual", "PL", "Fundo Partidário")] == 9000
+rcb = con.execute("select base, sigla, documento, nome, classe, valor from partido_recebedor order by 1,2,5,6").fetchall()
+print(rcb)
+assert ("campanha_orgao", "PT", "11222333000144", "Grafica X Ltda", "PJ", 200.0) in rcb
+assert any(r[4] == "PF" and r[3].startswith("Pessoas físicas") and r[5] == 50.0 for r in rcb)  # PF so agregada, sem nome
+assert not any("JOAO" in (r[3] or "").upper() or "MARIA FUNC" in (r[3] or "").upper() for r in rcb)
+des = {(r[0], r[1], r[2]): r[3] for r in con.execute("select base, sigla, categoria, valor from partido_despesa")}
+assert des[("campanha_orgao", "PT", "Publicidade")] == 200.0  # despesas_pagas nao somam em duplicidade
+cand = con.execute("select sigla, candidato, fefc, total from partido_candidato").fetchall()
+print(cand); assert cand == [("PT", "Maria Cand", 300.0, 400.0)]
+assert partidos.rodar(con) == 0  # ja carregado (campanha) e anual recente (recarrega) -> ver abaixo
+print("partidos ok")

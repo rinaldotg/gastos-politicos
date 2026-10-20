@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pipeline.partidos import sigla as chave_partido  # noqa: E402
 from pipeline.classe import BANCOS as BANCOS_CLASSE, PRIVADOS, ROTULO as ROTULO_CLASSE, classificar  # noqa: E402
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -1017,13 +1018,90 @@ def main():
     escrever("presidentes", env.get_template("presidentes.html").render(**{**ctx_base, "raiz": "../"}, titulo="Presidentes: gasto no mandato inteiro",
              descricao="Despesas da Presidência (cartão corporativo e viagens) em cada mandato, em valor total e por mês, para comparar presidentes.",
              presidentes=sorted(pres_resumo, key=lambda r: r["ini"])))
+    # ---- partidos: bancada (dados da Camara e do Senado) + dinheiro do partido (TSE) ----
+    def lerc(nome_):
+        try:
+            return ler(a.resumo, nome_)
+        except FileNotFoundError:
+            return []
+    RE_FP, RE_FEFC = re.compile(r"fundo partid"), re.compile(r"fundo especial|fefc")
+    RE_PESSOAL = re.compile(r"pessoal|salari|folha|remunerac|encargos (trabalh|social)|ferias|13o|rescis")
+    norm_ = lambda t_: sem_acento(t_ or "").lower()
+    tse = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: dict(rec=[], des=[], rcb=[]))))  # chave -> ano -> base -> listas
+    for r_ in lerc("partido_receita"):
+        tse[r_["sigla"]][int(r_["ano"])][r_["base"]]["rec"].append([r_["fonte"], round(f(r_["valor"])), int(f(r_["n"]))])
+    for r_ in lerc("partido_despesa"):
+        tse[r_["sigla"]][int(r_["ano"])][r_["base"]]["des"].append([r_["categoria"], round(f(r_["valor"])), int(f(r_["n"]))])
+    for r_ in lerc("partido_recebedor"):
+        tse[r_["sigla"]][int(r_["ano"])][r_["base"]]["rcb"].append([r_["nome"], r_["documento"], r_["classe"], round(f(r_["valor"])), int(f(r_["n"]))])
+    cand_t = defaultdict(lambda: defaultdict(list))
+    for r_ in lerc("partido_candidato"):
+        cand_t[r_["sigla"]][int(r_["ano"])].append([r_["candidato"], r_["cargo"], r_["uf"], round(f(r_["fefc"])), round(f(r_["total"]))])
+    parl_part, rot_part = defaultdict(list), {}
+    for x_ in lista:
+        if x_["cargo"] in ("deputado_federal", "senador") and x_["partido"] and (x_["anos"].get(ano_atual) or x_["anos"].get(ano_ref)):
+            k_ = chave_partido(x_["partido"])
+            parl_part[k_].append(x_)
+            rot_part.setdefault(k_, x_["partido"])
+    chaves_ = sorted(set(parl_part) | set(tse))
+    for k_ in chaves_:
+        rot_part.setdefault(k_, k_)
+    slug_part, usados_p = {}, set()
+    for k_ in chaves_:
+        sl_ = slugify(rot_part[k_]) or k_.lower()
+        slug_part[k_] = sl_ if sl_ not in usados_p else f"{sl_}-{k_.lower()}"
+        usados_p.add(slug_part[k_])
+    mediana_ = lambda v_: (sorted(v_)[len(v_) // 2] if len(v_) % 2 else (sorted(v_)[len(v_) // 2 - 1] + sorted(v_)[len(v_) // 2]) / 2) if v_ else None
+
+    def soma_fonte(lst_, rx_):
+        return sum(v_ for fo_, v_, _ in lst_ if rx_.search(norm_(fo_)))
+    anos_part = sorted({y_ for k_ in chaves_ for y_ in tse[k_]} | {y_ for k_ in parl_part for x_ in parl_part[k_] for y_ in x_["anos"] if y_ >= 2014}, reverse=True)
+    idx_part = {str(y_): [] for y_ in anos_part}
+    for k_ in chaves_:
+        for y_ in anos_part:
+            ps_ = [x_ for x_ in parl_part.get(k_, []) if x_["anos"].get(y_)]
+            cotas_ = [x_["anos"][y_] for x_ in ps_]
+            em_ = sum(emendas[x_["id"]][y_][2] for x_ in ps_ if y_ in emendas.get(x_["id"], {}))
+            T_ = tse.get(k_, {}).get(y_, {})
+            fp_ = soma_fonte(T_.get("anual", {}).get("rec", []), RE_FP) or None
+            fefc_ = soma_fonte(T_.get("campanha_orgao", {}).get("rec", []), RE_FEFC) or None
+            ra_ = sum(v_ for _, v_, _ in T_.get("anual", {}).get("rec", [])) or None
+            pe_ = sum(v_ for ct_, v_, _ in T_.get("anual", {}).get("des", []) if RE_PESSOAL.search(norm_(ct_))) or None
+            if not ps_ and not (fp_ or fefc_ or ra_ or pe_):
+                continue
+            idx_part[str(y_)].append([slug_part[k_], rot_part[k_], sum(1 for x_ in ps_ if x_["cargo"] == "deputado_federal"), sum(1 for x_ in ps_ if x_["cargo"] == "senador"),
+                                      round(mediana_(cotas_)) if cotas_ else None, round(em_) if em_ else None, round(fp_) if fp_ else None, round(fefc_) if fefc_ else None,
+                                      round(ra_) if ra_ else None, round(pe_) if pe_ else None])
+    anos_part = [y_ for y_ in anos_part if idx_part[str(y_)]]
+    (saida / "data").mkdir(parents=True, exist_ok=True)
+    (saida / "data" / "partidos.json").write_text(json.dumps(dict(anos=anos_part, ref=ano_ref, linhas=idx_part), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tem_tse = bool(tse)
+    escrever("partidos", env.get_template("partidos.html").render(**{**ctx_base, "raiz": "../"}, titulo="Partidos: bancada e dinheiro que passa por eles",
+             descricao="Bancada, cota e emendas de cada partido e, com os dados do TSE, fundo partidário, fundo eleitoral, campanhas, quem recebeu e gastos com pessoal.", anos=anos_part, tem_tse=tem_tse, ref=ano_ref))
+    for k_ in chaves_:
+        sl_ = slug_part[k_]
+        T_ = tse.get(k_, {})
+        d_ = dict(anos={str(y_): {b_: dict(rec=sorted(v_["rec"], key=lambda t_: -t_[1])[:30], des=sorted(v_["des"], key=lambda t_: -t_[1])[:30],
+                                          rcb=sorted(v_["rcb"], key=lambda t_: -t_[3])[:45]) for b_, v_ in bs_.items()} for y_, bs_ in T_.items()},
+                  cand={str(y_): sorted(v_, key=lambda t_: -t_[3])[:40] for y_, v_ in cand_t.get(k_, {}).items()})
+        if T_:
+            (saida / "data" / f"partido-{sl_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        ps_ = sorted(parl_part.get(k_, []), key=lambda x_: x_["nome"])
+        linhas_p = [dict(nome=x_["nome"], url=x_["url"], cod=x_["cod"], uf=x_["uf"] or "", cota=x_["anos"].get(ano_ref, 0), em=sum(e_[2] for e_ in emendas.get(x_["id"], {}).values())) for x_ in ps_]
+        cotas_ = [l_["cota"] for l_ in linhas_p if l_["cota"]]
+        escrever(f"partido/{sl_}", env.get_template("partido.html").render(**{**ctx_base, "raiz": "../../"}, titulo=f"{rot_part[k_]}: bancada e dinheiro do partido",
+                 descricao=f"Parlamentares do {rot_part[k_]} e dinheiro que passa pelo partido: fundos, campanhas, quem recebeu e gastos com pessoal.",
+                 nome=rot_part[k_], slug=sl_, linhas=linhas_p, n_dep=sum(1 for l_ in linhas_p if l_["cod"] == "deputado"), n_sen=sum(1 for l_ in linhas_p if l_["cod"] == "senador"),
+                 cota_med=mediana_(cotas_), em_tot=sum(l_["em"] for l_ in linhas_p), tem_tse=bool(T_), ref=ano_ref))
+    partidos_urls = ["partidos/"] + [f"partido/{slug_part[k_]}/" for k_ in chaves_]
+
     escrever("comparar", env.get_template("comparar.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar gastos",
              descricao="Compare lado a lado os gastos de parlamentares e presidentes, ano a ano e por tipo de despesa."))
     escrever("sobre", env.get_template("sobre.html").render(**{**ctx_base, "raiz": "../"}, titulo="De onde vêm os dados e o que cada gasto cobre",
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "glossario/", "comparar/", "presidentes/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "sobre/"] + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "presidentes/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "partidos/", "sobre/"] + partidos_urls + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

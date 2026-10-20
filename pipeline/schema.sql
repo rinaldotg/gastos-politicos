@@ -162,3 +162,14 @@ CREATE TABLE IF NOT EXISTS gabinete_pessoa (
     pessoa_id INTEGER NOT NULL REFERENCES pessoa(id), nome TEXT NOT NULL, cargo TEXT, lotacao TEXT, nomeacao TEXT, fonte TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_gab_pessoa ON gabinete_pessoa (pessoa_id);
+
+-- Dinheiro dos partidos (TSE): base = campanha_orgao | campanha_candidato | anual
+CREATE TABLE IF NOT EXISTS partido_receita (ano INTEGER, base TEXT, sigla TEXT, fonte TEXT, valor REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_part_rec ON partido_receita (sigla, ano);
+CREATE TABLE IF NOT EXISTS partido_despesa (ano INTEGER, base TEXT, sigla TEXT, categoria TEXT, valor REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_part_des ON partido_despesa (sigla, ano);
+CREATE TABLE IF NOT EXISTS partido_recebedor (ano INTEGER, base TEXT, sigla TEXT, documento TEXT, nome TEXT, classe TEXT, valor REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_part_rcb ON partido_recebedor (sigla, ano);
+CREATE TABLE IF NOT EXISTS partido_candidato (ano INTEGER, sigla TEXT, candidato TEXT, cargo TEXT, uf TEXT, fefc REAL, total REAL);
+CREATE INDEX IF NOT EXISTS ix_part_cand ON partido_candidato (sigla, ano);
+CREATE TABLE IF NOT EXISTS partido_carga (ano INTEGER, base TEXT, linhas INTEGER, carregado TEXT, PRIMARY KEY (ano, base));

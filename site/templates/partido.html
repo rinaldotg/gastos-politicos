@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<article class="pessoa" data-partido-pagina data-slug="{{ slug }}">
+  <header class="pessoa-cab">
+    <p class="cargo">Partido</p>
+    <h1>{{ nome }}</h1>
+    <p class="resumo-linha">{{ n_dep }} {{ 'deputado federal' if n_dep == 1 else 'deputados federais' }} e {{ n_sen }} {{ 'senador' if n_sen == 1 else 'senadores' }} com cota registrada em {{ ref }} ou no ano atual. Veja também <a href="{{ raiz }}partidos/">todos os partidos</a>.</p>
+  </header>
+  <div class="faixa-resumo">
+    {% if cota_med %}<div><span>Cota por parlamentar em {{ ref }} (mediana)</span><strong>{{ cota_med | brl }}</strong></div>{% endif %}
+    {% if em_tot %}<div><span>Emendas pagas pela bancada (desde 2014)</span><strong>{{ em_tot | curto }}</strong></div>{% endif %}
+  </div>
+  <nav class="abas-pessoa" data-abas hidden aria-label="Seções da página">
+    <button type="button" data-aba-btn="dinheiro" aria-pressed="true">Dinheiro do partido (TSE)</button>
+    <button type="button" data-aba-btn="parlamentares" aria-pressed="false">Parlamentares ({{ linhas | length }})</button>
+  </nav>
+
+  <div class="aba-painel" data-aba="dinheiro" id="dinheiro">
+    {% if not tem_tse %}
+    <section class="bloco"><h2>Dinheiro do partido</h2><p>Os dados da prestação de contas do TSE ainda não estão carregados para este partido. Quando estiverem, aparecem aqui: fundos recebidos, gastos, quem recebeu e despesas com pessoal.</p></section>
+    {% else %}
+    <section class="bloco" data-partido-dados>
+      <h2>Dinheiro que passa pelo partido</h2>
+      <p>Dados da prestação de contas entregue pelo partido ao TSE. Escolha o ano e o tipo de conta.</p>
+      <div class="controles">
+        <label>Ano <select data-pt-ano></select></label>
+        <label>Tipo de conta <select data-pt-base>
+          <option value="anual">Contas anuais do partido</option>
+          <option value="campanha_orgao">Campanha: comitês do partido</option>
+          <option value="campanha_candidato">Campanha: candidatos do partido</option>
+        </select></label>
+      </div>
+      <p class="apoio" data-pt-aviso></p>
+      <h3>De onde veio o dinheiro</h3>
+      <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>Fonte</th><th class="num">Valor</th><th class="num">Lançamentos</th></tr></thead><tbody data-pt-rec></tbody></table></div>
+      <h3>Em que foi gasto</h3>
+      <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>Tipo de despesa</th><th class="num">Valor</th><th class="num">Lançamentos</th></tr></thead><tbody data-pt-des></tbody></table></div>
+      <p class="apoio" data-pt-pessoal></p>
+      <h3>Quem recebeu (empresas e entidades)</h3>
+      <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>Recebedor</th><th>CNPJ</th><th class="num">Valor</th><th class="num">Lançamentos</th></tr></thead><tbody data-pt-rcb></tbody></table></div>
+      <div data-pt-cand-bloco hidden>
+        <h3>Candidatos que mais receberam do fundo eleitoral</h3>
+        <div class="tabela-rolavel"><table class="tabela"><thead><tr><th>Candidato</th><th>Cargo</th><th>UF</th><th class="num">Fundo eleitoral</th><th class="num">Total recebido na campanha</th></tr></thead><tbody data-pt-cand></tbody></table></div>
+      </div>
+      <p class="nota">Pessoas físicas que receberam pagamentos (prestadores, funcionários) aparecem só como valor somado, sem nome nem CPF, e o salário individual de funcionários de partidos não é divulgado em dados abertos: o que o TSE traz é o total gasto com pessoal. Candidatos são nomeados porque recebem o fundo eleitoral como figuras públicas. Valores como informados pelos partidos; podem ser retificados depois. <a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
+    </section>
+    {% endif %}
+  </div>
+
+  <div class="aba-painel" data-aba="parlamentares" id="parlamentares">
+    <section class="bloco">
+      <h2>Parlamentares do {{ nome }}</h2>
+      {% if not linhas %}<p>Nenhum parlamentar com cota registrada em {{ ref }} ou neste ano.</p>{% else %}
+      <div class="tabela-rolavel"><table class="tabela">
+        <thead><tr><th>Nome</th><th>Cargo</th><th>UF</th><th class="num">Cota em {{ ref }}</th><th class="num">Emendas pagas (desde 2014)</th></tr></thead>
+        <tbody>{% for l in linhas %}<tr><td><a href="{{ raiz }}{{ l.url }}">{{ l.nome }}</a></td><td>{{ 'Deputado federal' if l.cod == 'deputado' else 'Senador' }}</td><td>{{ l.uf }}</td><td class="num">{{ l.cota | brl if l.cota else '—' }}</td><td class="num">{{ l.em | brl if l.em else '—' }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <p class="nota">Partido atual de cada parlamentar. Quem trocou de partido aparece só no partido de hoje.</p>
+      {% endif %}
+    </section>
+  </div>
+</article>
+{% endblock %}

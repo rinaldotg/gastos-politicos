@@ -65,6 +65,11 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so sancoes
 
+      - name: Dinheiro dos partidos (TSE: fundos, campanhas, contas anuais)
+        continue-on-error: true
+        timeout-minutes: 60
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so partidos
+
       - name: Equipe dos gabinetes (assessores)
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so gabinete
