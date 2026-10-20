@@ -218,3 +218,4 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .aba-painel[hidden] { display: none; }
 .topo nav .insta{display:inline-flex;align-items:center;color:var(--tinta)}
 .topo nav .insta:hover{color:var(--acento)}
+.acoes-cab { margin: .8rem 0 0; }

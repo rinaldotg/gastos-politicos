@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Dados abertos</h1>
+  <p class="apoio">Os números do site podem ser baixados em CSV para você conferir, cruzar com outras bases ou usar em reportagens e pesquisas. Todos vêm de dados oficiais (Câmara, Senado, Portal da Transparência, TSE, IBGE, Obras.gov.br); aqui estão já organizados.</p>
+</section>
+<section class="bloco">
+  <h2>Arquivos</h2>
+  {% if arquivos %}
+  <div class="tabela-rolavel"><table class="tabela">
+    <thead><tr><th>Arquivo</th><th>O que contém</th><th class="num">Tamanho</th></tr></thead>
+    <tbody>{% for nome, desc, tam in arquivos %}<tr><td><a href="{{ raiz }}dados/{{ nome }}.csv" download>{{ nome }}.csv</a></td><td>{{ desc }}</td><td class="num">{{ tam }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="nota">Arquivos com mais de 40 MB não são publicados aqui. Valores em reais, ponto decimal; codificação UTF-8, separador vírgula. Atualizados em {{ atualizado }}.</p>
+  {% else %}<p>Nenhum arquivo disponível nesta atualização.</p>{% endif %}
+</section>
+<section class="bloco">
+  <h2>Como citar</h2>
+  <p>Pode usar e republicar os dados e as telas, citando a fonte: <em>“Gastos Públicos (oquepagamos), com dados oficiais da Câmara dos Deputados, do Senado Federal, do Portal da Transparência e do TSE, atualizados em {{ atualizado }}”</em>. Os dados originais são públicos; o tratamento (ligação de emendas ao autor, classificação de recebedores, somas por ano) é nosso e está descrito em <a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
+</section>
+<section class="bloco">
+  <h2>Imprensa e pesquisadores</h2>
+  <p>Encontrou um erro, quer entender como um número foi calculado ou precisa de um recorte que não está aqui? <a href="https://github.com/rinaldotg/gastos-politicos/issues/new" target="_blank" rel="noopener">Abra um aviso</a> (público) ou escreva pelo Instagram <a href="https://www.instagram.com/oquepagamos/" target="_blank" rel="noopener">@oquepagamos</a>. Erros confirmados são corrigidos na atualização seguinte e registrados em “O que mudou”.</p>
+</section>
+{% endblock %}

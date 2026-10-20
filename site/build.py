@@ -750,6 +750,10 @@ def main():
              anos=sorted({int(y) for t in pix_lista for y in t[5]}, reverse=True)))
     busca = [dict(n=x["nome"], a=slugify(x["nome"]).replace("-", " "), c=x["cod"], u=x["uf"] or "", p=x["partido"] or "",
                   url=x["url"], id=x["id"]) for x in lista]
+    try:  # municipios tambem entram na busca da home (a tela de comparar ignora este tipo)
+        busca += [dict(n=m_[0], a=slugify(m_[0]).replace("-", " "), c="m", u="", p="", url="municipio/?m=" + m_[1], id=0) for m_ in indice_m]
+    except NameError:
+        pass
     (saida / "data" / "busca.json").write_text(json.dumps(busca, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (saida / "data" / "ranking.json").write_text(json.dumps(ranking, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -1102,13 +1106,52 @@ def main():
                  cota_med=mediana_(cotas_), em_tot=sum(l_["em"] for l_ in linhas_p), tem_tse=bool(T_), ref=ano_ref))
     partidos_urls = ["partidos/"] + [f"partido/{slug_part[k_]}/" for k_ in chaves_]
 
+    # ---- dados abertos: CSVs do resumo para baixar ----
+    DADOS = {
+        "pessoa": "Parlamentares e presidentes: nome, cargo, UF e partido",
+        "gasto_ano_categoria": "Cota e gastos por pessoa, ano, fonte e tipo de despesa",
+        "gasto_mensal": "Total gasto por pessoa em cada mês",
+        "gasto_mes_categoria": "Gasto por pessoa, mês e tipo de despesa",
+        "top_fornecedores": "Maiores fornecedores de cada parlamentar (desde 2014)",
+        "fornecedor_ano_pessoa": "Maiores fornecedores de cada parlamentar, por ano",
+        "emenda_agregado": "Emendas por parlamentar, tipo e ano: empenhado, liquidado e pago",
+        "emenda_detalhe": "Cada emenda individual: local, função, programa, empenhado e pago",
+        "emenda_favorecido": "Quem recebeu o dinheiro de cada emenda",
+        "emenda_convenio": "Convênios ligados às emendas",
+        "emenda_funcao": "Emendas pagas por parlamentar, ano e área",
+        "obra": "Obras federais (Obras.gov.br): situação, valor e executor",
+        "sancao": "Recebedores de emendas que constam em cadastros de sanção (CEIS, CNEP, CEPIM)",
+        "despesa_orgao": "Despesa paga por órgão superior (ministérios etc.), por tipo de gasto",
+        "atuacao": "Projetos, normas e votações por parlamentar e ano",
+        "gabinete_pessoa": "Assessores lotados nos gabinetes: nome, cargo e nomeação (lista do dia da coleta)",
+        "partido_receita": "Receitas dos partidos por fonte (TSE): Fundo Partidário, fundo eleitoral, doações",
+        "partido_despesa": "Despesas dos partidos por categoria (TSE)",
+        "partido_recebedor": "Quem recebeu dinheiro dos partidos (empresas e entidades; pessoas físicas só somadas)",
+        "partido_candidato": "Candidatos que mais receberam do fundo eleitoral, por partido e eleição",
+        "municipio_pop": "População estimada dos municípios (IBGE)",
+    }
+    arq_dados = []
+    for nome_, desc_ in DADOS.items():
+        orig_ = Path(a.resumo) / f"{nome_}.csv"
+        if orig_.exists() and orig_.stat().st_size <= 40 * 1024 * 1024:
+            (saida / "dados").mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(orig_, saida / "dados" / f"{nome_}.csv")
+            tam_ = orig_.stat().st_size
+            arq_dados.append((nome_, desc_, f"{tam_ / 1048576:.1f} MB" if tam_ >= 1048576 else f"{max(1, tam_ // 1024)} KB"))
+    if (saida / "data" / "ministerios.csv").exists():
+        arq_dados.append(("ministerios", "Custo de funcionamento de cada ministério por ano", f"{max(1, (saida / 'data' / 'ministerios.csv').stat().st_size // 1024)} KB"))
+        (saida / "dados").mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(saida / "data" / "ministerios.csv", saida / "dados" / "ministerios.csv")
+    escrever("dados", env.get_template("dados.html").render(**{**ctx_base, "raiz": "../"}, titulo="Dados abertos: baixe os números do site",
+             descricao="Baixe em CSV os dados usados no site: cota, emendas, recebedores, partidos, ministérios e mais.", arquivos=arq_dados))
+
     escrever("comparar", env.get_template("comparar.html").render(**{**ctx_base, "raiz": "../"}, titulo="Comparar gastos",
              descricao="Compare lado a lado os gastos de parlamentares e presidentes, ano a ano e por tipo de despesa."))
     escrever("sobre", env.get_template("sobre.html").render(**{**ctx_base, "raiz": "../"}, titulo="De onde vêm os dados e o que cada gasto cobre",
              descricao="Fontes, método e limites dos números: o que a cota parlamentar cobre e o que não está nos totais."))
     escrever("404.html", env.get_template("404.html").render(**ctx_base, titulo="Página não encontrada"))
 
-    urls = ["", "glossario/", "comparar/", "presidentes/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "partidos/", "sobre/"] + partidos_urls + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
+    urls = ["", "glossario/", "comparar/", "presidentes/", "emendas-pix/", "municipios/", "recebedores/", "novidades/", "sem-autor/", "atencao/", "ministerios/", "pares/", "privados/", "partidos/", "dados/", "sobre/"] + partidos_urls + [f"estado/{s_.lower()}/" for s_ in UFS] + [x["url"] for x in lista]
     (saida / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n" if base_url else "User-agent: *\nAllow: /\n")
     if base_url:
         (saida / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

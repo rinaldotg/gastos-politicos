@@ -6,6 +6,7 @@
     <h1>{{ nome }}</h1>
     <p class="resumo-linha">{{ n_dep }} {{ 'deputado federal' if n_dep == 1 else 'deputados federais' }} e {{ n_sen }} {{ 'senador' if n_sen == 1 else 'senadores' }} com cota registrada em {{ ref }} ou no ano atual. Veja também <a href="{{ raiz }}partidos/">todos os partidos</a>.</p>
   </header>
+  <p class="acoes-cab"><button type="button" class="botao botao-leve" data-compartilhar>Compartilhar imagem</button></p>
   <div class="faixa-resumo">
     {% if cota_med %}<div><span>Cota por parlamentar em {{ ref }} (mediana)</span><strong>{{ cota_med | brl }}</strong></div>{% endif %}
     {% if em_tot %}<div><span>Emendas pagas pela bancada (desde 2014)</span><strong>{{ em_tot | curto }}</strong></div>{% endif %}

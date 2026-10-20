@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var RAIZ = document.body.getAttribute('data-raiz') || '';
-  var CARGO_ROTULO = { deputado: 'Deputado federal', senador: 'Senador', presidente: 'Presidente' };
+  var CARGO_ROTULO = { deputado: 'Deputado federal', senador: 'Senador', presidente: 'Presidente', m: 'Cidade (emendas recebidas)' };
 
   function el(tag, attrs, children) {
     var e = document.createElement(tag);
@@ -63,7 +63,7 @@
   function carregarBusca() { return buscaCache || (buscaCache = get('data/busca.json')); }
 
   function iniciarBusca(form, aoEscolher) {
-    var input = form.querySelector('input'), lista = form.querySelector('ul'), itens = [], ativo = -1;
+    var input = form.querySelector('input'), lista = form.querySelector('ul'), itens = [], ativo = -1, comM = form.hasAttribute('data-com-municipios');
     function fechar() { lista.hidden = true; input.setAttribute('aria-expanded', 'false'); ativo = -1; }
     function marcar() {
       Array.prototype.forEach.call(lista.children, function (li, i) { li.setAttribute('aria-selected', i === ativo ? 'true' : 'false'); });
@@ -74,11 +74,11 @@
       if (q.length < 2) { fechar(); return; }
       var partes = q.split(/\s+/);
       carregarBusca().then(function (dados) {
-        itens = dados.filter(function (d) { return partes.every(function (p) { return d.a.indexOf(p) >= 0; }); })
+        itens = dados.filter(function (d) { return (comM || d.c !== 'm') && partes.every(function (p) { return d.a.indexOf(p) >= 0; }); })
           .sort(function (a, b) { return (a.a.indexOf(partes[0]) === 0 ? 0 : 1) - (b.a.indexOf(partes[0]) === 0 ? 0 : 1) || a.n.localeCompare(b.n); })
           .slice(0, 8);
         lista.textContent = '';
-        if (!itens.length) { lista.appendChild(el('li', { text: 'Nenhum nome encontrado' })); }
+        if (!itens.length) { lista.appendChild(el('li', { text: comM ? 'Nenhum parlamentar ou cidade encontrado' : 'Nenhum nome encontrado' })); }
         itens.forEach(function (d, i) {
           var li = el('li', { role: 'option', 'aria-selected': 'false' }, [
             el('span', { text: d.n }),
@@ -766,6 +766,74 @@
       else outro.value = sel.value || outro.value, outro.dispatchEvent(new Event('change'));
     });
   }
+
+  /* ---------- reportar erro e compartilhar imagem ---------- */
+  var rep_ = document.querySelector('[data-reportar]');
+  if (rep_) rep_.href = 'https://github.com/rinaldotg/gastos-politicos/issues/new?title=' + encodeURIComponent('Erro ou falta em: ' + document.title) +
+    '&body=' + encodeURIComponent('Página: ' + location.href + '\n\nO que está errado ou faltando (se puder, cite a fonte oficial):\n');
+
+  function quebrar(ctx, texto, largura) {
+    var palavras = String(texto).split(/\s+/), linhas = [], atual = '';
+    palavras.forEach(function (p) {
+      var t = atual ? atual + ' ' + p : p;
+      if (ctx.measureText(t).width > largura && atual) { linhas.push(atual); atual = p; } else atual = t;
+    });
+    if (atual) linhas.push(atual);
+    return linhas;
+  }
+  function imagemCompartilhar() {
+    var titulo = (document.querySelector('h1') || {}).textContent || document.title;
+    var sub = ((document.querySelector('.pessoa-cab .cargo') || {}).textContent || '').trim();
+    var fatos = Array.prototype.map.call(document.querySelectorAll('.faixa-resumo > div'), function (d) {
+      return [(d.querySelector('span') || {}).textContent || '', (d.querySelector('strong') || {}).textContent || ''];
+    }).slice(0, 4);
+    return (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
+      return new Promise(function (ok) {
+        var img = new Image(); img.onload = function () { ok(img); }; img.onerror = function () { ok(null); }; img.src = RAIZ + 'static/logo.png';
+      });
+    }).then(function (logo) {
+      var W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      var ctx = cv.getContext('2d'), FT = '"Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif';
+      ctx.fillStyle = '#f2c335'; ctx.fillRect(0, 0, W, 190);
+      ctx.fillStyle = '#f6f7fb'; ctx.fillRect(0, 190, W, H - 190);
+      if (logo) ctx.drawImage(logo, 56, 40, 110, 110);
+      ctx.fillStyle = '#10202f'; ctx.font = '700 46px ' + FT; ctx.textBaseline = 'alphabetic';
+      ctx.fillText('Gastos Públicos', 190, 92);
+      ctx.font = '500 30px ' + FT; ctx.fillText('@oquepagamos', 190, 138);
+      var y = 330; ctx.fillStyle = '#10202f'; ctx.font = '700 76px ' + FT;
+      quebrar(ctx, titulo, W - 112).slice(0, 3).forEach(function (l) { ctx.fillText(l, 56, y); y += 90; });
+      ctx.fillStyle = '#4a5868'; ctx.font = '500 34px ' + FT; y += 6;
+      quebrar(ctx, sub, W - 112).slice(0, 2).forEach(function (l) { ctx.fillText(l, 56, y); y += 46; });
+      y += 40;
+      fatos.forEach(function (f_) {
+        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#dfe3ea'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(56, y, W - 112, 150, 20) : ctx.rect(56, y, W - 112, 150); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#4a5868'; ctx.font = '500 30px ' + FT; ctx.fillText(f_[0], 90, y + 52);
+        ctx.fillStyle = '#10202f'; ctx.font = '700 58px ' + FT; ctx.fillText(f_[1], 90, y + 118);
+        y += 172;
+      });
+      ctx.fillStyle = '#4a5868'; ctx.font = '500 26px ' + FT;
+      ctx.fillText('Fatos de dados oficiais (Câmara, Senado, Portal da Transparência, TSE).', 56, H - 110);
+      ctx.fillText('Gasto não é irregularidade. Veja o método e confira a fonte:', 56, H - 72);
+      ctx.fillStyle = '#10202f'; ctx.font = '700 30px ' + FT; ctx.fillText(location.host + location.pathname, 56, H - 30);
+      return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
+    });
+  }
+  document.querySelectorAll('[data-compartilhar]').forEach(function (btn) {
+    var rot = btn.textContent;
+    btn.addEventListener('click', function () {
+      btn.disabled = true; btn.textContent = 'Gerando imagem…';
+      imagemCompartilhar().then(function (blob) {
+        var nome = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'gastos-publicos') + '.png';
+        var texto = document.title + ' ' + location.href;
+        var arq = blob && window.File ? new File([blob], nome, { type: 'image/png' }) : null;
+        if (arq && navigator.canShare && navigator.canShare({ files: [arq] })) {
+          return navigator.share({ files: [arq], title: document.title, text: texto }).catch(function () {});
+        }
+        if (blob) { var a_ = el('a', { href: URL.createObjectURL(blob), download: nome }); document.body.appendChild(a_); a_.click(); a_.remove(); }
+      }).then(function () { btn.disabled = false; btn.textContent = rot; }, function () { btn.disabled = false; btn.textContent = rot; });
+    });
+  });
 
   /* abas da pagina do parlamentar + abre blocos recolhidos quando o link aponta para dentro deles */
   var abasNav = document.querySelector('[data-abas]');
