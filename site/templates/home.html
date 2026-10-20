@@ -1,42 +1,52 @@
 {% extends "base.html" %}
 {% block conteudo %}
-<section class="abertura">
-  <h1>Quanto cada parlamentar gastou, com o quê e com quem</h1>
-  <form class="busca" role="search" autocomplete="off" data-busca data-com-municipios>
-    <label for="q">Buscar deputado, senador, presidente ou cidade</label>
-    <input id="q" type="search" placeholder="Digite o nome de um parlamentar ou de uma cidade" aria-controls="resultados" aria-expanded="false">
-    <ul id="resultados" role="listbox" hidden></ul>
-  </form>
-  <p class="apoio">Deputados federais, senadores e Presidência da República, de 2014 até hoje. Dinheiro público da cota parlamentar, do cartão corporativo e das viagens oficiais.</p>
+{% set ICONES = {"user": "<path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>", "barras": "<line x1=\"12\" y1=\"20\" x2=\"12\" y2=\"10\"/><line x1=\"18\" y1=\"20\" x2=\"18\" y2=\"4\"/><line x1=\"6\" y1=\"20\" x2=\"6\" y2=\"16\"/>", "partido": "<path d=\"M3 21h18M5 21V10m4 11V10m6 11V10m4 11V10M2 10l10-6 10 6z\"/>", "dinheiro": "<line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"23\"/><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"/>", "mala": "<rect x=\"2\" y=\"7\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/>", "raio": "<polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"/>", "pino": "<path d=\"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/>", "mapa": "<polygon points=\"1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6\"/><line x1=\"8\" y1=\"2\" x2=\"8\" y2=\"18\"/><line x1=\"16\" y1=\"6\" x2=\"16\" y2=\"22\"/>", "bandeira": "<path d=\"M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z\"/><line x1=\"4\" y1=\"22\" x2=\"4\" y2=\"15\"/>", "predio": "<rect x=\"4\" y=\"2\" width=\"16\" height=\"20\" rx=\"2\"/><path d=\"M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01\"/>", "lupa": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\"/>", "novo": "<polyline points=\"23 4 23 10 17 10\"/><path d=\"M20.49 15a9 9 0 1 1-2.12-9.36L23 10\"/>"} %}
+{% macro ico(n) %}<svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICONES[n] | safe }}</svg>{% endmacro %}
+
+<section class="abertura abertura-grade">
+  <div class="abertura-texto">
+    <h1>Quanto cada parlamentar gastou, com o quê e com quem</h1>
+    <form class="busca" role="search" autocomplete="off" data-busca data-com-municipios>
+      <label for="q">Buscar deputado, senador, presidente ou cidade</label>
+      <input id="q" type="search" placeholder="Digite o nome de um parlamentar ou de uma cidade" aria-controls="resultados" aria-expanded="false">
+      <ul id="resultados" role="listbox" hidden></ul>
+    </form>
+    <p class="apoio">Deputados federais, senadores e Presidência da República, de 2014 até hoje, com dados oficiais.</p>
+  </div>
+  <aside class="numeros" aria-label="Números em destaque">
+    <div><strong>{{ stats.cota | curto }}</strong><span>de cota parlamentar usados em {{ ano_ref }}</span></div>
+    <div><strong>{{ stats.emendas | curto }}</strong><span>pagos em emendas desde 2014</span></div>
+    <div><strong>{{ stats.parlamentares }}</strong><span>deputados e senadores acompanhados</span></div>
+  </aside>
 </section>
 
 <section aria-label="Por onde começar">
   <h2>O que você quer saber?</h2>
   <p class="apoio">O caminho do dinheiro: <strong>parlamentar → emenda → quem recebeu → município → onde foi gasto</strong>. Escolha por onde começar.</p>
-  <h3 class="grupo-titulo">Parlamentares</h3>
+  <h3 class="grupo-titulo gt-parl">Parlamentares</h3>
   <div class="cartoes">
-    <a class="cartao" href="#ranking"><strong>O que meu deputado ou senador gastou?</strong><span>Busque o nome acima: cota mês a mês, emendas e para onde foram.</span></a>
-    <a class="cartao" href="pares/"><strong>Meu voto está valendo a pena?</strong><span>Compare custo, emendas e atuação de cada parlamentar com os pares do mesmo estado.</span></a>
-    <a class="cartao" href="partidos/"><strong>Quanto dinheiro passa pelos partidos?</strong><span>Fundo partidário, fundo eleitoral, campanhas, em que o dinheiro foi gasto, quem recebeu e gastos com pessoal.</span></a>
-  </div>
-  <h3 class="grupo-titulo">Emendas: o caminho do dinheiro</h3>
-  <div class="cartoes">
-    <a class="cartao" href="recebedores/"><strong>Quem recebeu o dinheiro?</strong><span>Prefeituras, fundos, empresas e entidades que mais recebem emendas.</span></a>
-    <a class="cartao" href="privados/"><strong>Foi dinheiro direto para empresa ou ONG?</strong><span>A parte das emendas paga a entidades privadas: quem recebeu, de quais parlamentares e que sinais vale conferir.</span></a>
-    <a class="cartao" href="emendas-pix/"><strong>Quem usa a emenda Pix?</strong><span>Transferência direta, sem convênio nem projeto prévio.</span></a>
-    <a class="cartao" href="municipios/"><strong>O que chegou à minha cidade?</strong><span>Emendas recebidas, de quais parlamentares e, em alguns municípios de São Paulo, onde a prefeitura gastou.</span></a>
-    <div class="cartao"><strong>Como está meu estado?</strong><span>Bancada, gastos e emendas por área.</span>
+    <a class="cartao c-parl destaque" href="#ranking"><span class="cartao-ico">{{ ico("user") }}</span><strong>O que meu deputado ou senador gastou?</strong><span>Busque o nome acima: cota mês a mês, emendas e para onde foram.</span></a>
+    <a class="cartao c-parl destaque" href="pares/"><span class="cartao-ico">{{ ico("barras") }}</span><strong>Meu voto está valendo a pena?</strong><span>Compare custo, emendas e atuação de cada parlamentar com os pares do mesmo estado.</span></a>
+    <a class="cartao c-parl destaque" href="partidos/"><span class="cartao-ico">{{ ico("partido") }}</span><strong>Quanto dinheiro passa pelos partidos?</strong><span>Fundo partidário, fundo eleitoral, campanhas, em que o dinheiro foi gasto, quem recebeu e gastos com pessoal.</span></a>
+    <div class="cartao c-parl"><span class="cartao-ico">{{ ico("mapa") }}</span><strong>Como está meu estado?</strong><span>Bancada, gastos e emendas por área.</span>
       <select data-uf-select aria-label="Escolha o estado"><option value="">Escolher estado…</option>{% for s, n in ufs %}<option value="{{ s | lower }}">{{ n }}</option>{% endfor %}</select></div>
   </div>
-  <h3 class="grupo-titulo">Governo federal</h3>
+  <h3 class="grupo-titulo gt-em">Emendas: o caminho do dinheiro</h3>
   <div class="cartoes">
-    {% if presidentes %}<a class="cartao" href="{{ presidentes[-1].url }}"><strong>E a Presidência?</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
-    <a class="cartao" href="ministerios/"><strong>Quanto custa cada ministério?</strong><span>Custo de funcionamento (pessoal e custeio) por ministério a cada ano, e o total de todos eles.</span></a>
+    <a class="cartao c-em" href="recebedores/"><span class="cartao-ico">{{ ico("dinheiro") }}</span><strong>Quem recebeu o dinheiro?</strong><span>Prefeituras, fundos, empresas e entidades que mais recebem emendas.</span></a>
+    <a class="cartao c-em" href="privados/"><span class="cartao-ico">{{ ico("mala") }}</span><strong>Foi dinheiro direto para empresa ou ONG?</strong><span>A parte das emendas paga a entidades privadas: quem recebeu, de quais parlamentares e que sinais vale conferir.</span></a>
+    <a class="cartao c-em" href="emendas-pix/"><span class="cartao-ico">{{ ico("raio") }}</span><strong>Quem usa a emenda Pix?</strong><span>Transferência direta, sem convênio nem projeto prévio.</span></a>
+    <a class="cartao c-em" href="municipios/"><span class="cartao-ico">{{ ico("pino") }}</span><strong>O que chegou à minha cidade?</strong><span>Emendas recebidas, de quais parlamentares e, em alguns municípios de São Paulo, onde a prefeitura gastou.</span></a>
   </div>
-  <h3 class="grupo-titulo">Fiscalização</h3>
+  <h3 class="grupo-titulo gt-gov">Governo federal</h3>
   <div class="cartoes">
-    <a class="cartao" href="atencao/"><strong>O que vale perguntar?</strong><span>Obras paralisadas, recebedores muito procurados e concentração de fornecedores: fatos, sem acusação.</span></a>
-    <a class="cartao" href="novidades/"><strong>O que mudou?</strong><span>Novidades desde a última atualização.</span></a>
+    {% if presidentes %}<a class="cartao c-gov" href="{{ presidentes[-1].url }}"><span class="cartao-ico">{{ ico("bandeira") }}</span><strong>E a Presidência?</strong><span>Cartão corporativo, viagens e orçamento por programa.</span></a>{% endif %}
+    <a class="cartao c-gov" href="ministerios/"><span class="cartao-ico">{{ ico("predio") }}</span><strong>Quanto custa cada ministério?</strong><span>Custo de funcionamento (pessoal e custeio) por ministério a cada ano, e o total de todos eles.</span></a>
+  </div>
+  <h3 class="grupo-titulo gt-fis">Fiscalização</h3>
+  <div class="cartoes">
+    <a class="cartao c-fis" href="atencao/"><span class="cartao-ico">{{ ico("lupa") }}</span><strong>O que vale perguntar?</strong><span>Obras paralisadas, recebedores muito procurados e concentração de fornecedores: fatos, sem acusação.</span></a>
+    <a class="cartao c-fis" href="novidades/"><span class="cartao-ico">{{ ico("novo") }}</span><strong>O que mudou?</strong><span>Novidades desde a última atualização.</span></a>
   </div>
 </section>
 

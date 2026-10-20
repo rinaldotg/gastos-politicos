@@ -108,12 +108,14 @@
       if (!dados) return;
       var linhas = (dados[selC.value] || {})[selA.value] || [];
       corpo.textContent = '';
+      var maxv = linhas.length ? Math.max(1, linhas[0][4]) : 1;
       linhas.slice(0, limite).forEach(function (r, i) {
         corpo.appendChild(el('tr', {}, [
           el('td', { class: 'pos', text: String(i + 1) }),
           el('td', {}, [el('a', { href: RAIZ + r[1], text: r[0] })]),
           el('td', { text: r[2] }), el('td', { text: r[3] }),
-          el('td', { class: 'num', text: brl(r[4]) }), el('td', { class: 'num', text: String(r[5]) })
+          el('td', { class: 'num' }, [document.createTextNode(brl(r[4])), el('span', { class: 'barra-gasto' }, [el('i', { style: 'width:' + Math.max(2, Math.round(r[4] / maxv * 100)) + '%' })])]),
+          el('td', { class: 'num', text: String(r[5]) })
         ]));
       });
       if (!linhas.length) corpo.appendChild(el('tr', {}, [el('td', { colspan: '6', text: 'Sem dados para este ano.' })]));
