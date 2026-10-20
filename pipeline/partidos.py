@@ -10,6 +10,7 @@ import io
 import re
 import sys
 import tempfile
+from itertools import chain, islice
 import time
 import zipfile
 from collections import defaultdict
@@ -66,7 +67,8 @@ def _urls(ano, campanha):
         achadas += [CDN.format(tipo=t, ano=ano) for t in ("candidatos", "orgaos_partidarios")]
     else:
         for q in ("prestacao de contas anual partidaria", "prestacao de contas partidarias", "contas anuais partidos"):
-            achadas += [u for u, n in _recursos(q) if u.lower().endswith(".zip") and str(ano) in u and "eleitorais" not in u.lower()]
+            achadas += [u for u, n in _recursos(q) if u.lower().endswith(".zip") and str(ano) in u and "eleitorais" not in u.lower()
+                        and ("prestacao_contas_anual_partidaria_" + str(ano) in u.lower() or "fefc_fp" in u.lower())]
             if achadas:
                 break
     vistos, out = set(), []
@@ -99,7 +101,7 @@ def _membros(z, anual):
     grupos = defaultdict(list)
     for n in z.namelist():
         ln = n.lower()
-        if not ln.endswith(".csv") or "originario" in ln:
+        if not ln.endswith(".csv") or "originario" in ln or "_nf_" in ln or "notafiscal" in ln or "extrato" in ln:
             continue
         tipo = "receita" if "receita" in ln else "despesa" if "despesa" in ln else None
         if tipo is None:
@@ -115,6 +117,29 @@ def _membros(z, anual):
         br = [n for n in nomes if n.lower().endswith("brasil.csv")]
         escolhidos[chave] = br or nomes
     return escolhidos
+
+
+PRIORIDADE_CAT = {"receita": ("fonte", "origem", "natureza", "especie", "tipo"),
+                  "despesa": ("tp_despesa", "tipo", "gasto", "origem", "natureza", "especie", "fonte")}
+EXCLUIR_CAT = ("fornecedor", "esfera", "documento", "municipio", "partidaria", "doador", "cargo", "candidato", "uf", "zona", "eleicao", "turno")
+
+
+def _cat_adaptativa(cab, amostra, tipo):
+    """Quando nenhum nome conhecido serve, escolhe entre as colunas descritivas (ds_/tp_) a que tem poucos valores distintos
+    (uma categoria de verdade, e nao um texto livre) olhando as primeiras linhas."""
+    cands = []
+    for i, h in enumerate(cab):
+        n = _norm_h(h)
+        if n.startswith(("ds_", "tp_")) and not any(x in n for x in EXCLUIR_CAT):
+            distintos = len({l[i].strip() for l in amostra if i < len(l) and l[i].strip()})
+            if 2 <= distintos <= 150:
+                prio = next((k for k, chave in enumerate(PRIORIDADE_CAT[tipo]) if chave in n), len(PRIORIDADE_CAT[tipo]))
+                cands.append((prio, distintos, i))
+    return min(cands)[2] if cands else None
+
+
+def _norm_h(h):
+    return re.sub(r"[^a-z0-9_]", "", c.sem_acento(h or "").lower().replace(" ", "_"))
 
 
 class Acum:
@@ -135,7 +160,7 @@ def _processar(z, nomes, nivel, tipo, base, ano, ac):
             i_val = _achar(cab, ("vr", "receita"), ("valor", "receita"))
             i_cat = _achar(cab, ("fonte", "receita"), ("origem", "receita"), ("tipo", "receita"), ("especie", "receita"))
         else:
-            i_val = _achar(cab, ("vr", "despesa"), ("valor", "despesa"))
+            i_val = _achar(cab, ("vr", "despesa"), ("valor", "despesa"), ("vr", "gasto"), ("vr", "pagamento"))
             i_cat = _achar(cab, ("origem", "despesa"), ("tipo", "despesa"), ("natureza", "despesa"), ("especie", "despesa"))
         i_nom = _achar(cab, ("nm", "fornecedor"), ("nome", "fornecedor"), ("nm", "doador"), ("nome", "doador"))
         i_doc = _achar(cab, ("cnpj", "fornecedor"), ("cpf", "fornecedor"), ("cnpj", "doador"), ("cpf", "doador"))
@@ -146,6 +171,11 @@ def _processar(z, nomes, nivel, tipo, base, ano, ac):
         if i_sig is None or i_val is None:
             print(f"  AVISO: colunas de partido/valor nao reconhecidas em {nome}", file=sys.stderr)
             continue
+        amostra = list(islice(leitor, 5000))
+        if i_cat is None:
+            i_cat = _cat_adaptativa(cab, amostra, tipo)
+        print(f"    categoria de {tipo}: {cab[i_cat] if i_cat is not None else 'nenhuma'}; valor: {cab[i_val]}")
+        leitor = chain(amostra, leitor)
 
         def cel(l, i):
             return l[i].strip() if i is not None and i < len(l) else ""
@@ -182,14 +212,33 @@ def _processar(z, nomes, nivel, tipo, base, ano, ac):
         print(f"    {n} linhas lidas")
 
 
+MAX_CATEGORIAS = 60
+
+
+def _limitar_categorias(d):
+    """Linhas (ano, base, sigla, categoria, valor, n); passa de MAX_CATEGORIAS por partido, o resto vira 'Outras categorias'."""
+    por = defaultdict(list)
+    for k, v in d.items():
+        por[k[:3]].append((k[3], v[0], v[1]))
+    out = []
+    for k, lst in por.items():
+        lst.sort(key=lambda t: -abs(t[1]))
+        for cat, val, n in lst[:MAX_CATEGORIAS]:
+            out.append((*k, cat, round(val, 2), n))
+        resto = lst[MAX_CATEGORIAS:]
+        if resto:
+            out.append((*k, f"Outras categorias ({len(resto)} tipos)", round(sum(t[1] for t in resto), 2), sum(t[2] for t in resto)))
+    return out
+
+
 def _gravar(con, ano, bases, ac):
     for b in bases:
         for t in ("partido_receita", "partido_despesa", "partido_recebedor"):
             con.execute(f"DELETE FROM {t} WHERE ano=? AND base=?", (ano, b))
     if "campanha_candidato" in bases:
         con.execute("DELETE FROM partido_candidato WHERE ano=?", (ano,))
-    con.executemany("INSERT INTO partido_receita VALUES (?,?,?,?,?,?)", [(*k, round(v[0], 2), v[1]) for k, v in ac.rec.items()])
-    con.executemany("INSERT INTO partido_despesa VALUES (?,?,?,?,?,?)", [(*k, round(v[0], 2), v[1]) for k, v in ac.des.items()])
+    con.executemany("INSERT INTO partido_receita VALUES (?,?,?,?,?,?)", _limitar_categorias(ac.rec))
+    con.executemany("INSERT INTO partido_despesa VALUES (?,?,?,?,?,?)", _limitar_categorias(ac.des))
     por = defaultdict(list)
     for k, v in ac.rcb.items():
         por[k[:3]].append((*k, round(v[0], 2), v[1]))
@@ -212,6 +261,17 @@ def _gravar(con, ano, bases, ac):
         con.execute("INSERT OR REPLACE INTO partido_carga VALUES (?,?,?,?)", (ano, b, ac.linhas, c.agora()))
         c.log(con, "partidos", b, ano, ac.linhas)
     con.commit()
+
+
+def _diagnostico(z):
+    """Zip de distribuicao do FEFC e do Fundo Partidario: por ora so mostramos o formato no log (ainda nao e gravado)."""
+    for n in z.namelist():
+        if n.lower().endswith(".csv"):
+            try:
+                cab, leitor = _fluxo_csv(z, n)
+                print(f"  [fefc_fp] {n}: colunas {cab}; exemplo: {[l for l in islice(leitor, 3)]}")
+            except Exception as e:
+                print(f"  [fefc_fp] {n}: erro {e}", file=sys.stderr)
 
 
 def _ja_carregado(con, ano, base):
@@ -239,6 +299,9 @@ def rodar(con, recarregar=False):
                 if z is None:
                     continue
                 print(f"  {ano} {'campanha' if campanha else 'anual'}: {url} -> {len(z.namelist())} arquivos")
+                if "fefc_fp" in url.lower():
+                    _diagnostico(z)
+                    continue
                 for (nivel, tipo), nomes in _membros(z, not campanha).items():
                     base = "anual" if not campanha else ("campanha_candidato" if nivel == "candidato" else "campanha_orgao")
                     _processar(z, nomes, nivel, tipo, base, ano, ac_por[base])
@@ -255,6 +318,12 @@ def rodar(con, recarregar=False):
             if junto.linhas == 0:
                 print(f"  AVISO: {ano}: arquivos lidos mas sem linhas aproveitaveis", file=sys.stderr)
                 continue
+            for nome_, rot_ in (("rec", "receitas"), ("des", "despesas")):
+                tot_ = defaultdict(float)
+                for k_, v_ in getattr(junto, nome_).items():
+                    tot_[(k_[1], k_[3])] += v_[0]
+                top_ = sorted(tot_.items(), key=lambda t: -abs(t[1]))[:6]
+                print(f"  maiores categorias de {rot_} {ano}: {[(b_, cat_[:40], round(v_)) for (b_, cat_), v_ in top_]}")
             _gravar(con, ano, bases, junto)
             feitos += 1
             print(f"  Partidos {ano} ({'campanha' if campanha else 'anual'}): {junto.linhas} linhas, {len({k[2] for k in junto.rec})} partidos")

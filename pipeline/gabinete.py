@@ -20,7 +20,7 @@ SENADO = ["https://adm.senado.gov.br/adm-dadosabertos/api/v1/servidores/servidor
 ALIAS = dict(
     nome=("nome", "servidor", "nome do funcionario", "nome do servidor", "nome_funcionario"),
     cargo=("cargo", "funcao", "cargo/funcao", "cargo ou funcao", "funcao ou cargo", "grupo funcional"),
-    lotacao=("lotacao", "unidade de lotacao", "lotacao atual", "orgao de lotacao", "unidade", "gabinete", "lotacao do servidor"),
+    lotacao=("lotacao", "nome lotacao", "sigla lotacao", "unidade de lotacao", "lotacao atual", "orgao de lotacao", "unidade", "gabinete", "lotacao do servidor"),
     nomeacao=("data de nomeacao", "data nomeacao", "data_nomeacao", "nomeacao", "admissao", "data de admissao", "data de exercicio"),
 )
 
@@ -63,11 +63,22 @@ def _baixar(urls):
 
 
 def _indice(con, cargo):
-    """nome normalizado -> pessoa_id (homonimos ficam de fora)."""
+    """nome normalizado -> pessoa_id. Homonimos: fica o que tem despesa registrada mais recente, se for um so; senao, de fora."""
     por_nome = defaultdict(set)
     for pid, nome in con.execute("SELECT id, nome FROM pessoa WHERE cargo=?", (cargo,)):
         por_nome[_nome_norm(nome)].add(pid)
-    return {k: next(iter(v)) for k, v in por_nome.items() if len(v) == 1 and k}
+    recente = dict(con.execute("SELECT pessoa_id, MAX(ano) FROM gasto GROUP BY pessoa_id").fetchall())
+    indice = {}
+    for k, ids in por_nome.items():
+        if not k:
+            continue
+        if len(ids) == 1:
+            indice[k] = next(iter(ids))
+            continue
+        pont = sorted(((recente.get(i) or 0, i) for i in ids), reverse=True)
+        if pont[0][0] and pont[0][0] > pont[1][0]:
+            indice[k] = pont[0][1]
+    return indice
 
 
 def _achar_parlamentar(resto, indice):
@@ -86,8 +97,8 @@ def _achar_parlamentar(resto, indice):
     return None
 
 
-PAD_CAMARA = re.compile(r"^GAB(?:INETE)?\s+(?:(?:DO|DA|DE)\s+)?(?:DEP(?:UTAD[OA])?\s+)?(.+)$")
-PAD_SENADO = re.compile(r"GABINETE\s+(?:DO|DA)\s+SENADOR(?:A)?\s+(.+)$")
+PAD_CAMARA = re.compile(r"^GAB(?:INETE)?\s+(?:(?:DO|DA|DE)\s+)?(?:DEP(?:UTAD[OA])?\s+)?(?:EDP\s+)?(.+)$")
+PAD_SENADO = re.compile(r"GAB(?:INETE)?\s+(?:(?:DO|DA)\s+)?(?:SEN(?:ADOR(?:A)?)?\s+)?(.+)$")
 
 
 def _processar(con, linhas, cargo, padrao, fonte):
@@ -133,7 +144,8 @@ def rodar(con):
         if sem_par:
             print(f"  Lotacoes de gabinete sem parlamentar identificado ({len(sem_par)}): {sem_par.most_common(8)}", file=sys.stderr)
         if not saida:
-            print(f"  AVISO: nenhum assessor identificado no {rotulo}; mantive a lista anterior", file=sys.stderr)
+            lots = Counter(_campo(l, "lotacao") for l in linhas).most_common(10)
+            print(f"  AVISO: nenhum assessor identificado no {rotulo}; mantive a lista anterior. Lotacoes mais comuns: {lots}", file=sys.stderr)
             continue
         _gravar(con, saida, fonte)
         total += len(saida)

@@ -113,9 +113,9 @@ class _R:
     def __init__(s, b): s.b = b
     def iter_content(s, n): yield s.b
 partidos.ANOS_CAMPANHA = (2022,); partidos.ANOS_ANUAL = (2023,)
-partidos._recursos = lambda q: [("https://x/anual_partidaria_2023.zip", "")] if "anual" in q or "partidaria" in q else []
+partidos._recursos = lambda q: [("https://x/prestacao_contas_anual_partidaria_2023.zip", "")] if "anual" in q or "partidaria" in q else []
 def _get(u, *a, **k):
-    if "anual_partidaria" in u: return _R(zanu)
+    if "anual_partidaria" in u or "anual_partidaria" in u.replace("prestacao_contas_",""): return _R(zanu)
     if "candidatos" in u: return _R(zcan)
     if "orgaos" in u: return _R(zorg)
     raise Exception("404")
