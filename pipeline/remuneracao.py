@@ -1,6 +1,6 @@
 """Remuneracao bruta dos assessores de gabinete (dado publico: Camara e Senado publicam por nome e mes).
 
-Camara: CSV mensal "Remuneracao mensal dos servidores" (transparencia/recursos-humanos/remuneracao).
+Camara: o CSV mensal publicado e consolidado (sem nome nem lotacao), entao nao liga ao gabinete; so sondamos a pagina de cada deputado.
 Senado: API administrativa de remuneracoes por ano/mes.
 O gabinete vem da lotacao (mesma regra de gabinete.py). Soma por pessoa e mes; guarda o valor bruto.
 Formatos escritos de memoria: o log imprime as colunas reais e quantas linhas ficaram sem gabinete.
@@ -69,33 +69,49 @@ def _baixar_senado(ano, mes):
     return []
 
 
-def _somar(con, linhas, cargo, padrao, ano, mes, rotulo, mostrar):
-    indice = g._indice(con, cargo)
-    col = _coluna_bruto(linhas[0]) if linhas else None
-    if mostrar:
-        print(f"  Colunas da remuneracao {rotulo}: {sorted(linhas[0].keys())}; coluna de valor bruto: {col}")
-    if col is None:
-        return {}, 0
+COMPONENTES_SENADO = ("remuneracao basica", "vantagens pessoais", "funcao comissionada", "gratificacao natalina", "horas extras", "outras eventuais", "abono permanencia")
+
+
+def _somar_senado(con, linhas, mostrar):
+    """O arquivo do Senado traz nome e valores, sem lotacao: ligamos pelo nome aos assessores atuais de cada senador.
+    Valor = remuneracao basica + vantagens + funcao comissionada + 13o + horas extras + eventuais + abono (sem verbas indenizatorias)."""
+    por_nome = defaultdict(set)
+    for pid, nome in con.execute("SELECT pessoa_id, nome FROM gabinete_pessoa WHERE fonte='gab_senado'"):
+        por_nome[g._nome_norm(nome)].add(pid)
+    if mostrar and linhas:
+        l0 = linhas[0]
+        print(f"  Exemplo de linha do Senado: {dict(list(l0.items())[:20])}")
     acum, sem = {}, 0
     for l in linhas:
-        lot = g._nome_norm(g._campo(l, "lotacao"))
-        if "GAB" not in lot:
-            continue
-        m = padrao.search(lot)
-        if not m:
-            continue
-        resto = re.sub(r"^[A-Z0-9]{3,12}\s+(?=.*\bGABINETE\b)", "", m.group(1)).strip()
-        pid = g._achar_parlamentar(resto, indice)
-        nome = g._campo(l, "nome")
-        if pid is None or not nome or g._nome_norm(nome) == g._nome_norm(resto):
+        nome = l.get("nome", "")
+        ids = por_nome.get(g._nome_norm(nome))
+        if not ids or len(ids) != 1:
             sem += 1
             continue
+        pid = next(iter(ids))
+        v = sum(c.numero(l.get(k, "")) for k in COMPONENTES_SENADO)
         k = (pid, g._nome_norm(nome))
-        v = c.numero(l.get(col, ""))
         if k not in acum:
-            acum[k] = [nome.strip()[:120], g._campo(l, "cargo").strip()[:120], 0.0]
+            cargo = con.execute("SELECT cargo FROM gabinete_pessoa WHERE pessoa_id=? AND fonte='gab_senado' AND nome=? LIMIT 1", (pid, nome)).fetchone()
+            acum[k] = [nome.strip()[:120], (cargo[0] if cargo else "")[:120], 0.0]
         acum[k][2] += v
     return acum, sem
+
+
+def _sonda_camara(con):
+    """O arquivo mensal da Camara e consolidado (sem nome nem lotacao). Sonda a pagina do gabinete de um deputado para
+    ver se ela traz a remuneracao por secretario; so imprime o formato no log."""
+    r = con.execute("SELECT f.id_externo FROM pessoa p JOIN pessoa_fonte f ON f.pessoa_id=p.id AND f.fonte='camara' WHERE p.cargo='deputado_federal' ORDER BY p.id LIMIT 1").fetchone()
+    if not r:
+        return
+    for u in (f"https://www.camara.leg.br/deputados/{r[0]}/pessoal-gabinete", f"https://dadosabertos.camara.leg.br/api/v2/deputados/{r[0]}"):
+        try:
+            resp = c.get(u, timeout=60, rapido=True)
+            txt = re.sub(r"\s+", " ", c.decodificar(resp.content))
+            i = txt.lower().find("remunera")
+            print(f"  [sonda Camara] {u}: {len(txt)} caracteres; trecho: {txt[max(0, i - 300):i + 900] if i >= 0 else txt[:600]}")
+        except Exception as e:
+            print(f"  [sonda Camara] {u}: {e}", file=sys.stderr)
 
 
 def _carregado(con, fonte, ano, mes):
@@ -105,27 +121,27 @@ def _carregado(con, fonte, ano, mes):
 def rodar(con):
     hoje = date.today()
     novos = 0
-    primeiro = {"gab_camara": True, "gab_senado": True}
+    mostrar = True
+    _sonda_camara(con)
     for ano, mes in _meses(hoje):
+        fonte = "gab_senado"
         recente = (hoje.year * 12 + hoje.month) - (ano * 12 + mes) <= 2
-        for rotulo, cargo, padrao, fonte, baixar in (("Camara", "deputado_federal", g.PAD_CAMARA, "gab_camara", _baixar_camara),
-                                                    ("Senado", "senador", g.PAD_SENADO, "gab_senado", _baixar_senado)):
-            if _carregado(con, fonte, ano, mes) and not recente:
-                continue
-            linhas = baixar(ano, mes)
-            if not linhas:
-                print(f"  AVISO: remuneracao {rotulo} {mes:02d}/{ano} indisponivel", file=sys.stderr)
-                continue
-            acum, sem = _somar(con, linhas, cargo, padrao, ano, mes, rotulo, primeiro[fonte])
-            primeiro[fonte] = False
-            if not acum:
-                print(f"  AVISO: remuneracao {rotulo} {mes:02d}/{ano}: nenhum assessor identificado ({len(linhas)} linhas)", file=sys.stderr)
-                continue
-            con.execute("DELETE FROM gabinete_remun WHERE fonte=? AND ano=? AND mes=?", (fonte, ano, mes))
-            con.executemany("INSERT INTO gabinete_remun (pessoa_id, ano, mes, nome, cargo, bruto, fonte) VALUES (?,?,?,?,?,?,?)",
-                            [(pid, ano, mes, v[0], v[1], round(v[2], 2), fonte) for (pid, _), v in acum.items()])
-            c.log(con, fonte, "remuneracao", ano, len(acum))
-            con.commit()
-            novos += len(acum)
-            print(f"Remuneracao {rotulo} {mes:02d}/{ano}: {len(acum)} assessores, {len({k[0] for k in acum})} gabinetes ({sem} linhas de gabinete sem parlamentar)")
+        if _carregado(con, fonte, ano, mes) and not recente:
+            continue
+        linhas = _baixar_senado(ano, mes)
+        if not linhas:
+            print(f"  AVISO: remuneracao Senado {mes:02d}/{ano} indisponivel", file=sys.stderr)
+            continue
+        acum, sem = _somar_senado(con, linhas, mostrar)
+        mostrar = False
+        if not acum:
+            print(f"  AVISO: remuneracao Senado {mes:02d}/{ano}: nenhum assessor identificado ({len(linhas)} linhas)", file=sys.stderr)
+            continue
+        con.execute("DELETE FROM gabinete_remun WHERE fonte=? AND ano=? AND mes=?", (fonte, ano, mes))
+        con.executemany("INSERT INTO gabinete_remun (pessoa_id, ano, mes, nome, cargo, bruto, fonte) VALUES (?,?,?,?,?,?,?)",
+                        [(pid, ano, mes, v[0], v[1], round(v[2], 2), fonte) for (pid, _), v in acum.items()])
+        c.log(con, fonte, "remuneracao", ano, len(acum))
+        con.commit()
+        novos += len(acum)
+        print(f"Remuneracao Senado {mes:02d}/{ano}: {len(acum)} assessores, {len({k[0] for k in acum})} gabinetes")
     return novos
