@@ -11,6 +11,7 @@ import io
 import re
 import sys
 import tempfile
+import time
 import zipfile
 from datetime import datetime
 
@@ -23,7 +24,8 @@ RE_EMENDA = re.compile(r"EMENDAS? PARLAMENTAR|EMENDA (IMPOSITIVA|INDIVIDUAL|DE B
 ALIAS = {"embu": "embu-das-artes"}  # nome no Portal da Transparencia federal x nome no TCE-SP
 LISTA = "https://transparencia.tce.sp.gov.br/api/json/municipios"
 ANO_MIN = 2024
-N_MUNICIPIOS = 30
+N_MUNICIPIOS = 150  # os de maior valor de emendas primeiro; o que nao couber no tempo entra na rodada seguinte
+LIMITE_SEGUNDOS = 40 * 60
 RETER = 300  # pagamentos de fonte federal guardados por municipio e ano (alem dos que citam emenda)
 
 
@@ -163,7 +165,11 @@ def rodar(con, municipios=None, desde=ANO_MIN, ate=None, baixar=_baixar):
         return 0
     feitos = {(r[0], r[1]) for r in con.execute("SELECT DISTINCT slug, ano FROM tce_fornecedor")}  # anos sem fornecedores (carga antiga) sao baixados de novo
     total = falhas = 0
+    inicio = time.time()
     for nome in municipios:
+        if time.time() - inicio > LIMITE_SEGUNDOS:
+            print(f"  AVISO: tempo esgotado em {nome}; os demais municipios entram na proxima rodada", file=sys.stderr)
+            break
         sl = slug(nome)      # chave no site (nome das emendas)
         sl_tce = sl          # endereco no TCE-SP
         corrigido = False

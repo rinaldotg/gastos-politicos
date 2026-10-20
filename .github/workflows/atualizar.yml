@@ -59,6 +59,7 @@ jobs:
 
       - name: Despesa dos municipios paulistas (TCE-SP, piloto)
         continue-on-error: true
+        timeout-minutes: 60
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so tcesp
 
       - name: Cadastros de sancoes (CEIS, CNEP, CEPIM)
