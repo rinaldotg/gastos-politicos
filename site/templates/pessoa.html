@@ -55,14 +55,14 @@
     <h2>Quanto custa um mandato</h2>
     <p>Além da cota, o mandato tem outros valores mensais, fixados em lei. Escolha o período para ver quanto isso soma. Só a cota tem gasto registrado neste site; os demais são valores legais ou tetos.</p>
     <div class="controles"><label>Período <select data-custo-ano><option value="">Todos os anos com dados</option></select></label></div>
-    <div class="tabela-rolavel"><table class="tabela">
+    <div class="tabela-rolavel"><table class="tabela tabela-custo">
       <thead><tr><th>Item</th><th class="num">Valor mensal</th><th class="num" data-custo-cab>No período</th></tr></thead>
       <tbody>
-        <tr><td>Subsídio (salário bruto)<small>Valor atual aplicado aos meses do período; em anos anteriores o subsídio foi menor.</small></td><td class="num">{{ custo.subsidio | brl2 }}</td><td class="num" data-custo-sub></td></tr>
-        {% if custo.gabinete %}<tr><td>Verba de gabinete (teto, para até 25 assessores)<small>É um limite: o gasto efetivo depende da equipe contratada.</small></td><td class="num">até {{ custo.gabinete | brl2 }}</td><td class="num" data-custo-gab></td></tr>{% endif %}
-        {% if tem_rem %}<tr><td>Verba de gabinete usada (remuneração bruta dos assessores)<small>Soma do que foi pago à equipe nos meses com dados (<span data-custo-gabmeses></span>). Fonte: remuneração publicada pela {{ 'Câmara' if p.cod == 'deputado' else 'Casa legislativa' }}.</small></td><td class="num">—</td><td class="num" data-custo-gabuso></td></tr>{% endif %}
-        {% if custo.moradia %}<tr><td>Auxílio-moradia (quando não usa imóvel funcional)<small>Só recebe quem não ocupa imóvel funcional; o site não sabe quem recebe.</small></td><td class="num">{{ custo.moradia | brl2 }}</td><td class="num" data-custo-mor></td></tr>{% endif %}
-        <tr><td>Cota parlamentar<small>Gasto registrado (Câmara e Senado).</small></td><td class="num">—</td><td class="num" data-custo-cota></td></tr>
+        <tr><td>Subsídio (salário bruto)<small>Valor atual aplicado aos meses do período; em anos anteriores o subsídio foi menor.</small></td><td class="num" data-rot="Valor mensal">{{ custo.subsidio | brl2 }}</td><td class="num" data-rot="No período" data-custo-sub></td></tr>
+        {% if custo.gabinete %}<tr><td>Verba de gabinete (teto, para até 25 assessores)<small>É um limite: o gasto efetivo depende da equipe contratada.</small></td><td class="num" data-rot="Valor mensal">até {{ custo.gabinete | brl2 }}</td><td class="num" data-rot="No período" data-custo-gab></td></tr>{% endif %}
+        {% if tem_rem %}<tr><td>Verba de gabinete usada (remuneração bruta dos assessores)<small>Soma do que foi pago à equipe nos meses com dados (<span data-custo-gabmeses></span>). Fonte: remuneração publicada pela {{ 'Câmara' if p.cod == 'deputado' else 'Casa legislativa' }}.</small></td><td class="num" data-rot="Valor mensal">—</td><td class="num" data-rot="No período" data-custo-gabuso></td></tr>{% endif %}
+        {% if custo.moradia %}<tr><td>Auxílio-moradia (quando não usa imóvel funcional)<small>Só recebe quem não ocupa imóvel funcional; o site não sabe quem recebe.</small></td><td class="num" data-rot="Valor mensal">{{ custo.moradia | brl2 }}</td><td class="num" data-rot="No período" data-custo-mor></td></tr>{% endif %}
+        <tr><td>Cota parlamentar<small>Gasto registrado (Câmara e Senado).</small></td><td class="num" data-rot="Valor mensal">—</td><td class="num" data-rot="No período" data-custo-cota></td></tr>
       </tbody>
     </table></div>
     <p class="apoio" data-custo-resumo></p>

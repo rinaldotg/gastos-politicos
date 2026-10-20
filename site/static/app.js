@@ -732,7 +732,9 @@
     function render() {
       var usar = sel.value ? [sel.value] : anos, meses = 0, cota = 0;
       usar.forEach(function (a) { meses += d[a][0]; cota += d[a][1]; });
-      box.querySelector('[data-custo-cab]').textContent = sel.value ? 'Em ' + sel.value : 'Em todos os anos';
+      var rotP = sel.value ? 'Em ' + sel.value : 'Em todos os anos';
+      box.querySelector('[data-custo-cab]').textContent = rotP;
+      Array.prototype.forEach.call(box.querySelectorAll('td[data-rot="No período"]'), function (td) { td.setAttribute('data-rot', rotP); });
       set('[data-custo-sub]', meses ? sub * meses : null);
       set('[data-custo-gab]', meses && gab ? gab * meses : null);
       set('[data-custo-mor]', meses && mor ? mor * meses : null);

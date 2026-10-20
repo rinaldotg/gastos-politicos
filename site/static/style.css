@@ -243,3 +243,25 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 @media (max-width:520px){.numeros{grid-template-columns:1fr}.numeros div{display:flex;align-items:baseline;gap:.7rem}.numeros strong{font-size:1.4rem;min-width:5.5rem}}
 .ranking-cab{flex-wrap:wrap}.ranking-cab .controles{flex-wrap:wrap;max-width:100%}.controles label,.controles select{max-width:100%}
 @media (max-width:520px){.ranking-cab .controles{width:100%}.ranking-cab .controles label{flex:1 1 9rem}.ranking-cab .controles select{width:100%}}
+
+/* ---- celular: leitura em uma coluna, alvos de toque grandes ---- */
+@media (max-width:600px){
+  main{padding-top:1.2rem}
+  h2{font-size:1.3rem}
+  .tabela{font-size:.9rem}.tabela th,.tabela td{padding:.5rem .45rem}
+  .tabela-rolavel{position:relative;background:linear-gradient(to right,var(--papel) 30%,transparent),linear-gradient(to left,var(--papel) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(20,35,58,.18),transparent),radial-gradient(farthest-side at 100% 50%,rgba(20,35,58,.18),transparent) 100% 0;background-repeat:no-repeat;background-size:2rem 100%,2rem 100%,.8rem 100%,.8rem 100%;background-attachment:local,local,scroll,scroll}
+  .tabela-custo thead{display:none}
+  .tabela-custo,.tabela-custo tbody,.tabela-custo tr,.tabela-custo td{display:block;width:100%}
+  .tabela-custo tr{padding:.7rem .2rem;border-bottom:1px solid var(--linha)}
+  .tabela-custo td{border:0;padding:.15rem .3rem}
+  .tabela-custo td.num{display:flex;justify-content:space-between;gap:1rem;text-align:right}
+  .tabela-custo td.num::before{content:attr(data-rot);color:var(--tinta-2);font-size:.85rem;text-align:left}
+  button,.botao,.abas-pessoa button,[data-aba-btn]{min-height:44px}
+  select,input[type=search]{min-height:44px}
+  .acoes-cab{gap:.5rem}
+  .acoes-cab a,.acoes-cab button{flex:1 1 auto;text-align:center}
+}
+@media (max-width:600px){
+  .botao,.botao-leve{font:600 .95rem var(--corpo);display:inline-flex;align-items:center;justify-content:center}
+  .abertura-pessoa .botao,.faixa-resumo .botao,[class*=acoes] .botao{width:100%}
+}
