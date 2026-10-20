@@ -97,6 +97,7 @@
       else if (ev.key === 'Enter') { if (ativo >= 0) { escolher(ativo); ev.preventDefault(); } }
       else if (ev.key === 'Escape') { fechar(); }
     });
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); if (!lista.hidden && itens.length) escolher(ativo >= 0 ? ativo : 0); });
     input.addEventListener('blur', function () { setTimeout(fechar, 120); });
   }
 
@@ -774,6 +775,16 @@
       else outro.value = sel.value || outro.value, outro.dispatchEvent(new Event('change'));
     });
   }
+
+  /* ---------- tamanho do texto (A- / A+) ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-texto]'), function (b) {
+    b.addEventListener('click', function () {
+      var atual = parseFloat(document.documentElement.style.fontSize) || 112.5;
+      var novo = Math.max(100, Math.min(137.5, atual + (b.getAttribute('data-texto') === '+' ? 12.5 : -12.5)));
+      document.documentElement.style.fontSize = novo + '%';
+      try { localStorage.setItem('tamanho-texto', String(novo)); } catch (e) {}
+    });
+  });
 
   /* ---------- reportar erro e compartilhar imagem ---------- */
   var rep_ = document.querySelector('[data-reportar]');

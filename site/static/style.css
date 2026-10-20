@@ -10,7 +10,7 @@
         --deputado:#7DA2FF;--senador:#4FD1C5;--presidente:#F29AC7}
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;font-size:112.5%}
 body{margin:0;background:var(--fundo);color:var(--tinta);font:400 1rem/1.55 var(--corpo);font-variant-numeric:tabular-nums}
 a{color:var(--acento)}
 :focus-visible{outline:3px solid var(--acento);outline-offset:2px;border-radius:4px}
@@ -265,3 +265,14 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
   .botao,.botao-leve{font:600 .95rem var(--corpo);display:inline-flex;align-items:center;justify-content:center}
   .abertura-pessoa .botao,.faixa-resumo .botao,[class*=acoes] .botao{width:100%}
 }
+
+/* ---- publico amplo: texto maior por padrao, controle A-/A+, botao de busca ---- */
+.tamanho{display:inline-flex;gap:.25rem}
+.tamanho button{font:700 .95rem var(--corpo);min-width:2.4rem;min-height:2.4rem;border-radius:8px;border:1.5px solid var(--linha);background:var(--papel);color:var(--tinta);cursor:pointer}
+.tamanho button:hover{border-color:var(--acento);color:var(--acento)}
+.busca .campo{display:flex;gap:.5rem}
+.busca .campo input{flex:1;min-width:0}
+.busca .campo button{flex:0 0 auto;font:700 1.05rem var(--corpo);padding:0 1.3rem;border:2px solid var(--tinta);border-radius:10px;background:#F2C335;color:#14233A;cursor:pointer}
+.busca .campo button:hover{background:#E5B31E}
+@media (max-width:520px){.busca .campo button{padding:0 .9rem}.tamanho button{min-width:2.75rem;min-height:2.75rem}}
+@media (prefers-reduced-motion:reduce){.cartao,.cartao:hover{transition:none;transform:none}}
