@@ -74,6 +74,11 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so gabinete
 
+      - name: Remuneracao dos assessores (Camara e Senado)
+        continue-on-error: true
+        timeout-minutes: 30
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so remuneracao
+
       - name: Atuacao legislativa (projetos, normas, votacoes)
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao

@@ -162,6 +162,8 @@ CREATE TABLE IF NOT EXISTS gabinete_pessoa (
     pessoa_id INTEGER NOT NULL REFERENCES pessoa(id), nome TEXT NOT NULL, cargo TEXT, lotacao TEXT, nomeacao TEXT, fonte TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_gab_pessoa ON gabinete_pessoa (pessoa_id);
+CREATE TABLE IF NOT EXISTS gabinete_remun (pessoa_id INTEGER NOT NULL, ano INTEGER, mes INTEGER, nome TEXT, cargo TEXT, bruto REAL, fonte TEXT);
+CREATE INDEX IF NOT EXISTS ix_gab_rem ON gabinete_remun (pessoa_id, ano, mes);
 
 -- Dinheiro dos partidos (TSE): base = campanha_orgao | campanha_candidato | anual
 CREATE TABLE IF NOT EXISTS partido_receita (ano INTEGER, base TEXT, sigla TEXT, fonte TEXT, valor REAL, n INTEGER);

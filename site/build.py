@@ -468,6 +468,18 @@ def main():
             equipe[int(r_["pessoa_id"])].append([nome_bonito(r_["nome"]), (r_.get("cargo") or "").strip(), data_br(r_.get("nomeacao"))])
     except FileNotFoundError:
         pass
+    rem_ano = defaultdict(lambda: defaultdict(lambda: [0.0, set()]))  # pid -> ano -> [total bruto, meses]
+    rem_ult = defaultdict(dict)  # pid -> {nome: (ano*100+mes, bruto)}
+    try:
+        for r_ in ler(a.resumo, "gabinete_remun"):
+            pid_, y_, m_, v_ = int(r_["pessoa_id"]), int(f(r_["ano"])), int(f(r_["mes"])), f(r_["bruto"])
+            rem_ano[pid_][y_][0] += v_
+            rem_ano[pid_][y_][1].add(m_)
+            k_ = nome_bonito(r_["nome"])
+            if y_ * 100 + m_ >= rem_ult[pid_].get(k_, (0, 0))[0]:
+                rem_ult[pid_][k_] = (y_ * 100 + m_, v_)
+    except FileNotFoundError:
+        pass
     pres_datas = {int(r["pessoa_id"]): (r["data_inicio"], r["data_fim"]) for r in mand if r["cargo"] == "presidente"}
     pres_resumo = []
     for x in lista:
@@ -547,8 +559,9 @@ def main():
             **{**ctx_base, "raiz": "../../"}, titulo=f"{x['nome']}: gastos desde 2014", p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
-            em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x, orc_tot=orc_tot, mand=mand_x, forn_anos=json.dumps(forn_a.get(pid, {}), separators=(",", ":"), ensure_ascii=False), equipe=sorted(equipe.get(pid, []), key=lambda t: (t[1], t[0])),
-            custo_anos=json.dumps({str(y_): [meses[pid].get(y_, 0), round(sum(anos[pid][y_].values()))] for y_ in anos[pid] if y_ >= 2015}, separators=(",", ":")),
+            em_funcao=[t for t in sorted(em_funcao[pid].items(), key=lambda t: -t[1]) if t[1] > 0][:6], sig=sig, orc=orc_x, orc_tot=orc_tot, mand=mand_x, forn_anos=json.dumps(forn_a.get(pid, {}), separators=(",", ":"), ensure_ascii=False), equipe=sorted([e_ + [rem_ult[pid].get(e_[0], (0, None))[1], rem_ult[pid].get(e_[0], (0, None))[0]] for e_ in equipe.get(pid, [])], key=lambda t: (t[1], t[0])),
+            tem_rem=bool(rem_ano.get(pid)),
+            custo_anos=json.dumps({str(y_): [meses[pid].get(y_, 0), round(sum(anos[pid][y_].values()))] + ([round(rem_ano[pid][y_][0]), len(rem_ano[pid][y_][1])] if rem_ano.get(pid, {}).get(y_) else []) for y_ in anos[pid] if y_ >= 2015}, separators=(",", ":")),
             uf_url=(f"estado/{x['uf'].lower()}/" if x["uf"] in UFS else ""), pos=posicao.get(pid) if x["cargo"] != "presidente" else None, tem_detalhe=bool(detalhe.get(pid)), desde=(min(anos[pid]) if anos[pid] else 2014), em_desde=(min(emendas[pid]) if emendas.get(pid) else 2014), ano_ref_total=x["anos"].get(ano_ref, 0), descricao=(
                 f"{CARGOS[x['cargo']][1]} {x['nome']}: {brl_curto(total_geral)} em gastos desde 2014, por ano e por tipo de despesa."))
         escrever(f"{x['cod']}/{x['slug']}", html)
@@ -1119,6 +1132,7 @@ def main():
         "sancao": "Recebedores de emendas que constam em cadastros de sanção (CEIS, CNEP, CEPIM)",
         "despesa_orgao": "Despesa paga por órgão superior (ministérios etc.), por tipo de gasto",
         "atuacao": "Projetos, normas e votações por parlamentar e ano",
+        "gabinete_remun": "Remuneração bruta mensal dos assessores de cada gabinete, como publicada pela Câmara e pelo Senado",
         "gabinete_pessoa": "Assessores lotados nos gabinetes: nome, cargo e nomeação (lista do dia da coleta)",
         "partido_receita": "Receitas dos partidos por fonte (TSE): Fundo Partidário, fundo eleitoral, doações",
         "partido_despesa": "Despesas dos partidos por categoria (TSE)",

@@ -92,6 +92,24 @@ gabinete.rodar(con)
 print(con.execute("select pessoa_id, nome, cargo, nomeacao, fonte from gabinete_pessoa order by 1,2").fetchall())
 assert len(con.execute("select * from gabinete_pessoa").fetchall()) == 3
 
+# ---- remuneracao dos assessores ----
+from pipeline import remuneracao
+_cs = "Nome;Cargo;Lotação;Remuneração Bruta;Remuneração Líquida\n" + "\n".join(
+    f"{n};SECRETARIO PARLAMENTAR;{l};{v};1,00" for n, l, v in [("Fulano Assessor", "GAB DEP DELEGADO FRANCISCHINI", "5.000,50"), ("Beltrano Ex", "GAB DEP DELEGADO FRANCISCHINI", "3.000,00"), ("Outro Servidor", "DIRETORIA X", "9.999,00")])
+def _get_rem(u, *a, **k):
+    if "camara.leg.br/transparencia" in u and "marco-de" in u and u.endswith("-csv"):
+        class R: content = _cs.encode("latin-1")
+        return R()
+    raise Exception("404")
+_old_get = c.get; c.get = _get_rem
+remuneracao.MESES_BUSCA = 40
+n_rem = remuneracao.rodar(con)
+c.get = _old_get
+rr = con.execute("select ano, mes, nome, bruto, fonte from gabinete_remun order by 3").fetchall()
+print(rr)
+assert n_rem >= 2 and any(r[2] == "Fulano Assessor" and r[3] == 5000.5 and r[4] == "gab_camara" for r in rr)
+assert not any("Servidor" in r[2] for r in rr)
+
 # ---- partidos (TSE) ----
 import io as _io, zipfile as _zf
 from pipeline import partidos

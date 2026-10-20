@@ -735,6 +735,10 @@
       set('[data-custo-gab]', meses && gab ? gab * meses : null);
       set('[data-custo-mor]', meses && mor ? mor * meses : null);
       set('[data-custo-cota]', cota);
+      var uso = 0, mu = 0, tem = false;
+      usar.forEach(function (a) { if (d[a].length > 2) { tem = true; uso += d[a][2]; mu += d[a][3]; } });
+      set('[data-custo-gabuso]', tem ? uso : null);
+      var gm = box.querySelector('[data-custo-gabmeses]'); if (gm) gm.textContent = mu + (mu === 1 ? ' mês' : ' meses');
       var tetos = (meses ? sub * meses + gab * meses + mor * meses : 0);
       box.querySelector('[data-custo-resumo]').textContent = meses ?
         meses + ' meses no período. Somando subsídio, tetos e cota, o limite legal é de ' + brl(tetos + cota) + ' (a cota é o gasto registrado; o restante são valores legais, não gasto efetivo).' : 'Sem meses com despesa registrada neste período.';

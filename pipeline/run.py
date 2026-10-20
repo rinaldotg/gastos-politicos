@@ -2,7 +2,7 @@
 import argparse
 from datetime import datetime
 
-from . import camara, common as c, emendas, ibge, obras, orcamento, presidencia, senado, tcesp, atuacao, sancoes, gabinete, partidos
+from . import camara, common as c, emendas, ibge, obras, orcamento, presidencia, senado, tcesp, atuacao, sancoes, gabinete, partidos, remuneracao
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
     ap.add_argument("--db", default="data/gastos.db")
     ap.add_argument("--desde", type=int, default=c.ANO_INICIAL)
     ap.add_argument("--ate", type=int, default=datetime.now().year)
-    ap.add_argument("--so", nargs="*", choices=["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "partidos"])
+    ap.add_argument("--so", nargs="*", choices=["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "remuneracao", "partidos"])
     ap.add_argument("--pular-cadastro", action="store_true", help="nao recarrega listas de deputados/senadores")
     ap.add_argument("--recarregar-desde", type=int, default=None, help="anos do Portal anteriores a este e ja carregados sao pulados (padrao: ano passado)")
     a = ap.parse_args()
@@ -18,7 +18,7 @@ def main():
     con = c.abrir_banco(a.db)
     con.execute("DELETE FROM gasto WHERE ano < ?", (c.ANO_INICIAL,))  # lancamentos de extratos de 2014 com data anterior
     con.commit()
-    etapas = a.so or ["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "partidos"]
+    etapas = a.so or ["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "remuneracao", "partidos"]
     if "camara" in etapas:
         camara.rodar(con, anos, so_gastos=a.pular_cadastro)
     if "senado" in etapas:
@@ -43,6 +43,8 @@ def main():
         partidos.rodar(con, recarregar=bool(a.recarregar_desde))
     if "gabinete" in etapas:
         gabinete.rodar(con)
+    if "remuneracao" in etapas:
+        remuneracao.rodar(con)
     print("Concluido.")
 
 

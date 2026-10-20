@@ -51,6 +51,7 @@ def main():
         "partido_despesa": "SELECT ano, base, sigla, categoria, valor, n FROM partido_despesa",
         "partido_recebedor": "SELECT ano, base, sigla, documento, nome, classe, valor, n FROM partido_recebedor",
         "partido_candidato": "SELECT ano, sigla, candidato, cargo, uf, fefc, total FROM partido_candidato",
+        "gabinete_remun": "SELECT pessoa_id, ano, mes, nome, cargo, bruto, fonte FROM gabinete_remun ORDER BY pessoa_id, ano, mes, nome",
         "gabinete_pessoa": "SELECT pessoa_id, nome, cargo, lotacao, nomeacao, fonte FROM gabinete_pessoa ORDER BY pessoa_id, cargo, nome",
         "top_fornecedores_ano": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total,
                        ROW_NUMBER() OVER (PARTITION BY pessoa_id, ano ORDER BY SUM(valor) DESC) pos

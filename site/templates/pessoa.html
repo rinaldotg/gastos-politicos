@@ -60,12 +60,13 @@
       <tbody>
         <tr><td>Subsídio (salário bruto)<small>Valor atual aplicado aos meses do período; em anos anteriores o subsídio foi menor.</small></td><td class="num">{{ custo.subsidio | brl2 }}</td><td class="num" data-custo-sub></td></tr>
         {% if custo.gabinete %}<tr><td>Verba de gabinete (teto, para até 25 assessores)<small>É um limite: o gasto efetivo depende da equipe contratada.</small></td><td class="num">até {{ custo.gabinete | brl2 }}</td><td class="num" data-custo-gab></td></tr>{% endif %}
+        {% if tem_rem %}<tr><td>Verba de gabinete usada (remuneração bruta dos assessores)<small>Soma do que foi pago à equipe nos meses com dados (<span data-custo-gabmeses></span>). Fonte: remuneração publicada pela {{ 'Câmara' if p.cod == 'deputado' else 'Casa legislativa' }}.</small></td><td class="num">—</td><td class="num" data-custo-gabuso></td></tr>{% endif %}
         {% if custo.moradia %}<tr><td>Auxílio-moradia (quando não usa imóvel funcional)<small>Só recebe quem não ocupa imóvel funcional; o site não sabe quem recebe.</small></td><td class="num">{{ custo.moradia | brl2 }}</td><td class="num" data-custo-mor></td></tr>{% endif %}
         <tr><td>Cota parlamentar<small>Gasto registrado (Câmara e Senado).</small></td><td class="num">—</td><td class="num" data-custo-cota></td></tr>
       </tbody>
     </table></div>
     <p class="apoio" data-custo-resumo></p>
-    <p class="nota">Meses do período: meses com ao menos uma despesa de cota registrada. Valores legais de 2026, não gasto efetivo. {% if p.cod == 'senador' %}No Senado, equipe e auxílios variam por gabinete e ainda não estão aqui. {% endif %}<a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
+    <p class="nota">Meses do período: meses com ao menos uma despesa de cota registrada. Subsídio, teto da verba e auxílio-moradia são valores legais, não gasto efetivo. {% if p.cod == 'senador' %}No Senado, equipe e auxílios variam por gabinete e ainda não estão aqui. {% endif %}<a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
   </section>
   {% endif %}
   {% if tem_mes %}
@@ -176,11 +177,11 @@
     <details class="ano">
       <summary><span class="ano-n">Ver os nomes e cargos</span><span class="ano-v">{{ equipe | length }}</span></summary>
       <div class="tabela-rolavel"><table class="tabela">
-        <thead><tr><th>Nome</th><th>Cargo</th><th>Nomeação</th></tr></thead>
-        <tbody>{% for n, cg, dt in equipe %}<tr><td>{{ n }}</td><td>{{ cg or "—" }}</td><td>{{ dt or "—" }}</td></tr>{% endfor %}</tbody>
+        <thead><tr><th>Nome</th><th>Cargo</th><th>Nomeação</th>{% if tem_rem %}<th class="num">Remuneração bruta (último mês)</th>{% endif %}</tr></thead>
+        <tbody>{% for n, cg, dt, rv, rm in equipe %}<tr><td>{{ n }}</td><td>{{ cg or "—" }}</td><td>{{ dt or "—" }}</td>{% if tem_rem %}<td class="num">{% if rv is not none %}{{ rv | brl2 }}<small> {{ '%02d/%d' % (rm % 100, rm // 100) }}</small>{% else %}—{% endif %}</td>{% endif %}</tr>{% endfor %}</tbody>
       </table></div>
     </details>
-    <p class="nota">Dados públicos de transparência da {{ 'Câmara dos Deputados' if p.cod == 'deputado' else 'Casa legislativa' }}. Nomes e cargos apenas; a remuneração individual não é mostrada aqui. Ter parentes ou aliados na equipe é objeto de regras próprias (a Súmula Vinculante 13 proíbe o nepotismo): para checar, consulte o órgão.</p>
+    <p class="nota">Dados públicos de transparência da {{ 'Câmara dos Deputados' if p.cod == 'deputado' else 'Casa legislativa' }}. Remuneração bruta conforme publicada pela própria Casa (dado público); o valor do mês pode incluir verbas eventuais. Ter parentes ou aliados na equipe é objeto de regras próprias (a Súmula Vinculante 13 proíbe o nepotismo): para checar, consulte o órgão.</p>
   </section>
   {% endif %}
   </div>
