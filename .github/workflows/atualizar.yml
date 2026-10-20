@@ -89,10 +89,10 @@ jobs:
 
       - name: Baixar a comparacao da atualizacao anterior
         continue-on-error: true
-        run: curl -fsSL "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/snapshot.json" -o snapshot_anterior.json || true
+        run: curl -fsSL "https://oquepagamos.com.br/data/snapshot.json" -o snapshot_anterior.json || true
 
       - name: Gerar o site
-        run: python site/build.py --resumo resumo --saida dist --anterior snapshot_anterior.json --base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+        run: python site/build.py --resumo resumo --saida dist --anterior snapshot_anterior.json --base-url "https://oquepagamos.com.br"
 
       - name: Guardar o banco atualizado
         run: |
