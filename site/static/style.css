@@ -216,3 +216,5 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .abas-pessoa button { font: inherit; font-weight: 600; padding: .5rem 1rem; border: 1px solid var(--linha); border-radius: 999px; background: var(--papel); color: var(--tinta); cursor: pointer; }
 .abas-pessoa button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #fff; }
 .aba-painel[hidden] { display: none; }
+.topo nav .insta{display:inline-flex;align-items:center;color:var(--tinta)}
+.topo nav .insta:hover{color:var(--acento)}
