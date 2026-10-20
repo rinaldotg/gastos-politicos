@@ -769,7 +769,7 @@
 
   /* ---------- reportar erro e compartilhar imagem ---------- */
   var rep_ = document.querySelector('[data-reportar]');
-  if (rep_) rep_.href = 'https://github.com/rinaldotg/gastos-politicos/issues/new?title=' + encodeURIComponent('Erro ou falta em: ' + document.title) +
+  if (rep_) rep_.href = 'mailto:oquepagamos@gmail.com?subject=' + encodeURIComponent('Erro ou falta em: ' + document.title) +
     '&body=' + encodeURIComponent('Página: ' + location.href + '\n\nO que está errado ou faltando (se puder, cite a fonte oficial):\n');
 
   function quebrar(ctx, texto, largura) {

@@ -34,7 +34,7 @@
 {% block conteudo %}{% endblock %}
 </main>
 <footer class="rodape">
-  <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}<strong>Dados atualizados em {{ atualizado }}</strong>; a rotina roda todo mês.{% endif %} Viu algo errado ou faltando? <a href="https://github.com/rinaldotg/gastos-politicos/issues/new" data-reportar target="_blank" rel="noopener">Avise sobre esta página</a>.</p>
+  <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}<strong>Dados atualizados em {{ atualizado }}</strong>; a rotina roda todo mês.{% endif %} Viu algo errado ou faltando? <a href="mailto:oquepagamos@gmail.com" data-reportar>Avise sobre esta página</a>.</p>
   <p class="rodape-links"><strong>Ajuda e transparência:</strong> <a href="{{ raiz }}sobre/">Fontes e método</a> · <a href="{{ raiz }}glossario/">Glossário</a> · <a href="{{ raiz }}atencao/">Pontos de atenção</a> · <a href="{{ raiz }}sem-autor/">Emendas sem autor identificado</a> · <a href="{{ raiz }}dados/">Dados abertos</a> · <a href="{{ raiz }}novidades/">O que mudou</a>{% if base_url %} · <a href="{{ raiz }}feed.xml">RSS</a>{% endif %}</p>
   <p>Gasto não é irregularidade: os valores mostram o que foi pago dentro das regras de cada cota. <a href="{{ raiz }}sobre/">Entenda o que está e o que não está nos números.</a></p>
 </footer>
