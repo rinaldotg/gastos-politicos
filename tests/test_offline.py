@@ -130,6 +130,7 @@ rcb = con.execute("select base, sigla, documento, nome, classe, valor from parti
 print(rcb)
 assert ("campanha_orgao", "PT", "11222333000144", "Grafica X Ltda", "PJ", 200.0) in rcb
 assert any(r[4] == "PF" and r[3].startswith("Pessoas físicas") and r[5] == 50.0 for r in rcb)  # PF so agregada, sem nome
+assert not any(r[0] == "campanha_candidato" and r[4] == "PJ" for r in rcb)  # abaixo do limiar de campanha de candidatos
 assert not any("JOAO" in (r[3] or "").upper() or "MARIA FUNC" in (r[3] or "").upper() for r in rcb)
 des = {(r[0], r[1], r[2]): r[3] for r in con.execute("select base, sigla, categoria, valor from partido_despesa")}
 assert des[("campanha_orgao", "PT", "Publicidade")] == 200.0  # despesas_pagas nao somam em duplicidade

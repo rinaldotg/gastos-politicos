@@ -23,7 +23,8 @@ CDN = "https://cdn.tse.jus.br/estatistica/sead/odsele/prestacao_contas/prestacao
 ANOS_CAMPANHA = (2024, 2022, 2020, 2018, 2016, 2014)
 ANOS_ANUAL = tuple(range(date.today().year - 1, 2013, -1))
 LIMITE_SEGUNDOS = 40 * 60
-TOP_RECEBEDORES = 40
+LIMIAR_RECEBEDOR_CAMPANHA = 5000  # campanha dos candidatos tem milhoes de linhas: guardamos recebedores com este total ou mais
+MAX_RECEBEDORES_CAMPANHA = 5000   # por partido e eleicao
 TOP_CANDIDATOS = 40
 
 RENOMEADOS = {"PMDB": "MDB", "PPS": "CIDADANIA", "PTN": "PODE", "PSDC": "DC", "PRB": "REPUBLICANOS", "PR": "PL", "PTDOB": "AVANTE",
@@ -194,7 +195,9 @@ def _gravar(con, ano, bases, ac):
         por[k[:3]].append((*k, round(v[0], 2), v[1]))
     linhas = []
     for k, lst in por.items():
-        pj = sorted((x for x in lst if x[5] == "PJ"), key=lambda x: -x[6])[:TOP_RECEBEDORES]
+        pj = sorted((x for x in lst if x[5] == "PJ"), key=lambda x: -x[6])
+        if k[1] == "campanha_candidato":
+            pj = [x for x in pj if x[6] >= LIMIAR_RECEBEDOR_CAMPANHA][:MAX_RECEBEDORES_CAMPANHA]
         linhas += pj + [x for x in lst if x[5] == "PF"]
     con.executemany("INSERT INTO partido_recebedor VALUES (?,?,?,?,?,?,?,?)", linhas)
     pc = defaultdict(list)

@@ -839,6 +839,32 @@
     var slug = document.querySelector('[data-partido-pagina]').getAttribute('data-slug');
     var selA = sec.querySelector('[data-pt-ano]'), selB = sec.querySelector('[data-pt-base]'), d = null;
     var RE_P = /pessoal|sal[aá]ri|folha|remunera|encargos|f[eé]rias|13|rescis/i;
+    var rcbCache = {}, rcbAtual = { r: [], pf: [0, 0] }, rcbFiltrados = [], limite = 50;
+    var qEl = sec.querySelector('[data-pt-q]'), minEl = sec.querySelector('[data-pt-min]'), ordEl = sec.querySelector('[data-pt-ord]'), maisEl = sec.querySelector('[data-pt-mais]');
+    function pintarRcb() {
+      var nq = norm(qEl.value.trim()), dq = qEl.value.replace(/\D/g, ''), mn = Number(minEl.value) || 0;
+      rcbFiltrados = rcbAtual.r.filter(function (r) { return r[2] >= mn && (!nq || norm(r[0]).indexOf(nq) >= 0 || (dq.length >= 3 && r[1].indexOf(dq) >= 0)); });
+      if (ordEl.value === 'nome') rcbFiltrados = rcbFiltrados.slice().sort(function (x, y) { return x[0].localeCompare(y[0], 'pt-BR'); });
+      var tot = rcbFiltrados.reduce(function (s_, r) { return s_ + r[2]; }, 0), tb = sec.querySelector('[data-pt-rcb]'); tb.textContent = '';
+      rcbFiltrados.slice(0, limite).forEach(function (r) { tb.appendChild(el('tr', {}, [el('td', { text: r[0] }), el('td', { text: r[1] }), el('td', { class: 'num', text: brl(r[2]) }), el('td', { class: 'num', text: String(r[3]) })])); });
+      if (!rcbFiltrados.length) tb.appendChild(el('tr', {}, [el('td', { colspan: '4', text: 'Nenhum recebedor com esses filtros.' })]));
+      maisEl.hidden = rcbFiltrados.length <= limite;
+      sec.querySelector('[data-pt-rcb-resumo]').textContent = rcbFiltrados.length + ' de ' + rcbAtual.r.length + ' empresas e entidades, somando ' + brl(tot) +
+        (rcbAtual.pf[0] ? '. Pessoas físicas pagas, em valor somado e sem identificação: ' + brl(rcbAtual.pf[0]) + ' em ' + rcbAtual.pf[1] + ' pagamentos.' : '.');
+    }
+    function carregarRcb() {
+      var chave = selA.value + '-' + selB.value, A0 = (d.anos[selA.value] || {})[selB.value];
+      limite = 50;
+      var ok = function (j) { rcbCache[chave] = j; rcbAtual = j; pintarRcb(); };
+      if (!A0 || !A0.nrcb && !A0.rec.length) { rcbAtual = { r: [], pf: [0, 0] }; pintarRcb(); return; }
+      if (rcbCache[chave]) return ok(rcbCache[chave]);
+      get('data/partido-' + slug + '/' + chave + '.json').then(ok).catch(function () { rcbAtual = { r: [], pf: [0, 0] }; pintarRcb(); });
+    }
+    [qEl, minEl, ordEl].forEach(function (x) { x.addEventListener(x === qEl ? 'input' : 'change', function () { limite = 50; pintarRcb(); }); });
+    maisEl.addEventListener('click', function () { limite += 100; pintarRcb(); });
+    acoes(sec.querySelector('[data-pt-acoes]'), [['Baixar esta lista (CSV)', 'recebedores-' + slug + '.csv', function () {
+      return [['recebedor', 'cnpj', 'valor', 'lancamentos'], rcbFiltrados];
+    }]]);
     function tab(sel_, linhas, cols) {
       var tb = sec.querySelector(sel_); tb.textContent = '';
       if (!linhas.length) { tb.appendChild(el('tr', {}, [el('td', { colspan: String(cols), text: 'Sem dados neste ano e tipo de conta.' })])); return; }
@@ -852,7 +878,7 @@
       tab('[data-pt-des]', A.des.map(function (r) { return el('tr', {}, [el('td', { text: r[0] }), el('td', { class: 'num', text: brl(r[1]) }), el('td', { class: 'num', text: String(r[2]) })]); }), 3);
       var pes = A.des.filter(function (r) { return RE_P.test(r[0]); }).reduce(function (s, r) { return s + r[1]; }, 0);
       sec.querySelector('[data-pt-pessoal]').textContent = pes ? 'Despesas que parecem ser com pessoal (salários, encargos e similares): ' + brl(pes) + ' no ano. Só o total é público; não há salário por funcionário.' : '';
-      tab('[data-pt-rcb]', A.rcb.map(function (r) { return el('tr', {}, [el('td', { text: r[0] }), el('td', { text: r[1] ? r[1] : '' }), el('td', { class: 'num', text: brl(r[3]) }), el('td', { class: 'num', text: String(r[4]) })]); }), 4);
+      carregarRcb();
       var C = d.cand[selA.value] || [], blc = sec.querySelector('[data-pt-cand-bloco]');
       blc.hidden = !C.length;
       var tc = sec.querySelector('[data-pt-cand]'); tc.textContent = '';

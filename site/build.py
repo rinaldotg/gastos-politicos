@@ -1082,8 +1082,15 @@ def main():
         sl_ = slug_part[k_]
         T_ = tse.get(k_, {})
         d_ = dict(anos={str(y_): {b_: dict(rec=sorted(v_["rec"], key=lambda t_: -t_[1])[:30], des=sorted(v_["des"], key=lambda t_: -t_[1])[:30],
-                                          rcb=sorted(v_["rcb"], key=lambda t_: -t_[3])[:45]) for b_, v_ in bs_.items()} for y_, bs_ in T_.items()},
+                                          nrcb=sum(1 for t_ in v_["rcb"] if t_[2] == "PJ")) for b_, v_ in bs_.items()} for y_, bs_ in T_.items()},
                   cand={str(y_): sorted(v_, key=lambda t_: -t_[3])[:40] for y_, v_ in cand_t.get(k_, {}).items()})
+        for y_, bs_ in T_.items():
+            for b_, v_ in bs_.items():
+                pj_ = sorted(([t_[0], t_[1], t_[3], t_[4]] for t_ in v_["rcb"] if t_[2] == "PJ"), key=lambda t_: -t_[2])
+                pf_ = [sum(t_[3] for t_ in v_["rcb"] if t_[2] == "PF"), sum(t_[4] for t_ in v_["rcb"] if t_[2] == "PF")]
+                if pj_ or pf_[0]:
+                    (saida / "data" / f"partido-{sl_}").mkdir(parents=True, exist_ok=True)
+                    (saida / "data" / f"partido-{sl_}" / f"{y_}-{b_}.json").write_text(json.dumps(dict(r=pj_, pf=pf_), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         if T_:
             (saida / "data" / f"partido-{sl_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         ps_ = sorted(parl_part.get(k_, []), key=lambda x_: x_["nome"])
