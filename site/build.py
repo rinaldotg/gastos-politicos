@@ -1022,7 +1022,7 @@ def main():
     escrever("presidentes", env.get_template("presidentes.html").render(**{**ctx_base, "raiz": "../"}, titulo="Presidentes: gasto no mandato inteiro",
              descricao="Despesas da Presidência (cartão corporativo e viagens) em cada mandato, em valor total e por mês, para comparar presidentes.",
              presidentes=sorted(pres_resumo, key=lambda r: r["ini"])))
-    # ---- partidos: bancada (dados da Camara e do Senado) + dinheiro do partido (TSE) ----
+    # ---- partidos: dinheiro do partido (TSE); o nome do partido vem do cadastro dos parlamentares ----
     def lerc(nome_):
         try:
             return ler(a.resumo, nome_)
@@ -1047,7 +1047,7 @@ def main():
             k_ = chave_partido(x_["partido"])
             parl_part[k_].append(x_)
             rot_part.setdefault(k_, x_["partido"])
-    chaves_ = sorted(set(parl_part) | set(tse))
+    chaves_ = sorted(set(tse)) if tse else sorted(parl_part)  # sem dados do TSE ainda, as paginas dizem que faltam
     for k_ in chaves_:
         rot_part.setdefault(k_, k_)
     slug_part, usados_p = {}, set()
@@ -1055,33 +1055,33 @@ def main():
         sl_ = slugify(rot_part[k_]) or k_.lower()
         slug_part[k_] = sl_ if sl_ not in usados_p else f"{sl_}-{k_.lower()}"
         usados_p.add(slug_part[k_])
-    mediana_ = lambda v_: (sorted(v_)[len(v_) // 2] if len(v_) % 2 else (sorted(v_)[len(v_) // 2 - 1] + sorted(v_)[len(v_) // 2]) / 2) if v_ else None
 
     def soma_fonte(lst_, rx_):
         return sum(v_ for fo_, v_, _ in lst_ if rx_.search(norm_(fo_)))
-    anos_part = sorted({y_ for k_ in chaves_ for y_ in tse[k_]} | {y_ for k_ in parl_part for x_ in parl_part[k_] for y_ in x_["anos"] if y_ >= 2014}, reverse=True)
+    anos_part = sorted({y_ for k_ in chaves_ for y_ in tse[k_]}, reverse=True)
     idx_part = {str(y_): [] for y_ in anos_part}
+    fatos_part = {}  # chave -> [(rotulo, valor)] com o dado mais recente de cada tipo
     for k_ in chaves_:
         for y_ in anos_part:
-            ps_ = [x_ for x_ in parl_part.get(k_, []) if x_["anos"].get(y_)]
-            cotas_ = [x_["anos"][y_] for x_ in ps_]
-            em_ = sum(emendas[x_["id"]][y_][2] for x_ in ps_ if y_ in emendas.get(x_["id"], {}))
             T_ = tse.get(k_, {}).get(y_, {})
             fp_ = soma_fonte(T_.get("anual", {}).get("rec", []), RE_FP) or None
             fefc_ = soma_fonte(T_.get("campanha_orgao", {}).get("rec", []), RE_FEFC) or None
             ra_ = sum(v_ for _, v_, _ in T_.get("anual", {}).get("rec", [])) or None
             pe_ = sum(v_ for ct_, v_, _ in T_.get("anual", {}).get("des", []) if RE_PESSOAL.search(norm_(ct_))) or None
-            if not ps_ and not (fp_ or fefc_ or ra_ or pe_):
+            if not (fp_ or fefc_ or ra_ or pe_):
                 continue
-            idx_part[str(y_)].append([slug_part[k_], rot_part[k_], sum(1 for x_ in ps_ if x_["cargo"] == "deputado_federal"), sum(1 for x_ in ps_ if x_["cargo"] == "senador"),
-                                      round(mediana_(cotas_)) if cotas_ else None, round(em_) if em_ else None, round(fp_) if fp_ else None, round(fefc_) if fefc_ else None,
+            idx_part[str(y_)].append([slug_part[k_], rot_part[k_], round(fp_) if fp_ else None, round(fefc_) if fefc_ else None,
                                       round(ra_) if ra_ else None, round(pe_) if pe_ else None])
+            ft_ = fatos_part.setdefault(k_, {})
+            for chave_, val_, rot_ in (("fp", fp_, "Fundo Partidário em"), ("fefc", fefc_, "Fundo eleitoral em"), ("pe", pe_, "Gasto com pessoal em")):
+                if val_ and chave_ not in ft_:
+                    ft_[chave_] = (f"{rot_} {y_}", round(val_))  # anos em ordem decrescente: o primeiro e o mais recente
     anos_part = [y_ for y_ in anos_part if idx_part[str(y_)]]
     (saida / "data").mkdir(parents=True, exist_ok=True)
-    (saida / "data" / "partidos.json").write_text(json.dumps(dict(anos=anos_part, ref=ano_ref, linhas=idx_part), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (saida / "data" / "partidos.json").write_text(json.dumps(dict(anos=anos_part, linhas=idx_part), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     tem_tse = bool(tse)
-    escrever("partidos", env.get_template("partidos.html").render(**{**ctx_base, "raiz": "../"}, titulo="Partidos: bancada e dinheiro que passa por eles",
-             descricao="Bancada, cota e emendas de cada partido e, com os dados do TSE, fundo partidário, fundo eleitoral, campanhas, quem recebeu e gastos com pessoal.", anos=anos_part, tem_tse=tem_tse, ref=ano_ref))
+    escrever("partidos", env.get_template("partidos.html").render(**{**ctx_base, "raiz": "../"}, titulo="Partidos: fundos e como o dinheiro foi gasto",
+             descricao="Fundo partidário, fundo eleitoral, campanhas, em que cada partido gastou o dinheiro, quem recebeu e gastos com pessoal (dados do TSE).", anos=anos_part, tem_tse=tem_tse))
     for k_ in chaves_:
         sl_ = slug_part[k_]
         T_ = tse.get(k_, {})
@@ -1097,13 +1097,9 @@ def main():
                     (saida / "data" / f"partido-{sl_}" / f"{y_}-{b_}.json").write_text(json.dumps(dict(r=pj_, pf=pf_), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         if T_:
             (saida / "data" / f"partido-{sl_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        ps_ = sorted(parl_part.get(k_, []), key=lambda x_: x_["nome"])
-        linhas_p = [dict(nome=x_["nome"], url=x_["url"], cod=x_["cod"], uf=x_["uf"] or "", cota=x_["anos"].get(ano_ref, 0), em=sum(e_[2] for e_ in emendas.get(x_["id"], {}).values())) for x_ in ps_]
-        cotas_ = [l_["cota"] for l_ in linhas_p if l_["cota"]]
-        escrever(f"partido/{sl_}", env.get_template("partido.html").render(**{**ctx_base, "raiz": "../../"}, titulo=f"{rot_part[k_]}: bancada e dinheiro do partido",
-                 descricao=f"Parlamentares do {rot_part[k_]} e dinheiro que passa pelo partido: fundos, campanhas, quem recebeu e gastos com pessoal.",
-                 nome=rot_part[k_], slug=sl_, linhas=linhas_p, n_dep=sum(1 for l_ in linhas_p if l_["cod"] == "deputado"), n_sen=sum(1 for l_ in linhas_p if l_["cod"] == "senador"),
-                 cota_med=mediana_(cotas_), em_tot=sum(l_["em"] for l_ in linhas_p), tem_tse=bool(T_), ref=ano_ref))
+        escrever(f"partido/{sl_}", env.get_template("partido.html").render(**{**ctx_base, "raiz": "../../"}, titulo=f"{rot_part[k_]}: fundos e gastos do partido",
+                 descricao=f"Fundo Partidário, fundo eleitoral e como o {rot_part[k_]} gastou o dinheiro: categorias, quem recebeu e gasto com pessoal.",
+                 nome=rot_part[k_], slug=sl_, tem_tse=bool(T_), fatos=[v_ for v_ in (fatos_part.get(k_, {}).get(c_) for c_ in ("fp", "fefc", "pe")) if v_]))
     partidos_urls = ["partidos/"] + [f"partido/{slug_part[k_]}/" for k_ in chaves_]
 
     # ---- dados abertos: CSVs do resumo para baixar ----

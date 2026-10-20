@@ -4,19 +4,12 @@
   <header class="pessoa-cab">
     <p class="cargo">Partido</p>
     <h1>{{ nome }}</h1>
-    <p class="resumo-linha">{{ n_dep }} {{ 'deputado federal' if n_dep == 1 else 'deputados federais' }} e {{ n_sen }} {{ 'senador' if n_sen == 1 else 'senadores' }} com cota registrada em {{ ref }} ou no ano atual. Veja também <a href="{{ raiz }}partidos/">todos os partidos</a>.</p>
+    <p class="resumo-linha">Dinheiro público e privado que passa pelo partido: Fundo Partidário, fundo eleitoral e como foi gasto. Veja também <a href="{{ raiz }}partidos/">todos os partidos</a>.</p>
+    <button type="button" class="botao botao-leve" data-compartilhar>Compartilhar imagem</button>
   </header>
-  <p class="acoes-cab"><button type="button" class="botao botao-leve" data-compartilhar>Compartilhar imagem</button></p>
-  <div class="faixa-resumo">
-    {% if cota_med %}<div><span>Cota por parlamentar em {{ ref }} (mediana)</span><strong>{{ cota_med | brl }}</strong></div>{% endif %}
-    {% if em_tot %}<div><span>Emendas pagas pela bancada (desde 2014)</span><strong>{{ em_tot | curto }}</strong></div>{% endif %}
-  </div>
-  <nav class="abas-pessoa" data-abas hidden aria-label="Seções da página">
-    <button type="button" data-aba-btn="dinheiro" aria-pressed="true">Dinheiro do partido (TSE)</button>
-    <button type="button" data-aba-btn="parlamentares" aria-pressed="false">Parlamentares ({{ linhas | length }})</button>
-  </nav>
+  {% if fatos %}<div class="faixa-resumo">{% for rot, val in fatos %}<div><span>{{ rot }}</span><strong>{{ val | brl }}</strong></div>{% endfor %}</div>{% endif %}
 
-  <div class="aba-painel" data-aba="dinheiro" id="dinheiro">
+  <div id="dinheiro">
     {% if not tem_tse %}
     <section class="bloco"><h2>Dinheiro do partido</h2><p>Os dados da prestação de contas do TSE ainda não estão carregados para este partido. Quando estiverem, aparecem aqui: fundos recebidos, gastos, quem recebeu e despesas com pessoal.</p></section>
     {% else %}
@@ -56,17 +49,5 @@
     {% endif %}
   </div>
 
-  <div class="aba-painel" data-aba="parlamentares" id="parlamentares">
-    <section class="bloco">
-      <h2>Parlamentares do {{ nome }}</h2>
-      {% if not linhas %}<p>Nenhum parlamentar com cota registrada em {{ ref }} ou neste ano.</p>{% else %}
-      <div class="tabela-rolavel"><table class="tabela">
-        <thead><tr><th>Nome</th><th>Cargo</th><th>UF</th><th class="num">Cota em {{ ref }}</th><th class="num">Emendas pagas (desde 2014)</th></tr></thead>
-        <tbody>{% for l in linhas %}<tr><td><a href="{{ raiz }}{{ l.url }}">{{ l.nome }}</a></td><td>{{ 'Deputado federal' if l.cod == 'deputado' else 'Senador' }}</td><td>{{ l.uf }}</td><td class="num">{{ l.cota | brl if l.cota else '—' }}</td><td class="num">{{ l.em | brl if l.em else '—' }}</td></tr>{% endfor %}</tbody>
-      </table></div>
-      <p class="nota">Partido atual de cada parlamentar. Quem trocou de partido aparece só no partido de hoje.</p>
-      {% endif %}
-    </section>
-  </div>
 </article>
 {% endblock %}

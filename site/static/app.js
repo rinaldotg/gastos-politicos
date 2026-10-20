@@ -868,8 +868,7 @@
   function iniciarPartidos(sec) {
     var selA = sec.querySelector('[data-pt-ano]'), q = sec.querySelector('[data-pt-q]'), cab = document.querySelector('[data-pt-cab]'), corpo = document.querySelector('[data-pt-corpo]');
     var dados = null, ordem = 1, desc = false;
-    var COLS = [['Partido', 1, 'txt'], ['Deputados', 2, 'n'], ['Senadores', 3, 'n'], ['Cota por parlamentar (mediana)', 4, 'brl'], ['Emendas pagas', 5, 'brl'],
-                ['Fundo Partidário recebido', 6, 'brl'], ['Fundo eleitoral recebido', 7, 'brl'], ['Receitas do partido', 8, 'brl'], ['Gasto com pessoal', 9, 'brl']];
+    var COLS = [['Partido', 1, 'txt'], ['Fundo Partidário recebido', 2, 'brl'], ['Fundo eleitoral recebido', 3, 'brl'], ['Receitas do partido', 4, 'brl'], ['Gasto com pessoal', 5, 'brl']];
     function render() {
       if (!dados) return;
       var lista = (dados.linhas[selA.value] || []).slice(), nq = norm(q.value.trim());
@@ -889,8 +888,8 @@
       })));
       corpo.textContent = '';
       lista.forEach(function (r) {
-        corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + 'partido/' + r[0] + '/', text: r[1] })])].concat([2, 3].map(function (i) { return el('td', { class: 'num', text: String(r[i]) }); }))
-          .concat([4, 5, 6, 7, 8, 9].map(function (i) { return el('td', { class: 'num', text: r[i] === null ? '—' : brl(r[i]) }); }))));
+        corpo.appendChild(el('tr', {}, [el('td', {}, [el('a', { href: RAIZ + 'partido/' + r[0] + '/', text: r[1] })])]
+          .concat([2, 3, 4, 5].map(function (i) { return el('td', { class: 'num', text: r[i] === null ? '—' : brl(r[i]) }); }))));
       });
       sec.querySelector('[data-pt-resumo]').textContent = lista.length + (lista.length === 1 ? ' partido' : ' partidos') + ' em ' + selA.value + '. "—" significa sem dado naquele ano (a prestação de contas do TSE sai com atraso e o fundo eleitoral só existe em anos de eleição).';
     }

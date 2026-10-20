@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block conteudo %}
 <section class="abertura abertura-curta" data-partidos>
-  <h1>Partidos: bancada e dinheiro que passa por eles</h1>
-  <p class="apoio">Para cada partido: quantos parlamentares tem, quanto eles gastam com a cota e em emendas e, com os dados do TSE, quanto o partido recebeu de <strong>Fundo Partidário</strong> e de <strong>fundo eleitoral</strong>, o que gastou com pessoal e quem recebeu. Sem nota única e sem ordem de "melhor" ou "pior": clique no título de uma coluna para ordenar.</p>
+  <h1>Partidos: fundos e como o dinheiro foi gasto</h1>
+  <p class="apoio">Quanto cada partido recebeu de <strong>Fundo Partidário</strong> (dinheiro público distribuído todo ano) e de <strong>fundo eleitoral</strong> (dinheiro público para campanhas, só em anos de eleição), o total de receitas, quanto gastou com pessoal e, na página de cada partido, em que gastou e quem recebeu. Sem nota única e sem ordem de "melhor" ou "pior": clique no título de uma coluna para ordenar.</p>
   <div class="controles">
-    <label>Ano <select data-pt-ano>{% for a in anos %}<option value="{{ a }}"{% if a == ref %} selected{% endif %}>{{ a }}</option>{% endfor %}</select></label>
+    <label>Ano <select data-pt-ano>{% for a in anos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label>
     <label>Buscar partido <input type="search" data-pt-q placeholder="Digite a sigla"></label>
   </div>
   <p class="apoio" data-pt-resumo></p>
@@ -14,6 +14,6 @@
     <thead data-pt-cab></thead><tbody data-pt-corpo></tbody>
   </table></div>
   <div class="acoes" data-acoes></div>
-  <p class="nota"><strong>Bancada</strong>: parlamentares com cota registrada no ano, pelo partido em que estão hoje (quem trocou de partido aparece no atual, também nos anos anteriores). <strong>Cota (mediana)</strong>: valor do meio entre os parlamentares do partido, para não favorecer quem tem bancada grande. <strong>Fundo Partidário</strong>, <strong>receitas</strong> e <strong>pessoal</strong> vêm da prestação de contas anual do partido; <strong>fundo eleitoral</strong>, da prestação de contas de campanha (só anos de eleição). Partidos que mudaram de nome aparecem pelo nome atual; fusões e federações podem dividir os números entre mais de um nome. {% if not tem_tse %}<strong>Os dados do TSE ainda não foram carregados nesta atualização.</strong> {% endif %}<a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
+  <p class="nota"><strong>Fundo Partidário</strong>, <strong>receitas</strong> e <strong>pessoal</strong> vêm da prestação de contas anual do partido; <strong>fundo eleitoral</strong>, da prestação de contas de campanha (só anos de eleição: 2014, 2016, 2018, 2020, 2022 e 2024). "—" significa sem dado naquele ano; a prestação de contas do TSE sai com atraso. Partidos que mudaram de nome aparecem pelo nome atual; fusões e federações podem dividir os números entre mais de um nome. {% if not tem_tse %}<strong>Os dados do TSE ainda não foram carregados nesta atualização.</strong> {% endif %}<a href="{{ raiz }}sobre/">Fontes e método</a>.</p>
 </section>
 {% endblock %}
