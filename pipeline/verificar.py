@@ -51,6 +51,15 @@ def main():
         "partido_despesa": "SELECT ano, base, sigla, categoria, valor, n FROM partido_despesa",
         "partido_recebedor": "SELECT ano, base, sigla, documento, nome, classe, valor, n FROM partido_recebedor",
         "partido_candidato": "SELECT ano, sigla, candidato, cargo, uf, fefc, total FROM partido_candidato",
+        "fornecedor_exclusivo": """WITH g AS (SELECT pessoa_id, fornecedor, valor,
+                       REPLACE(REPLACE(REPLACE(COALESCE(cnpj_cpf,''),'.',''),'/',''),'-','') doc
+                       FROM gasto WHERE fonte NOT LIKE 'pres%' AND fornecedor IS NOT NULL AND fornecedor<>''),
+                       t AS (SELECT doc, SUM(valor) total_global, COUNT(DISTINCT pessoa_id) n_pessoas FROM g WHERE LENGTH(doc)=14 GROUP BY doc)
+                       SELECT g.pessoa_id, g.doc documento, MAX(g.fornecedor) fornecedor, ROUND(SUM(g.valor),2) total_pessoa, COUNT(*) n,
+                              ROUND(t.total_global,2) total_global, t.n_pessoas
+                       FROM g JOIN t ON t.doc=g.doc GROUP BY g.pessoa_id, g.doc
+                       HAVING SUM(g.valor)>=20000 AND SUM(g.valor)>=0.8*t.total_global""",
+        "candidatura": "SELECT pessoa_id, ano, cargo, partido, numero, nome_urna, situacao FROM candidatura ORDER BY pessoa_id",
         "gabinete_remun": "SELECT pessoa_id, ano, mes, nome, cargo, bruto, fonte FROM gabinete_remun ORDER BY pessoa_id, ano, mes, nome",
         "gabinete_pessoa": "SELECT pessoa_id, nome, cargo, lotacao, nomeacao, fonte FROM gabinete_pessoa ORDER BY pessoa_id, cargo, nome",
         "top_fornecedores_ano": """SELECT * FROM (SELECT pessoa_id, ano, fornecedor, cnpj_cpf, ROUND(SUM(valor),2) total,

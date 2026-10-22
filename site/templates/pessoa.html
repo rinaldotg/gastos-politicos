@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% set fontes = ('Cota: Câmara dos Deputados · Emendas: Portal da Transparência (CGU) · Equipe: dados abertos da Câmara' if p.cargo == 'deputado_federal' else 'Cota: Senado Federal (CEAPS) · Emendas: Portal da Transparência (CGU) · Equipe e remuneração: Senado Federal' if p.cargo == 'senador' else 'Cartão corporativo, viagens e orçamento: Portal da Transparência (CGU)') %}
 {% block conteudo %}
 <article class="pessoa pessoa-{{ p.cod }}">
   <header class="pessoa-cab">
@@ -25,6 +26,9 @@
       <p class="nota">Links para busca em veículos jornalísticos, sem opinião de leitores nem redes sociais; o site não escolhe nem resume as matérias. Colunas e editoriais são excluídos pela busca, mas alguns textos de opinião podem passar: confira o selo da matéria.</p>
     </details>
   </header>
+  {% for cd in candidaturas %}<p class="aviso-candidato"><strong>Candidatura em {{ cd.ano }}:</strong> {{ p.nome }} registrou candidatura a <strong>{{ cd.cargo }}</strong>{% if cd.partido %} pelo {{ cd.partido }}{% endif %}{% if cd.numero %} (número {{ cd.numero }}){% endif %}. Situação no TSE: <strong>{{ cd.situacao or 'não informada' }}</strong>. <a href="https://divulgacandcontas.tse.jus.br/divulga/" rel="noopener" target="_blank">Consultar no TSE ↗</a></p>
+  {% endfor %}
+  {% if p.cargo != 'presidente' %}<p class="aviso-triagem"><strong>Gasto não é irregularidade.</strong> Os números mostram o que foi pago dentro das regras de cada cota. Servem para você conferir e fazer perguntas, não para acusar ninguém. <a href="{{ raiz }}sobre/">O que está e o que não está nos números</a>.</p>{% endif %}
   <div class="faixa-resumo">
     {% if ano_ref_total %}<div><span>Cota em {{ ano_ref }}</span><strong>{{ ano_ref_total | brl }}</strong></div>{% endif %}
     {% if pos %}<div><span>Posição em {{ ano_ref }}</span><strong>{{ pos[0] }}º de {{ pos[1] }}</strong></div>{% endif %}
@@ -148,6 +152,19 @@
     </div>
     </div>
     {% if p.cargo == 'presidente' %}<p class="nota">“Sigiloso”, “Sem informação” e “Não se aplica” indicam que o fornecedor não é divulgado.</p>{% endif %}
+  </section>
+  {% endif %}
+  {% if perguntas_forn %}
+  <section class="bloco perguntas-forn">
+    <h2>Perguntas sobre os fornecedores</h2>
+    <p class="apoio">Fatos tirados dos dados da cota que valem uma conferência. <strong>Não são acusação</strong>: há explicações comuns para cada um, e só a nota fiscal e o serviço contratado respondem.</p>
+    <ul class="perguntas">
+      {% if perguntas_forn.conc %}<li><span class="fato"><strong>{{ perguntas_forn.conc.nome }}</strong> recebeu {{ perguntas_forn.conc.total | brl }}, ou <strong>{{ perguntas_forn.conc.pct | pct }}</strong> de toda a cota usada desde {{ desde }}. O valor típico do maior fornecedor entre {{ 'os deputados' if p.cargo == 'deputado_federal' else 'os senadores' }} é {{ perguntas_forn.conc.tipico | pct }}.</span>
+        <span class="pergunta">Que serviço é esse e por que ele concentra tanto? <small>Contratos de longo prazo (locação de veículos, passagens por agência, assinaturas) concentram naturalmente.</small></span></li>{% endif %}
+      {% for e in perguntas_forn.excl %}<li><span class="fato"><strong>{{ e.nome }}</strong> (CNPJ {{ e.doc }}) recebeu {{ e.total | brl }} deste parlamentar: <strong>{{ e.pct | pct }}</strong> de tudo o que a empresa recebeu da cota parlamentar de {{ 'um único parlamentar' if e.np == 1 else e.np ~ ' parlamentares' }}.</span>
+        <span class="pergunta">Qual foi o serviço e o preço é compatível com o mercado? <small>Empresas locais ou de serviço específico podem ter poucos clientes.</small></span></li>{% endfor %}
+    </ul>
+    <p class="nota">Como lemos: o primeiro item compara o maior fornecedor com os colegas do mesmo cargo (aparece quando passa de 25% da cota e do 90º percentil). O segundo lista empresas (CNPJ) em que este parlamentar responde por 80% ou mais de tudo o que a empresa recebeu da cota, com pelo menos R$ 20 mil, e no máximo 3 parlamentares como clientes. <a href="{{ raiz }}sobre/">Método</a>.</p>
   </section>
   {% endif %}
   {% if orc %}

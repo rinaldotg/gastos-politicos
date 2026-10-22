@@ -789,6 +789,21 @@
     });
   }
 
+  /* ---------- tema: automatico -> claro -> escuro ---------- */
+  (function () {
+    var b = document.querySelector('[data-tema-btn]'); if (!b) return;
+    var rot = b.querySelector('[data-tema-rot]'), nomes = { '': 'Auto', claro: 'Claro', escuro: 'Escuro' };
+    function atual() { return document.documentElement.getAttribute('data-tema') || ''; }
+    function mostrar() { rot.textContent = nomes[atual()]; }
+    b.addEventListener('click', function () {
+      var prox = { '': 'claro', claro: 'escuro', escuro: '' }[atual()];
+      if (prox) document.documentElement.setAttribute('data-tema', prox); else document.documentElement.removeAttribute('data-tema');
+      try { if (prox) localStorage.setItem('tema', prox); else localStorage.removeItem('tema'); } catch (e) {}
+      mostrar();
+    });
+    mostrar();
+  })();
+
   /* ---------- tamanho do texto (A- / A+) ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('[data-texto]'), function (b) {
     b.addEventListener('click', function () {

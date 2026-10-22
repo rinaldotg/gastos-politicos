@@ -20,17 +20,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ raiz }}static/style.css">
-<script>try{var t=localStorage.getItem("tamanho-texto");if(t)document.documentElement.style.fontSize=t+"%"}catch(e){}</script>
+<script>try{var m=localStorage.getItem("tema");if(m==="claro"||m==="escuro")document.documentElement.setAttribute("data-tema",m)}catch(e){}try{var t=localStorage.getItem("tamanho-texto");if(t)document.documentElement.style.fontSize=t+"%"}catch(e){}</script>
 {% if base_url %}<link rel="alternate" type="application/rss+xml" title="Atualizações" href="{{ raiz }}feed.xml">{% endif %}
 </head>
 <body data-raiz="{{ raiz }}">
 <a class="pular" href="#conteudo">Ir para o conteúdo</a>
 <header class="topo">
   <a class="marca" href="{{ raiz or './' }}"><img src="{{ raiz }}static/logo.png" alt="" width="36" height="36">Gastos Públicos</a>
-  <nav aria-label="Principal"><a href="{{ raiz }}sobre/">Fontes e método</a><span class="tamanho" role="group" aria-label="Tamanho do texto"><button type="button" data-texto="-" aria-label="Diminuir o texto">A−</button><button type="button" data-texto="+" aria-label="Aumentar o texto">A+</button></span><a class="insta" href="https://www.instagram.com/oquepagamos/" target="_blank" rel="noopener" aria-label="Instagram @oquepagamos" title="Instagram @oquepagamos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a></nav>
+  <nav aria-label="Principal"><a href="{{ raiz }}sobre/">Fontes e método</a><span class="tamanho" role="group" aria-label="Tamanho do texto"><button type="button" data-texto="-" aria-label="Diminuir o texto">A−</button><button type="button" data-texto="+" aria-label="Aumentar o texto">A+</button></span><button type="button" class="tema" data-tema-btn aria-label="Trocar tema: automático, claro ou escuro" title="Tema"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg><span data-tema-rot>Auto</span></button><a class="insta" href="https://www.instagram.com/oquepagamos/" target="_blank" rel="noopener" aria-label="Instagram @oquepagamos" title="Instagram @oquepagamos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a></nav>
 </header>
 {% if raiz %}<div class="voltar"><a href="{{ raiz }}">← Início</a></div>{% endif %}
 <main id="conteudo">
+{% if fontes %}<p class="fonte-topo">Fontes: {{ fontes }}{% if atualizado %} · dados atualizados em {{ atualizado }}{% endif %} · <a href="{{ raiz }}sobre/">método</a></p>{% endif %}
 {% block abas %}{% endblock %}
 {% block conteudo %}{% endblock %}
 </main>

@@ -75,6 +75,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so gabinete
 
+      - name: Candidaturas 2026 (registro no TSE)
+        continue-on-error: true
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so candidaturas
+
       - name: Remuneracao dos assessores (Camara e Senado)
         continue-on-error: true
         timeout-minutes: 30

@@ -175,3 +175,6 @@ CREATE INDEX IF NOT EXISTS ix_part_rcb ON partido_recebedor (sigla, ano);
 CREATE TABLE IF NOT EXISTS partido_candidato (ano INTEGER, sigla TEXT, candidato TEXT, cargo TEXT, uf TEXT, fefc REAL, total REAL);
 CREATE INDEX IF NOT EXISTS ix_part_cand ON partido_candidato (sigla, ano);
 CREATE TABLE IF NOT EXISTS partido_carga (ano INTEGER, base TEXT, linhas INTEGER, carregado TEXT, PRIMARY KEY (ano, base));
+
+CREATE TABLE IF NOT EXISTS candidatura (pessoa_id INTEGER NOT NULL, ano INTEGER, cargo TEXT, partido TEXT, numero TEXT, nome_urna TEXT, situacao TEXT);
+CREATE INDEX IF NOT EXISTS ix_candidatura ON candidatura (pessoa_id, ano);

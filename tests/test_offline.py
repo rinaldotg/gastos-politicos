@@ -181,3 +181,18 @@ assert [v[0] for k, v in ac3.rec.items()] == [3421737.78] and sorted(round(v[0])
 print("formatos reais ok")
 assert partidos.rodar(con) == 0  # ja carregado (campanha) e anual recente (recarrega) -> ver abaixo
 print("partidos ok")
+
+# ---- candidaturas (TSE) ----
+from pipeline import candidaturas
+_nome902 = con.execute("select nome from pessoa where id=902").fetchone()[0]
+con.execute("INSERT OR IGNORE INTO mandato (pessoa_id, cargo, legislatura, uf, partido) VALUES (902,'senador',57,'SP','XX')")
+_zc = _zip({"consulta_cand_2026_BRASIL.csv": 'NM_CANDIDATO;NM_URNA_CANDIDATO;DS_CARGO;SG_UF;SG_PARTIDO;NR_CANDIDATO;DS_SITUACAO_CANDIDATURA;DS_DETALHE_SITUACAO_CAND\n'
+            f'"{_nome902.upper()} DA SILVA";"{_nome902.upper()}";"SENADOR";"SP";"PL";"123";"APTO";"Aguardando julgamento"\n'
+            f'"OUTRO HOMONIMO";"{_nome902.upper()}";"DEPUTADO FEDERAL";"RJ";"PT";"1";"APTO";"Deferido"\n'})
+_old_b = candidaturas._baixar; candidaturas._baixar = lambda u: _zf.ZipFile(_io.BytesIO(_zc))
+assert candidaturas.rodar(con, 2026) == 1
+candidaturas._baixar = _old_b
+_cr = con.execute("select pessoa_id, cargo, partido, numero, situacao from candidatura").fetchall()
+print(_cr)
+assert _cr == [(902, "Senador", "PL", "123", "Aguardando julgamento")]
+print("candidaturas ok")
