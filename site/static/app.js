@@ -974,7 +974,18 @@
       d = j; Object.keys(d.anos).sort().reverse().forEach(function (y) { selA.appendChild(el('option', { value: y, text: y })); });
       var anual = Object.keys(d.anos).filter(function (y) { return d.anos[y].anual; }).sort().reverse()[0];
       if (anual) selA.value = anual;
-      selA.addEventListener('change', render); selB.addEventListener('change', render); render();
+      Array.prototype.forEach.call(selB.options, function (o) { o.setAttribute('data-rot', o.textContent); });
+      function ajustar() {
+        var Y = d.anos[selA.value] || {}, primeiro = null;
+        function tem(b) { return !!(Y[b] && (Y[b].rec.length || Y[b].des.length)); }
+        Array.prototype.forEach.call(selB.options, function (o) {
+          o.textContent = o.getAttribute('data-rot') + (tem(o.value) ? '' : ' (sem dados neste ano)');
+          if (tem(o.value) && !primeiro) primeiro = o.value;
+        });
+        if (!tem(selB.value) && primeiro) selB.value = primeiro;
+      }
+      selA.addEventListener('change', function () { ajustar(); render(); }); selB.addEventListener('change', render);
+      ajustar(); render();
     }).catch(function () { sec.querySelector('[data-pt-aviso]').textContent = 'Não foi possível carregar os dados deste partido.'; });
   }
 
