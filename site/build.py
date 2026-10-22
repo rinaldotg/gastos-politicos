@@ -1029,12 +1029,6 @@ def main():
         xs = [x for x in lista if x["cargo"] == cargo]
         resumo_home[cargo] = dict(n=len(xs), total_ref=sum(x["anos"].get(ano_ref, 0) for x in xs), cod=CARGOS[cargo][0],
                                   rotulo=CARGOS[cargo][2])
-    parl_ = [x for x in lista if x["cargo"] in ("deputado_federal", "senador")]
-    stats_home = dict(cota=sum(x["anos"].get(ano_ref, 0) for x in parl_), parlamentares=len(parl_),
-                      emendas=sum(sum(v_.values()) for v_ in emendas_tipo.values()))
-    escrever("index.html", env.get_template("home.html").render(**ctx_base, titulo="Gastos dos parlamentares e da Presidência", stats=stats_home,
-             resumo=resumo_home, descricao="Quanto deputados federais, senadores e a Presidência da República gastaram desde 2014, com o quê e com quem. Busque e compare.",
-             presidentes=[x for x in lista if x["cargo"] == "presidente"], ufs=sorted(UFS.items(), key=lambda t: t[1])))
     escrever("presidentes", env.get_template("presidentes.html").render(**{**ctx_base, "raiz": "../"}, titulo="Presidentes: gasto no mandato inteiro",
              descricao="Despesas da Presidência (cartão corporativo e viagens) em cada mandato, em valor total e por mês, para comparar presidentes.",
              presidentes=sorted(pres_resumo, key=lambda r: r["ini"])))
@@ -1071,6 +1065,20 @@ def main():
         sl_ = slugify(rot_part[k_]) or k_.lower()
         slug_part[k_] = sl_ if sl_ not in usados_p else f"{sl_}-{k_.lower()}"
         usados_p.add(slug_part[k_])
+    parl_ = [x for x in lista if x["cargo"] in ("deputado_federal", "senador")]
+    stats_home = dict(cota=sum(x["anos"].get(ano_ref, 0) for x in parl_), parlamentares=len(parl_),
+                      emendas=sum(sum(v_.values()) for v_ in emendas_tipo.values()))
+    hemi = {}
+    for x_ in lista:
+        if x_["cargo"] == "deputado_federal" and x_["partido"] and (x_["anos"].get(ano_atual) or x_["anos"].get(ano_ref)):
+            k_ = chave_partido(x_["partido"])
+            hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[]))["d"].append(
+                [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0))])
+    hemi_l = sorted(hemi.values(), key=lambda h_: -len(h_["d"]))
+    escrever("index.html", env.get_template("home.html").render(**ctx_base, titulo="Gastos dos parlamentares e da Presidência", stats=stats_home,
+             resumo=resumo_home, descricao="Quanto deputados federais, senadores e a Presidência da República gastaram desde 2014, com o quê e com quem. Busque e compare.",
+             presidentes=[x for x in lista if x["cargo"] == "presidente"], ufs=sorted(UFS.items(), key=lambda t: t[1]),
+             hemiciclo=json.dumps(hemi_l, ensure_ascii=False, separators=(",", ":"))))
 
     def soma_fonte(lst_, rx_):
         return sum(v_ for fo_, v_, _ in lst_ if rx_.search(norm_(fo_)))

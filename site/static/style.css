@@ -276,3 +276,25 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .busca .campo button:hover{background:#E5B31E}
 @media (max-width:520px){.busca .campo button{padding:0 .9rem}.tamanho button{min-width:2.75rem;min-height:2.75rem}}
 @media (prefers-reduced-motion:reduce){.cartao,.cartao:hover{transition:none;transform:none}}
+
+/* hemiciclo */
+.hemi-corpo{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-areas:'svg painel' 'leg painel';gap:1rem 1.2rem;align-items:start;margin-top:.6rem}
+.hemi-svg{grid-area:svg}.hemi-legenda{grid-area:leg}.hemi-painel{grid-area:painel}
+.hemi-svg svg{width:100%;height:auto;display:block}
+.hemi-svg .cad{cursor:pointer;stroke:var(--papel);stroke-width:1;transition:opacity .2s,transform .2s;transform-box:fill-box;transform-origin:center}
+.hemi-svg .cad:hover{transform:scale(1.5)}
+.hemi-svg svg.foco .cad{opacity:.15}.hemi-svg svg.foco .cad.on{opacity:1}
+.hemi-n{font:700 1.1rem var(--titulo);fill:var(--tinta)}
+.hemi-legenda{display:flex;flex-wrap:wrap;gap:.45rem}
+.hemi-chip{display:inline-flex;align-items:center;gap:.4rem;min-height:44px;padding:.3rem .8rem;border:1px solid var(--linha);border-radius:999px;background:var(--papel);color:var(--tinta);font:inherit;font-size:.95rem;cursor:pointer}
+.hemi-chip i,.hemi-painel h3 i{display:inline-block;width:.8rem;height:.8rem;border-radius:50%}
+.hemi-chip.on{border-color:var(--destaque);box-shadow:0 0 0 2px var(--destaque)}
+.hemi-painel{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:1rem;min-height:12rem}
+.hemi-painel h3{display:flex;align-items:center;gap:.5rem;margin:0 0 .3rem}
+.hemi-lista{list-style:none;margin:.6rem 0;padding:0;max-height:20rem;overflow:auto}
+.hemi-lista li{display:flex;gap:.5rem;align-items:baseline;padding:.5rem 0;border-bottom:1px solid var(--linha)}
+.hemi-lista li a{flex:1;min-width:0}.hemi-lista li span{color:var(--tinta-2);font-size:.85rem}.hemi-lista li b{font-variant-numeric:tabular-nums}
+.hemi-lista li.dest{background:var(--fundo-suave,rgba(31,111,235,.1));font-weight:700}
+.hemi-uf select{min-height:44px;margin-left:.4rem}
+@media(max-width:720px){.hemi-corpo{grid-template-columns:1fr;grid-template-areas:'svg' 'leg' 'painel'}}
+@media(prefers-reduced-motion:reduce){.hemi-svg .cad{transition:none}}

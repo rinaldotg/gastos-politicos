@@ -50,6 +50,17 @@
   </div>
 </section>
 
+<section id="hemiciclo" class="hemi" data-hemi data-ano="{{ ano_ref }}" aria-label="Câmara dos Deputados por partido">
+  <h2>A Câmara, cadeira por cadeira</h2>
+  <p class="apoio">Cada bolinha é um deputado. <strong>Toque em um partido ou numa cadeira</strong> para ver quem é, quanto gastou da cota em {{ ano_ref }} e abrir a página dele. As cores só separam os partidos; não indicam posição política.</p>
+  <script type="application/json" data-hemi-dados>{{ hemiciclo | safe }}</script>
+  <div class="hemi-corpo">
+    <div class="hemi-svg" data-hemi-svg></div>
+    <div class="hemi-legenda" data-hemi-leg role="group" aria-label="Partidos"></div>
+    <div class="hemi-painel" data-hemi-painel aria-live="polite"><p class="apoio">Escolha um partido na legenda ou toque numa cadeira.</p></div>
+  </div>
+</section>
+
 <section id="ranking" class="ranking" data-ranking data-ano-ref="{{ ano_ref }}" data-ano-atual="{{ ano_atual }}">
   <div class="ranking-cab">
     <h2>Quem mais gastou</h2>

@@ -1252,12 +1252,82 @@
     render();
   }
 
+
+  function iniciarHemiciclo(raiz) {
+    var esc = function (v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
+    var el = raiz.querySelector('[data-hemi-dados]'); if (!el) return;
+    var P; try { P = JSON.parse(el.textContent); } catch (e) { return; }
+    var tot = 0; P.forEach(function (p) { tot += p.d.length; }); if (!tot) return;
+    var cores = ['#1f6feb', '#d9822b', '#2a9d6f', '#8e5bd1', '#c2417a', '#0f9bb3', '#a9852a', '#5b6b7a', '#e0533d', '#4f8a2f', '#7a4fb0', '#2f7f9e', '#b5651d', '#3b4cc0', '#8a8a2a', '#c0392b'];
+    P.forEach(function (p, i) { p.cor = cores[i % cores.length]; p.d.sort(function (a, b) { return b[3] - a[3]; }); });
+    // cadeiras em arcos concentricos; ordem pelo angulo para cada partido ocupar uma fatia
+    var linhas = Math.max(3, Math.round(Math.sqrt(tot / 3.2))), raios = [], soma = 0, i, j;
+    for (i = 0; i < linhas; i++) { raios.push(1 + i * 0.5 / (linhas - 1) * (linhas - 1) / linhas * 2); }
+    raios = []; for (i = 0; i < linhas; i++) raios.push(0.42 + 0.58 * i / (linhas - 1));
+    raios.forEach(function (r) { soma += r; });
+    var seats = [], resto = tot;
+    raios.forEach(function (r, k) {
+      var n = k === linhas - 1 ? resto : Math.round(tot * r / soma); resto -= n;
+      for (j = 0; j < n; j++) seats.push({ a: n === 1 ? 0.5 : j / (n - 1), r: r });
+    });
+    seats.sort(function (x, y) { return x.a - y.a || x.r - y.r; });
+    var W = 600, H = 320, cx = W / 2, cy = H - 14, R = 270, rs = Math.max(3.2, Math.min(7, R * 0.58 / linhas * 0.5));
+    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Hemiciclo da Câmara com ' + tot + ' deputados, agrupados por partido');
+    var k2 = 0, pts = [];
+    P.forEach(function (p, pi) { p.d.forEach(function (d, di) { pts.push({ pi: pi, di: di }); }); });
+    pts.forEach(function (q, idx) {
+      var s = seats[idx], ang = Math.PI * (1 - s.a), c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx', (cx + Math.cos(ang) * s.r * R).toFixed(1)); c.setAttribute('cy', (cy - Math.sin(ang) * s.r * R).toFixed(1));
+      c.setAttribute('r', rs.toFixed(1)); c.setAttribute('fill', P[q.pi].cor); c.setAttribute('class', 'cad');
+      c.setAttribute('data-p', q.pi); c.setAttribute('data-d', q.di); c.setAttribute('tabindex', '-1');
+      var t = document.createElementNS(ns, 'title'); t.textContent = P[q.pi].d[q.di][0] + ' (' + P[q.pi].s + ')'; c.appendChild(t);
+      svg.appendChild(c);
+    });
+    var cen = document.createElementNS(ns, 'text'); cen.setAttribute('x', cx); cen.setAttribute('y', cy - 10); cen.setAttribute('text-anchor', 'middle'); cen.setAttribute('class', 'hemi-n');
+    cen.textContent = tot + ' deputados'; svg.appendChild(cen);
+    raiz.querySelector('[data-hemi-svg]').appendChild(svg);
+    var leg = raiz.querySelector('[data-hemi-leg]'), painel = raiz.querySelector('[data-hemi-painel]'), sel = -1, uf = '';
+    P.forEach(function (p, pi) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'hemi-chip'; b.setAttribute('data-p', pi);
+      b.innerHTML = '<i style="background:' + p.cor + '"></i>' + esc(p.s) + ' <b>' + p.d.length + '</b>';
+      b.addEventListener('click', function () { escolher(pi, ''); }); leg.appendChild(b);
+    });
+    function marcar() {
+      svg.classList.toggle('foco', sel >= 0);
+      svg.querySelectorAll('.cad').forEach(function (c) { c.classList.toggle('on', +c.getAttribute('data-p') === sel); });
+      leg.querySelectorAll('.hemi-chip').forEach(function (b) { b.classList.toggle('on', +b.getAttribute('data-p') === sel); });
+    }
+    function escolher(pi, nomeDestaque) {
+      sel = pi; uf = ''; marcar(); desenhar(nomeDestaque);
+    }
+    function desenhar(destaque) {
+      var p = P[sel], ufs = {}, soma = 0;
+      p.d.forEach(function (d) { ufs[d[2]] = 1; soma += d[3]; });
+      var lista = p.d.filter(function (d) { return !uf || d[2] === uf; });
+      var h = '<h3><i style="background:' + p.cor + '"></i>' + esc(p.s) + '</h3><p class="apoio">' + p.d.length + ' deputado' + (p.d.length > 1 ? 's' : '') + ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong> (média ' + brl(soma / p.d.length) + ' por deputado)</p>';
+      h += '<label class="hemi-uf">Estado <select data-hemi-uf><option value="">Todos</option>' + Object.keys(ufs).sort().map(function (u) { return '<option' + (u === uf ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></label>';
+      h += '<ol class="hemi-lista">' + lista.map(function (d) {
+        return '<li' + (d[0] === destaque ? ' class="dest"' : '') + '><a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
+      }).join('') + '</ol>';
+      if (p.l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + p.l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
+      painel.innerHTML = h;
+      painel.querySelector('[data-hemi-uf]').addEventListener('change', function (e) { uf = e.target.value; desenhar(''); });
+      var dst = painel.querySelector('.dest'); if (dst && dst.scrollIntoView) dst.scrollIntoView({ block: 'nearest' });
+    }
+    svg.addEventListener('click', function (e) {
+      var c = e.target.closest ? e.target.closest('.cad') : null; if (!c) return;
+      var pi = +c.getAttribute('data-p'); escolher(pi, P[pi].d[+c.getAttribute('data-d')][0]);
+    });
+  }
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
   });
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
+  var hm_ = document.querySelector('[data-hemi]'); if (hm_) iniciarHemiciclo(hm_);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);
