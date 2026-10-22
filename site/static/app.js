@@ -104,22 +104,28 @@
   /* ---------- ranking da home ---------- */
   function iniciarRanking(sec) {
     var selC = sec.querySelector('[data-r-cargo]'), selA = sec.querySelector('[data-r-ano]'), corpo = sec.querySelector('tbody');
+    var selU = sec.querySelector('[data-r-uf]'), selP = sec.querySelector('[data-r-partido]'), selO = sec.querySelector('[data-r-ordem]');
     var maisBtn = null, dados = null, limite = 25;
     function render() {
       if (!dados) return;
-      var linhas = (dados[selC.value] || {})[selA.value] || [];
+      var todas = (dados[selC.value] || {})[selA.value] || [];
+      opcoes(selU, todas, 2, 'Todos os estados'); opcoes(selP, todas, 3, 'Todos os partidos');
+      var linhas = todas.filter(function (r) { return (!selU.value || r[2] === selU.value) && (!selP.value || r[3] === selP.value); });
+      var porMes = selO && selO.value === 'mes', v = function (r) { return porMes ? (r[5] ? r[4] / r[5] : 0) : r[4]; };
+      linhas = linhas.slice().sort(function (x, y) { return v(y) - v(x); });
       corpo.textContent = '';
-      var maxv = linhas.length ? Math.max(1, linhas[0][4]) : 1;
+      var maxv = linhas.length ? Math.max(1, v(linhas[0])) : 1;
       linhas.slice(0, limite).forEach(function (r, i) {
         corpo.appendChild(el('tr', {}, [
           el('td', { class: 'pos', text: String(i + 1) }),
           el('td', {}, [el('a', { href: RAIZ + r[1], text: r[0] })]),
           el('td', { text: r[2] }), el('td', { text: r[3] }),
-          el('td', { class: 'num' }, [document.createTextNode(brl(r[4])), el('span', { class: 'barra-gasto' }, [el('i', { style: 'width:' + Math.max(2, Math.round(r[4] / maxv * 100)) + '%' })])]),
+          el('td', { class: 'num' }, [document.createTextNode(brl(porMes ? v(r) : r[4]) + (porMes ? '/mês' : '')), el('span', { class: 'barra-gasto' }, [el('i', { 'data-w': String(Math.max(2, Math.round(v(r) / maxv * 100))), style: 'width:0' })])]),
           el('td', { class: 'num', text: String(r[5]) })
         ]));
       });
-      if (!linhas.length) corpo.appendChild(el('tr', {}, [el('td', { colspan: '6', text: 'Sem dados para este ano.' })]));
+      if (!linhas.length) corpo.appendChild(el('tr', {}, [el('td', { colspan: '6', text: 'Sem dados para este filtro.' })]));
+      requestAnimationFrame(function () { requestAnimationFrame(function () { corpo.querySelectorAll('.barra-gasto i').forEach(function (b) { b.style.width = b.getAttribute('data-w') + '%'; }); }); });
       if (maisBtn) maisBtn.remove();
       if (linhas.length > limite) {
         maisBtn = el('button', { class: 'botao botao-leve', type: 'button', text: 'Mostrar mais (' + (linhas.length - limite) + ')' });
@@ -127,8 +133,15 @@
         sec.querySelector('.tabela-rolavel').after(maisBtn);
       }
     }
+    function opcoes(sel, linhas, i, vazio) {
+      if (!sel) return; var atual = sel.value, set = {};
+      linhas.forEach(function (r) { if (r[i]) set[r[i]] = 1; });
+      var ks = Object.keys(set).sort(); if (atual && !set[atual]) atual = '';
+      sel.innerHTML = '<option value="">' + vazio + '</option>' + ks.map(function (k) { return '<option>' + k.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</option>'; }).join('');
+      sel.value = atual;
+    }
     get('data/ranking.json').then(function (d) { dados = d; render(); });
-    [selC, selA].forEach(function (s) { s.addEventListener('change', function () { limite = 25; render(); }); });
+    [selC, selA, selU, selP, selO].forEach(function (s) { if (s) s.addEventListener('change', function () { limite = 25; render(); }); });
     document.querySelectorAll('.grupo[data-cargo]').forEach(function (a) {
       a.addEventListener('click', function () { selC.value = a.getAttribute('data-cargo'); limite = 25; render(); });
     });
@@ -1321,12 +1334,44 @@
       var pi = +c.getAttribute('data-p'); escolher(pi, P[pi].d[+c.getAttribute('data-d')][0]);
     });
   }
+
+  function iniciarPosicao(sec) {
+    var url = sec.getAttribute('data-url'), cargo = sec.getAttribute('data-cargo'), pid = sec.getAttribute('data-id');
+    var sel = sec.querySelector('[data-pos-ano]'), texto = sec.querySelector('[data-pos-texto]'), trilho = sec.querySelector('[data-pos-trilho]');
+    var a = sec.querySelector('[data-pos-comparar]'); if (a && pid) a.href = RAIZ + 'comparar/?p=' + pid;
+    get('data/ranking.json').then(function (d) {
+      var porAno = d[cargo] || {}, anos = Object.keys(porAno).filter(function (y) {
+        return (porAno[y] || []).some(function (r) { return r[1] === url && r[4] > 0; });
+      }).sort().reverse();
+      if (!anos.length) return;
+      sec.hidden = false;
+      anos.forEach(function (y) { var o = document.createElement('option'); o.value = y; o.textContent = y + (y === sec.getAttribute('data-atual') ? ' (parcial)' : ''); sel.appendChild(o); });
+      var ini = anos.indexOf(sec.getAttribute('data-ano')); sel.value = anos[ini >= 0 ? ini : 0];
+      function desenhar() {
+        var lista = (porAno[sel.value] || []).filter(function (r) { return r[4] > 0; });
+        var vs = lista.map(function (r) { return r[4]; }).sort(function (x, y) { return x - y; });
+        var eu = lista.filter(function (r) { return r[1] === url; })[0]; if (!eu || !vs.length) return;
+        var abaixo = vs.filter(function (v) { return v < eu[4]; }).length, pct = Math.round(abaixo / vs.length * 100);
+        var med = vs[Math.floor(vs.length / 2)], max = vs[vs.length - 1], rot = cargo === 'senador' ? 'senadores' : 'deputados';
+        texto.innerHTML = 'Em <strong>' + sel.value + '</strong>, usou <strong>' + brl(eu[4]) + '</strong> da cota: mais que <strong>' + pct + '%</strong> dos ' + vs.length + ' ' + rot +
+          ' com gasto no ano. A mediana é ' + brl(med) + '.' + (eu[5] && eu[5] < 12 ? ' Considere que foram ' + eu[5] + ' meses com despesa.' : '');
+        trilho.textContent = '';
+        var pos = function (v) { return 'calc(14px + (100% - 28px) * ' + (max > 0 ? v / max : 0).toFixed(4) + ')'; };
+        vs.forEach(function (v) { var t = document.createElement('i'); t.className = 'pos-traco'; t.style.left = pos(v); trilho.appendChild(t); });
+        var m = document.createElement('b'); m.className = 'pos-med'; m.style.left = pos(med); m.title = 'Mediana'; trilho.appendChild(m);
+        var pt = document.createElement('em'); pt.className = 'pos-ponto'; pt.style.left = pos(eu[4]); pt.title = brl(eu[4]); trilho.appendChild(pt);
+        trilho.classList.remove('pronto'); void trilho.offsetWidth; trilho.classList.add('pronto');
+      }
+      sel.addEventListener('change', desenhar); desenhar();
+    });
+  }
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
   });
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
+  var po_ = document.querySelector('[data-posicao]'); if (po_) iniciarPosicao(po_);
   var hm_ = document.querySelector('[data-hemi]'); if (hm_) iniciarHemiciclo(hm_);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });

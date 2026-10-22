@@ -238,7 +238,7 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .grupo-titulo::before{content:"";width:.7rem;height:.7rem;border-radius:3px;background:var(--linha)}
 .gt-parl::before{background:var(--deputado)}.gt-em::before{background:var(--c-em)}.gt-gov::before{background:var(--c-gov)}.gt-fis::before{background:var(--c-fis)}
 .barra-gasto{display:block;height:6px;border-radius:3px;background:var(--acento-fundo);margin-top:.3rem;overflow:hidden}
-.barra-gasto i{display:block;height:100%;background:var(--destaque);border-radius:3px}
+.barra-gasto i{display:block;height:100%;background:var(--destaque);border-radius:3px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
 @media (max-width:820px){.abertura-grade{grid-template-columns:1fr;gap:1.2rem}.numeros{grid-template-columns:1fr 1fr 1fr}.numeros strong{font-size:1.35rem}.numeros span{font-size:.8rem}}
 @media (max-width:520px){.numeros{grid-template-columns:1fr}.numeros div{display:flex;align-items:baseline;gap:.7rem}.numeros strong{font-size:1.4rem;min-width:5.5rem}}
 .ranking-cab{flex-wrap:wrap}.ranking-cab .controles{flex-wrap:wrap;max-width:100%}.controles label,.controles select{max-width:100%}
@@ -298,3 +298,16 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .hemi-uf select{min-height:44px;margin-left:.4rem}
 @media(max-width:720px){.hemi-corpo{grid-template-columns:1fr;grid-template-areas:'svg' 'leg' 'painel'}}
 @media(prefers-reduced-motion:reduce){.hemi-svg .cad{transition:none}}
+
+/* posicao entre colegas */
+.pos-texto{font-size:1.05rem;margin:.4rem 0 1rem}
+.pos-trilho{position:relative;height:44px;background:var(--acento-fundo);border-radius:10px;overflow:hidden}
+.pos-traco{position:absolute;top:10px;bottom:10px;width:2px;margin-left:-1px;background:var(--tinta-2);opacity:.28}
+.pos-med{position:absolute;top:4px;bottom:4px;width:0;border-left:2px dashed var(--tinta);margin-left:-1px}
+.pos-ponto{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--destaque);border:3px solid var(--papel);box-shadow:0 0 0 2px var(--destaque)}
+.pos-trilho.pronto .pos-ponto{animation:pos-pop .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes pos-pop{from{transform:scale(0)}to{transform:scale(1)}}
+.pos-escala{display:flex;justify-content:space-between;font-size:.85rem;color:var(--tinta-2);margin-top:.3rem}
+@media(prefers-reduced-motion:reduce){.barra-gasto i{transition:none}.pos-trilho.pronto .pos-ponto{animation:none}}
+
+@media(max-width:720px){.ranking .controles{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}.ranking .controles label{min-width:0}.ranking .controles select{width:100%}}

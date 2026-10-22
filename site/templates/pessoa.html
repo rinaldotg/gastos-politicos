@@ -51,6 +51,17 @@
   {% endif %}
   {% endif %}
   {% if custo %}
+  {% if p.cargo in ('deputado_federal', 'senador') %}
+  <section class="bloco pos-faixa" data-posicao data-url="{{ p.url }}" data-cargo="{{ p.cargo }}" data-ano="{{ ano_ref }}" data-atual="{{ ano_atual }}" data-id="{{ p.id }}" hidden>
+    <h2>Onde ele está em relação aos colegas</h2>
+    <div class="controles"><label>Ano <select data-pos-ano></select></label></div>
+    <p class="pos-texto" data-pos-texto></p>
+    <div class="pos-trilho" data-pos-trilho role="img" aria-label="Posição do gasto entre os colegas"></div>
+    <div class="pos-escala"><span>menos gasto</span><span>mais gasto</span></div>
+    <p class="nota">Cada traço cinza é um colega do mesmo cargo; o ponto é este parlamentar e a linha tracejada é a mediana. Valor da cota parlamentar no ano. Gastar mais não indica irregularidade: o valor depende do estado (passagens), do tamanho do trabalho e dos meses em exercício. <a data-pos-comparar href="{{ raiz }}comparar/">Comparar com outro parlamentar</a>.</p>
+  </section>
+  {% endif %}
+
   <section class="bloco" data-custo data-anos='{{ custo_anos }}' data-sub="{{ custo.subsidio }}" data-gab="{{ custo.gabinete or 0 }}" data-mor="{{ custo.moradia or 0 }}">
     <h2>Quanto custa um mandato</h2>
     <p>Além da cota, o mandato tem outros valores mensais, fixados em lei. Escolha o período para ver quanto isso soma. Só a cota tem gasto registrado neste site; os demais são valores legais ou tetos.</p>

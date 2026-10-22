@@ -71,6 +71,9 @@
           <option value="senador">Senadores</option>
         </select>
       </label>
+      <label>Estado <select data-r-uf><option value="">Todos os estados</option></select></label>
+      <label>Partido <select data-r-partido><option value="">Todos os partidos</option></select></label>
+      <label>Ordenar por <select data-r-ordem><option value="total">Total no ano</option><option value="mes">Média por mês com gasto</option></select></label>
       <label>Ano
         <select data-r-ano>
           {% for a in range(ano_atual, 2013, -1) %}<option value="{{ a }}" {% if a == ano_ref %}selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}
