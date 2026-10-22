@@ -7,6 +7,7 @@
     <h1>{{ nome }}</h1>
     <p class="resumo-linha">Dinheiro público e privado que passa pelo partido: Fundo Partidário, fundo eleitoral e como foi gasto. Veja também <a href="{{ raiz }}partidos/">todos os partidos</a>.</p>
     <button type="button" class="botao botao-leve" data-compartilhar>Compartilhar imagem</button>
+    <a class="botao botao-leve" data-zap href="https://wa.me/" target="_blank" rel="noopener">Mandar no WhatsApp</a>
   </header>
   {% if fatos %}<div class="faixa-resumo">{% for rot, val in fatos %}<div><span>{{ rot }}</span><strong>{{ val | brl }}</strong></div>{% endfor %}</div>{% endif %}
 

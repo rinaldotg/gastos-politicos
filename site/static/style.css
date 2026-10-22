@@ -328,3 +328,23 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .perguntas .fato{display:block}.perguntas .pergunta{display:block;margin-top:.5rem;color:var(--acento);font-weight:600}
 .perguntas small{display:block;color:var(--tinta-2);font-weight:400;margin-top:.15rem}
 @media(max-width:560px){.topo{flex-wrap:wrap;gap:.5rem .8rem;padding-top:.7rem;padding-bottom:.7rem}.topo nav{gap:.5rem;flex-wrap:wrap;align-items:center;width:100%;justify-content:space-between}.tema [data-tema-rot]{display:none}.fonte-topo{font-size:.8rem}}
+
+/* mapa de estados (tile map) */
+.mapa-corpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem;align-items:start;margin-top:.8rem}
+.mapa-grade{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(54px,1fr);gap:5px;max-width:480px;width:100%}
+.uf-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid var(--linha);border-radius:10px;cursor:pointer;font:inherit;color:var(--tinta);min-height:54px;padding:2px;
+  background:color-mix(in srgb,var(--acento) calc(var(--i,.1) * 100%),var(--papel));transition:transform .15s,box-shadow .15s}
+.uf-tile b{font-size:1rem}.uf-tile span{font-size:.68rem;line-height:1.1}
+.uf-tile.forte{color:var(--papel);border-color:transparent}
+.uf-tile:hover{transform:scale(1.06)}
+.uf-tile.sel{box-shadow:0 0 0 3px var(--destaque)}
+.mapa-painel{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:1rem;min-height:9rem}
+.mapa-painel h3{margin-top:0}
+.mapa-num{margin:.6rem 0}.mapa-num div{padding:.5rem 0;border-bottom:1px solid var(--linha)}
+.mapa-num dt{color:var(--tinta-2);font-size:.9rem}.mapa-num dd{margin:0;font:700 1.35rem var(--titulo)}
+@media(max-width:720px){.mapa-corpo{grid-template-columns:1fr}.mapa-grade{max-width:none}}
+@media(prefers-reduced-motion:reduce){.uf-tile{transition:none}}
+.faltam{border:1px dashed var(--linha);border-radius:10px;padding:.5rem 1rem;margin:1rem 0;background:var(--papel)}
+.faltam summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.faltam ul{margin:.3rem 0 .6rem;padding-left:1.2rem;max-width:75ch}.faltam li{margin:.4rem 0}
+.mapa-din .controles{margin:.8rem 0}

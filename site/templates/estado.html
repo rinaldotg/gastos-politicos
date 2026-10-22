@@ -5,6 +5,7 @@
   <p class="voltar"><a href="{{ raiz }}">← Início</a></p>
   <h1>{{ nome_uf }}</h1>
   <p class="apoio">Quanto os deputados e senadores de {{ nome_uf }} gastaram e quanto o estado recebeu em emendas, por área. Para ver o dinheiro por município, use a <a href="{{ raiz }}municipios/">busca de municípios</a>.</p>
+  <p><a class="botao botao-leve" data-zap href="https://wa.me/" target="_blank" rel="noopener">Mandar no WhatsApp</a></p>
   <div class="controles"><label>Ano <select data-es-ano><option value="">Todos os anos</option>{% for a in anos_uf %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
   <script type="application/json" data-es-dados>{{ dados_json | safe }}</script>
 </section>

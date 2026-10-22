@@ -6,6 +6,7 @@
   <h1 data-mu-titulo>Município</h1>
   <p class="apoio" data-mu-info></p>
   <div class="acoes" data-acoes></div>
+  <p><a class="botao botao-leve" data-zap href="https://wa.me/" target="_blank" rel="noopener">Mandar no WhatsApp</a></p>
   <div class="controles"><label>Ano do pagamento <select data-mu-ano><option value="">Todos os anos</option>{% for a in anos_pag %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label></div>
 </section>
 <div data-mu-corpo hidden>
@@ -52,5 +53,14 @@
   </table></div>
   <p class="nota">Dados do Obras.gov.br, ligados pelo CNPJ de quem recebeu emendas neste município. Não é a lista completa de obras da cidade, e a plataforma não informa de qual emenda veio cada obra.</p>
 </section>
+<details class="faltam">
+  <summary>O que não está nesta página, e por quê</summary>
+  <ul>
+    <li><strong>Salário do prefeito e dos vereadores:</strong> nem as prefeituras nem os Tribunais de Contas publicam a folha em dados abertos padronizados.</li>
+    <li><strong>Despesa da prefeitura:</strong> só para um grupo de municípios paulistas (piloto com dados do TCE-SP). Fora dele, o site mostra apenas o dinheiro que chegou por emendas e convênios federais.</li>
+    <li><strong>Obras de cada emenda:</strong> a plataforma de obras não informa de qual emenda veio cada obra.</li>
+    <li><strong>Dinheiro que não passa por emenda:</strong> repasses obrigatórios (como o FPM) e verbas estaduais não estão aqui.</li>
+  </ul>
+</details>
 <p class="nota" data-mu-vazio hidden>Não encontramos este município.</p>
 {% endblock %}

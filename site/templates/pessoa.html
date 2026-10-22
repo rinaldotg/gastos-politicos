@@ -11,6 +11,7 @@
     </p>
     <a class="botao botao-leve" href="{{ raiz }}comparar/?p={{ p.id }}">Comparar com outra pessoa</a>
     <button type="button" class="botao botao-leve" data-compartilhar>Compartilhar imagem</button>
+    <a class="botao botao-leve" data-zap href="https://wa.me/" target="_blank" rel="noopener">Mandar no WhatsApp</a>
     {% if uf_url %}<a class="botao botao-leve" href="{{ raiz }}{{ uf_url }}">Ver o estado {{ p.uf }}</a>{% endif %}
     {% if p.oficial %}<a class="botao botao-leve" href="{{ p.oficial }}" rel="noopener" target="_blank">Perfil oficial{% if p.cargo == 'deputado_federal' %} (notas fiscais da cota){% endif %} ↗</a>{% endif %}
     {% set sites = "site:g1.globo.com OR site:folha.uol.com.br OR site:estadao.com.br OR site:oglobo.globo.com OR site:cnnbrasil.com.br OR site:poder360.com.br OR site:agenciabrasil.ebc.com.br OR site:camara.leg.br OR site:senado.leg.br OR site:bbc.com OR site:valor.globo.com" %}
@@ -29,6 +30,17 @@
   {% for cd in candidaturas %}<p class="aviso-candidato"><strong>Candidatura em {{ cd.ano }}:</strong> {{ p.nome }} registrou candidatura a <strong>{{ cd.cargo }}</strong>{% if cd.partido %} pelo {{ cd.partido }}{% endif %}{% if cd.numero %} (número {{ cd.numero }}){% endif %}. Situação no TSE: <strong>{{ cd.situacao or 'não informada' }}</strong>. <a href="https://divulgacandcontas.tse.jus.br/divulga/" rel="noopener" target="_blank">Consultar no TSE ↗</a></p>
   {% endfor %}
   {% if p.cargo != 'presidente' %}<p class="aviso-triagem"><strong>Gasto não é irregularidade.</strong> Os números mostram o que foi pago dentro das regras de cada cota. Servem para você conferir e fazer perguntas, não para acusar ninguém. <a href="{{ raiz }}sobre/">O que está e o que não está nos números</a>.</p>{% endif %}
+  {% if p.cargo != 'presidente' %}<details class="faltam">
+    <summary>O que não está nesta página, e por quê</summary>
+    <ul>
+      {% if p.cargo == 'deputado_federal' %}<li><strong>Salário individual dos assessores:</strong> a Câmara publica a remuneração só de forma consolidada, sem ligar a pessoa ao gabinete.</li>{% endif %}
+      {% if p.cargo == 'senador' %}<li><strong>Presença em votações:</strong> o Senado não publica a presença dos senadores em dados abertos.</li>{% endif %}
+      <li><strong>Equipe de anos anteriores:</strong> mostramos a lista do dia da coleta, sem histórico de quem já passou pelo gabinete.</li>
+      <li><strong>Notas fiscais da cota:</strong> o site mostra o fornecedor, o valor e a data; a nota fiscal está na fonte oficial (Câmara ou Senado).</li>
+      <li><strong>Verbas de gabinete não usadas e verbas indenizatórias:</strong> o site só soma o que foi publicado como pago.</li>
+      <li><strong>Obras ligadas a cada emenda:</strong> a plataforma de obras não informa de qual emenda veio cada obra.</li>
+    </ul>
+  </details>{% endif %}
   <div class="faixa-resumo">
     {% if ano_ref_total %}<div><span>Cota em {{ ano_ref }}</span><strong>{{ ano_ref_total | brl }}</strong></div>{% endif %}
     {% if pos %}<div><span>Posição em {{ ano_ref }}</span><strong>{{ pos[0] }}º de {{ pos[1] }}</strong></div>{% endif %}

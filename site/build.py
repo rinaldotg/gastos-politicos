@@ -1120,10 +1120,26 @@ def main():
             hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[]))["d"].append(
                 [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0))])
     hemi_l = sorted(hemi.values(), key=lambda h_: -len(h_["d"]))
+    mapa_uf = {}
+    for sig_, nome_uf_ in UFS.items():
+        em_ = defaultdict(float)
+        for (ano_k_, _a), v_ in area_uf.get(sig_, {}).items():
+            em_[ano_k_ or "0"] += v_["pago"]
+        co_ = defaultdict(float)
+        n_ = 0
+        for x_ in lista:
+            if x_["uf"] == sig_ and x_["cargo"] in ("deputado_federal", "senador"):
+                n_ += 1
+                for a_, v_ in x_["anos"].items():
+                    co_[str(a_)] += v_
+                    co_["0"] += v_
+        mapa_uf[sig_] = dict(n=nome_uf_, p=n_, e={k_: round(v_) for k_, v_ in em_.items() if v_ > 0}, c={k_: round(v_) for k_, v_ in co_.items() if v_ > 0})
+    anos_mapa = sorted({int(k_) for m_ in mapa_uf.values() for k_ in list(m_["e"]) + list(m_["c"]) if k_ != "0"}, reverse=True)
     escrever("index.html", env.get_template("home.html").render(**ctx_base, titulo="Gastos dos parlamentares e da Presidência", stats=stats_home,
              resumo=resumo_home, descricao="Quanto deputados federais, senadores e a Presidência da República gastaram desde 2014, com o quê e com quem. Busque e compare.",
              presidentes=[x for x in lista if x["cargo"] == "presidente"], ufs=sorted(UFS.items(), key=lambda t: t[1]),
-             hemiciclo=json.dumps(hemi_l, ensure_ascii=False, separators=(",", ":"))))
+             hemiciclo=json.dumps(hemi_l, ensure_ascii=False, separators=(",", ":")),
+             mapa_uf=json.dumps(mapa_uf, ensure_ascii=False, separators=(",", ":")), anos_mapa=anos_mapa))
 
     def soma_fonte(lst_, rx_):
         return sum(v_ for fo_, v_, _ in lst_ if rx_.search(norm_(fo_)))

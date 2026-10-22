@@ -61,6 +61,21 @@
   </div>
 </section>
 
+<section id="mapa-dinheiro" class="mapa-din" data-mapa aria-label="Para onde vai o dinheiro, por estado">
+  <h2>Para onde vai o dinheiro, estado por estado</h2>
+  <p class="apoio">Cada quadrado é um estado, na posição aproximada do mapa. <strong>Quanto mais forte a cor, mais dinheiro.</strong> Toque num estado para ver os números e abrir a página dele.</p>
+  <script type="application/json" data-mapa-dados>{{ mapa_uf | safe }}</script>
+  <div class="controles">
+    <label>O que mostrar <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos deputados e senadores do estado</option></select></label>
+    <label>Período <select data-mapa-ano><option value="0">Todos os anos (desde 2014)</option>{% for a in anos_mapa %}<option value="{{ a }}"{% if a == ano_ref %} selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</select></label>
+  </div>
+  <div class="mapa-corpo">
+    <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados"></div>
+    <div class="mapa-painel" data-mapa-painel aria-live="polite"><p class="apoio">Toque num estado.</p></div>
+  </div>
+  <p class="nota">São valores totais, não por habitante: estados grandes aparecem mais fortes. Emendas pagas: Portal da Transparência, pelo estado de destino (emendas de bancada e “múltiplos” podem ficar sem estado definido). Cota: soma dos deputados e senadores eleitos pelo estado.</p>
+</section>
+
 <section id="ranking" class="ranking" data-ranking data-ano-ref="{{ ano_ref }}" data-ano-atual="{{ ano_atual }}">
   <div class="ranking-cab">
     <h2>Quem mais gastou</h2>

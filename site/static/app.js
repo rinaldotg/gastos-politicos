@@ -866,6 +866,9 @@
       return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
     });
   }
+  document.querySelectorAll('[data-zap]').forEach(function (a) {
+    a.addEventListener('click', function () { a.href = 'https://wa.me/?text=' + encodeURIComponent(document.title + ' ' + location.href); });
+  });
   document.querySelectorAll('[data-compartilhar]').forEach(function (btn) {
     var rot = btn.textContent;
     btn.addEventListener('click', function () {
@@ -1380,6 +1383,49 @@
       sel.addEventListener('change', desenhar); desenhar();
     });
   }
+
+  function iniciarMapaDinheiro(raiz) {
+    var el = raiz.querySelector('[data-mapa-dados]'); if (!el) return;
+    var D; try { D = JSON.parse(el.textContent); } catch (e) { return; }
+    var esc = function (v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var POS = { RR: [2, 0], AP: [4, 0], AM: [1, 1], PA: [3, 1], MA: [4, 1], CE: [5, 1], RN: [6, 1], AC: [0, 2], RO: [1, 2], MT: [2, 2], TO: [3, 2], PI: [4, 2], PE: [5, 2], PB: [6, 2],
+      GO: [2, 3], DF: [3, 3], BA: [4, 3], AL: [5, 3], SE: [6, 3], MS: [2, 4], MG: [3, 4], ES: [4, 4], PR: [2, 5], SP: [3, 5], RJ: [4, 5], SC: [2, 6], RS: [2, 7] };
+    var selT = raiz.querySelector('[data-mapa-tipo]'), selA = raiz.querySelector('[data-mapa-ano]'), grade = raiz.querySelector('[data-mapa-grade]'), painel = raiz.querySelector('[data-mapa-painel]');
+    var atual = '';
+    function curto(v) { return v >= 1e9 ? (v / 1e9).toFixed(1).replace('.', ',') + ' bi' : v >= 1e6 ? Math.round(v / 1e6) + ' mi' : v >= 1e3 ? Math.round(v / 1e3) + ' mil' : String(Math.round(v)); }
+    Object.keys(POS).forEach(function (uf) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'uf-tile'; b.setAttribute('data-uf', uf);
+      b.style.gridColumn = String(POS[uf][0] + 1); b.style.gridRow = String(POS[uf][1] + 1);
+      b.innerHTML = '<b>' + uf + '</b><span></span>';
+      b.addEventListener('click', function () { atual = uf; mostrar(); desenhar(); });
+      grade.appendChild(b);
+    });
+    function valores() {
+      var t = selT.value, a = selA.value, out = {}, max = 0;
+      Object.keys(POS).forEach(function (uf) { var v = (D[uf] && D[uf][t] && D[uf][t][a]) || 0; out[uf] = v; if (v > max) max = v; });
+      return { v: out, max: max };
+    }
+    function desenhar() {
+      var r = valores();
+      grade.querySelectorAll('.uf-tile').forEach(function (b) {
+        var uf = b.getAttribute('data-uf'), i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0;
+        b.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3));
+        b.classList.toggle('forte', i > 0.55); b.classList.toggle('sel', uf === atual);
+        b.querySelector('span').textContent = r.v[uf] ? curto(r.v[uf]) : '—';
+        b.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + (r.v[uf] ? brl(r.v[uf]) : 'sem dados'));
+      });
+    }
+    function mostrar() {
+      var d = D[atual]; if (!d) return;
+      var a = selA.value, per = a === '0' ? 'desde 2014' : 'em ' + a, e = d.e[a] || 0, c = d.c[a] || 0;
+      var slug = atual.toLowerCase();
+      painel.innerHTML = '<h3>' + esc(d.n) + '</h3><dl class="mapa-num"><div><dt>Emendas pagas ao estado ' + per + '</dt><dd>' + (e ? brl(e) : '—') + '</dd></div>' +
+        '<div><dt>Cota usada por seus ' + d.p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
+        '<p><a class="botao botao-leve" href="' + RAIZ + 'estado/' + slug + '/">Ver ' + esc(d.n) + ' por área e parlamentar</a></p>';
+    }
+    [selT, selA].forEach(function (s) { s.addEventListener('change', function () { desenhar(); if (atual) mostrar(); }); });
+    desenhar();
+  }
   document.querySelectorAll('[data-busca]').forEach(function (f) {
     if (f.hasAttribute('data-comparar')) return;
     iniciarBusca(f, function (d) { location.href = RAIZ + d.url; });
@@ -1387,6 +1433,7 @@
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
   var po_ = document.querySelector('[data-posicao]'); if (po_) iniciarPosicao(po_);
+  var mp_ = document.querySelector('[data-mapa]'); if (mp_) iniciarMapaDinheiro(mp_);
   var hm_ = document.querySelector('[data-hemi]'); if (hm_) iniciarHemiciclo(hm_);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
