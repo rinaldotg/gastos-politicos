@@ -151,5 +151,33 @@ des = {(r[0], r[1], r[2]): r[3] for r in con.execute("select base, sigla, catego
 assert des[("campanha_orgao", "PT", "Publicidade")] == 200.0  # despesas_pagas nao somam em duplicidade
 cand = con.execute("select sigla, candidato, fefc, total from partido_candidato").fetchall()
 print(cand); assert cand == [("PT", "Maria Cand", 300.0, 400.0)]
+
+# ---- formatos reais do TSE vistos nos logs ----
+from pipeline.partidos import Acum, _processar, _fefc
+zr = _zip({"receita_anual_2025_BRASIL.csv": 'SG_PARTIDO;DS_TP_ESPERA_PARTIDARIA;DS_TP_FONTE_RECURSO;VR_RECEITA\n"PT";"Nacional";"Fundo Partidário";"1000,00"\n"PT";"Estadual";"FUNDO PARTIDÁRIO";"600,00"\n"PT";"Estadual";"Outros Recursos";"50,00"\n',
+           "despesa_anual_2025_BRASIL.csv": 'SG_PARTIDO;TP_DESPESA;DS_GASTO;DS_FONTE_DESPESA;NM_FORNECEDOR;NR_CPF_CNPJ_FORNECEDOR;VR_GASTO;VR_PAGAMENTO\n"PT";"Despesas com pessoal";"salario texto livre 1";"Fundo Partidário";"X";"11122233344";"300,00";"300,00"\n"PT";"Serviços de terceiros";"texto livre 2";"Outros recursos";"EMPRESA K";"11222333000144";"200,00";"200,00"\n'})
+ac = Acum()
+zz = partidos._zipfile = None
+import zipfile as _z2
+z_ = _z2.ZipFile(_io.BytesIO(zr))
+for (nivel, tipo), nomes in partidos._membros(z_, True).items():
+    _processar(z_, nomes, nivel, tipo, "anual", 2025, ac)
+rec_ = {ac.rotulo(k[3]): v[0] for k, v in ac.rec.items()}
+print(rec_)
+assert rec_ == {"Fundo Partidário": 1000.0, "Outros Recursos": 50.0}  # variantes de caixa unidas e FP so do nacional (sem contar o repasse estadual)
+des_ = {ac.rotulo(k[3]): v[0] for k, v in ac.des.items()}
+print(des_)
+assert des_ == {"Despesas com pessoal (Fundo Partidário)": 300.0, "Serviços de terceiros (Outros recursos)": 200.0}
+zc = _zip({"receitas_orgaos_partidarios_2018_BRASIL.csv": 'SG_PARTIDO;CD_FONTE_RECEITA;DS_FONTE_RECEITA;CD_ORIGEM_RECEITA;DS_ORIGEM_RECEITA;VR_RECEITA\n"PT";"2";"Fundo Especial de Financiamento de Campanha";"9";"Recursos de partido";"700,00"\n',
+           "despesas_contratadas_orgaos_partidarios_2018_BRASIL.csv": 'SG_PARTIDO;CD_ORIGEM_DESPESA;DS_ORIGEM_DESPESA;NM_FORNECEDOR;NR_CPF_CNPJ_FORNECEDOR;VR_DESPESA_CONTRATADA\n"PT";"20240000";"Publicidade por materiais impressos";"G LTDA";"11222333000144";"90,00"\n'})
+ac2 = Acum(); z2_ = _z2.ZipFile(_io.BytesIO(zc))
+for (nivel, tipo), nomes in partidos._membros(z2_, False).items():
+    _processar(z2_, nomes, nivel, tipo, "campanha_orgao", 2018, ac2)
+assert {ac2.rotulo(k[3]) for k in ac2.rec} == {"Fundo Especial de Financiamento de Campanha"}  # descricao, nao o codigo
+assert {ac2.rotulo(k[3]) for k in ac2.des} == {"Publicidade por materiais impressos"}
+zf = _zip({"fefc_genero_2024.csv": 'AA_ELEICAO;SG_PARTIDO;NR_PARTIDO;DS_GENERO;QT_CANDIDATO;VR_PARTIDO_FEFC;PE_CAND_PARTIDO_GENERO;VR_REPASSE_MINIMO_COTA;VR_TOTAL_RECEBIDO_FEFC;PE_VALOR_FEFC_GENERO;ST_RENUNCIA\n2024;AGIR;36;Feminino;2468;3421737,78;33,99;1163048,67;1413257,55;41,30;0\n2024;AGIR;36;Masculino;4794;3421737,78;66,01;2258689,11;1794102,48;52,43;0\n'})
+ac3 = Acum(); _fefc(_z2.ZipFile(_io.BytesIO(zf)), 2024, ac3)
+assert [v[0] for k, v in ac3.rec.items()] == [3421737.78] and sorted(round(v[0]) for v in ac3.des.values()) == [1413258, 1794102]
+print("formatos reais ok")
 assert partidos.rodar(con) == 0  # ja carregado (campanha) e anual recente (recarrega) -> ver abaixo
 print("partidos ok")

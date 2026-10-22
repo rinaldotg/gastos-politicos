@@ -1081,7 +1081,8 @@ def main():
         for y_ in anos_part:
             T_ = tse.get(k_, {}).get(y_, {})
             fp_ = soma_fonte(T_.get("anual", {}).get("rec", []), RE_FP) or None
-            fefc_ = soma_fonte(T_.get("campanha_orgao", {}).get("rec", []), RE_FEFC) or None
+            fefc_ = (soma_fonte(T_.get("fundos_tse", {}).get("rec", []), RE_FEFC) or soma_fonte(T_.get("anual", {}).get("rec", []), RE_FEFC)
+                     or soma_fonte(T_.get("campanha_orgao", {}).get("rec", []), RE_FEFC) or None)
             ra_ = sum(v_ for _, v_, _ in T_.get("anual", {}).get("rec", [])) or None
             pe_ = sum(v_ for ct_, v_, _ in T_.get("anual", {}).get("des", []) if RE_PESSOAL.search(norm_(ct_))) or None
             if not (fp_ or fefc_ or ra_ or pe_):
