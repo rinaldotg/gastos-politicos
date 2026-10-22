@@ -1400,6 +1400,23 @@
       b.addEventListener('click', function () { atual = uf; mostrar(); desenhar(); });
       grade.appendChild(b);
     });
+    var svgBox = raiz.querySelector('[data-mapa-svg]'), paths = {}, NS = 'http://www.w3.org/2000/svg';
+    get('static/mapa-brasil.json').then(function (m) {
+      var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', m.viewBox); svg.setAttribute('role', 'group'); svg.setAttribute('aria-label', 'Mapa do Brasil por estado');
+      m.locais.forEach(function (l) {
+        var p = document.createElementNS(NS, 'path'); p.setAttribute('d', l[1]); p.setAttribute('class', 'uf-path'); p.setAttribute('data-uf', l[0]);
+        p.setAttribute('tabindex', '0'); p.setAttribute('role', 'button');
+        p.addEventListener('click', function () { atual = l[0]; mostrar(); desenhar(); });
+        p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atual = l[0]; mostrar(); desenhar(); } });
+        svg.appendChild(p); paths[l[0]] = p;
+      });
+      svgBox.appendChild(svg); desenhar();
+    }).catch(function () { setVis('grade'); });
+    function setVis(v) {
+      svgBox.hidden = v !== 'mapa'; grade.hidden = v !== 'grade';
+      raiz.querySelectorAll('[data-mapa-vis]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-mapa-vis') === v ? 'true' : 'false'); });
+    }
+    raiz.querySelectorAll('[data-mapa-vis]').forEach(function (b) { b.addEventListener('click', function () { setVis(b.getAttribute('data-mapa-vis')); }); });
     function valores() {
       var t = selT.value, a = selA.value, out = {}, max = 0;
       Object.keys(POS).forEach(function (uf) { var v = (D[uf] && D[uf][t] && D[uf][t][a]) || 0; out[uf] = v; if (v > max) max = v; });
@@ -1407,6 +1424,12 @@
     }
     function desenhar() {
       var r = valores();
+      Object.keys(paths).forEach(function (uf) {
+        var i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0, p = paths[uf];
+        p.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3)); p.classList.toggle('sel', uf === atual);
+        p.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + (r.v[uf] ? brl(r.v[uf]) : 'sem dados'));
+        if (uf === atual && p.parentNode) p.parentNode.appendChild(p);
+      });
       grade.querySelectorAll('.uf-tile').forEach(function (b) {
         var uf = b.getAttribute('data-uf'), i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0;
         b.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3));

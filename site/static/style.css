@@ -348,3 +348,12 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .faltam summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
 .faltam ul{margin:.3rem 0 .6rem;padding-left:1.2rem;max-width:75ch}.faltam li{margin:.4rem 0}
 .mapa-din .controles{margin:.8rem 0}
+.mapa-svg svg{width:100%;max-width:460px;height:auto;display:block;margin:0 auto}
+.uf-path{fill:color-mix(in srgb,var(--acento) calc(var(--i,.1) * 100%),var(--papel));stroke:var(--papel);stroke-width:1;cursor:pointer;transition:opacity .15s}
+.uf-path:hover,.uf-path:focus-visible{opacity:.8;outline:none;stroke:var(--tinta);stroke-width:1.5}
+.uf-path.sel{stroke:var(--destaque);stroke-width:3}
+.mapa-vis{display:inline-flex;border:1px solid var(--linha);border-radius:999px;overflow:hidden;margin-bottom:.6rem;background:var(--papel)}
+.mapa-vis button{font:inherit;border:0;background:transparent;color:var(--tinta);min-height:44px;padding:0 1.1rem;cursor:pointer}
+.mapa-vis button[aria-pressed=true]{background:var(--tinta);color:var(--fundo);font-weight:600}
+.mapa-cred{font-size:.8rem}
+.mapa-grade[hidden],.mapa-svg[hidden]{display:none}
