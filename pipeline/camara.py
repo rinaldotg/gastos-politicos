@@ -36,6 +36,8 @@ def carregar_deputados(con):
                 pid = c.pessoa_por_fonte(con, "camara", d["id"]) or \
                     c.criar_pessoa(con, "camara", d["id"], d["nome"], CARGO)
                 garantir_mandato(con, pid, leg, d.get("siglaUf"), d.get("siglaPartido"))
+                if d.get("urlFoto"):
+                    c.guardar_foto(con, pid, d["urlFoto"])
                 total += 1
             pagina += 1
         con.commit()

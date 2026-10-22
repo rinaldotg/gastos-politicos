@@ -59,6 +59,7 @@ def main():
                               ROUND(t.total_global,2) total_global, t.n_pessoas
                        FROM g JOIN t ON t.doc=g.doc GROUP BY g.pessoa_id, g.doc
                        HAVING SUM(g.valor)>=20000 AND SUM(g.valor)>=0.8*t.total_global""",
+        "pessoa_foto": "SELECT pessoa_id, url FROM pessoa_foto",
         "candidatura": "SELECT pessoa_id, ano, cargo, partido, numero, nome_urna, situacao FROM candidatura ORDER BY pessoa_id",
         "gabinete_remun": "SELECT pessoa_id, ano, mes, nome, cargo, bruto, fonte FROM gabinete_remun ORDER BY pessoa_id, ano, mes, nome",
         "gabinete_pessoa": "SELECT pessoa_id, nome, cargo, lotacao, nomeacao, fonte FROM gabinete_pessoa ORDER BY pessoa_id, cargo, nome",

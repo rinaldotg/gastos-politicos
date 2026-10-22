@@ -866,6 +866,10 @@
       return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
     });
   }
+  document.querySelectorAll('img[data-foto]').forEach(function (im) {
+    im.addEventListener('error', function () { im.remove(); });
+    if (im.complete && im.naturalWidth === 0 && im.getAttribute('src')) im.remove();
+  });
   document.querySelectorAll('[data-zap]').forEach(function (a) {
     a.addEventListener('click', function () { a.href = 'https://wa.me/?text=' + encodeURIComponent(document.title + ' ' + location.href); });
   });
@@ -1340,7 +1344,8 @@
       var h = '<h3><i style="background:' + p.cor + '"></i>' + esc(p.s) + '</h3><p class="apoio">' + p.d.length + ' deputado' + (p.d.length > 1 ? 's' : '') + ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong> (média ' + brl(soma / p.d.length) + ' por deputado)</p>';
       h += '<label class="hemi-uf">Estado <select data-hemi-uf><option value="">Todos</option>' + Object.keys(ufs).sort().map(function (u) { return '<option' + (u === uf ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></label>';
       h += '<ol class="hemi-lista">' + lista.map(function (d) {
-        return '<li' + (d[0] === destaque ? ' class="dest"' : '') + '><a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
+        var im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
+        return '<li' + (d[0] === destaque ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
       }).join('') + '</ol>';
       if (p.l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + p.l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
       painel.innerHTML = h;

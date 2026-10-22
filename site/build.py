@@ -332,6 +332,13 @@ def main():
     for r in mand:
         legis[int(r["pessoa_id"])].add(int(r["legislatura"]))
 
+    fotos_url = {}
+    try:
+        for r_ in ler(a.resumo, "pessoa_foto"):
+            if (r_.get("url") or "").startswith("https://"):
+                fotos_url[int(r_["pessoa_id"])] = r_["url"].strip()
+    except FileNotFoundError:
+        pass
     # ---- pessoas publicaveis ----
     lista, usados = [], set()
     for pid, p in sorted(pessoas.items()):
@@ -348,7 +355,8 @@ def main():
         ext = (p.get("id_externo") or "").strip()
         oficial = (f"https://www.camara.leg.br/deputados/{ext}" if p["cargo"] == "deputado_federal" else
                    f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{ext}" if p["cargo"] == "senador" else "") if ext else ""
-        lista.append(dict(id=pid, oficial=oficial, nome=nome, cargo=p["cargo"], cod=cod, slug=slug, uf=p["uf"], partido=p["partido"],
+        foto = fotos_url.get(pid) or (f"https://www.camara.leg.br/internet/deputado/bandep/{ext}.jpg" if p["cargo"] == "deputado_federal" and ext.isdigit() else "")
+        lista.append(dict(id=pid, oficial=oficial, foto=foto, nome=nome, cargo=p["cargo"], cod=cod, slug=slug, uf=p["uf"], partido=p["partido"],
                           url=f"{cod}/{slug}/", anos=tot_ano, legis=sorted(legis.get(pid, ()))))
     por_id = {x["id"]: x for x in lista}
 
@@ -1118,7 +1126,7 @@ def main():
         if x_["cargo"] == "deputado_federal" and x_["partido"] and (x_["anos"].get(ano_atual) or x_["anos"].get(ano_ref)):
             k_ = chave_partido(x_["partido"])
             hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[]))["d"].append(
-                [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0))])
+                [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0)), x_["foto"]])
     hemi_l = sorted(hemi.values(), key=lambda h_: -len(h_["d"]))
     mapa_uf = {}
     for sig_, nome_uf_ in UFS.items():

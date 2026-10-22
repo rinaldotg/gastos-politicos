@@ -357,3 +357,11 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .mapa-vis button[aria-pressed=true]{background:var(--tinta);color:var(--fundo);font-weight:600}
 .mapa-cred{font-size:.8rem}
 .mapa-grade[hidden],.mapa-svg[hidden]{display:none}
+.pessoa-cab.com-foto{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:1rem;align-items:start}
+.com-foto > *{grid-column:2}
+.com-foto > .foto-pessoa{grid-column:1;grid-row:1 / span 3}
+.com-foto > .cab-acoes,.com-foto > .noticias{grid-column:1 / -1}
+.cab-acoes{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem}
+.foto-pessoa{width:96px;height:128px;object-fit:cover;object-position:center top;border-radius:12px;border:1px solid var(--linha);background:var(--acento-fundo)}
+@media(max-width:560px){.foto-pessoa{width:76px;height:101px}}
+.mini-foto{width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:center top;flex:none;background:var(--acento-fundo);border:1px solid var(--linha)}

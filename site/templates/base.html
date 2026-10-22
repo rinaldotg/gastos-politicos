@@ -31,7 +31,7 @@
 </header>
 {% if raiz %}<div class="voltar"><a href="{{ raiz }}">← Início</a></div>{% endif %}
 <main id="conteudo">
-{% if fontes %}<p class="fonte-topo">Fontes: {{ fontes }}{% if atualizado %} · dados atualizados em {{ atualizado }}{% endif %} · <a href="{{ raiz }}sobre/">método</a></p>{% endif %}
+{% if fontes %}<p class="fonte-topo">Fontes: {{ fontes }}{{ fontes_foto }}{% if atualizado %} · dados atualizados em {{ atualizado }}{% endif %} · <a href="{{ raiz }}sobre/">método</a></p>{% endif %}
 {% block abas %}{% endblock %}
 {% block conteudo %}{% endblock %}
 </main>

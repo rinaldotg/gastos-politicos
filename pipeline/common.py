@@ -103,6 +103,16 @@ def criar_pessoa(con, fonte, id_externo, nome, cargo):
     return pid
 
 
+def guardar_foto(con, pid, url):
+    """Foto oficial publicada pela Camara/Senado (so o endereco; a imagem e carregada do site de origem). Legislaturas
+    mais recentes sao gravadas depois e prevalecem."""
+    url = (url or "").strip()
+    if url.startswith("http://"):
+        url = "https://" + url[7:]
+    if url.startswith("https://"):
+        con.execute("INSERT OR REPLACE INTO pessoa_foto (pessoa_id, url) VALUES (?,?)", (pid, url))
+
+
 def sem_acento(s):
     s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
     return re.sub(r"\s+", " ", s.lower()).strip()

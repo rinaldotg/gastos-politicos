@@ -196,3 +196,9 @@ _cr = con.execute("select pessoa_id, cargo, partido, numero, situacao from candi
 print(_cr)
 assert _cr == [(902, "Senador", "PL", "123", "Aguardando julgamento")]
 print("candidaturas ok")
+
+# ---- fotos oficiais ----
+c.guardar_foto(con, 902, "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador902.jpg")
+c.guardar_foto(con, 902, "javascript:alert(1)")
+assert con.execute("select url from pessoa_foto where pessoa_id=902").fetchall() == [("https://www.senado.leg.br/senadores/img/fotos-oficiais/senador902.jpg",)]
+print("fotos ok")

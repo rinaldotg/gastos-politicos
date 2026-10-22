@@ -35,6 +35,8 @@ def carregar_senadores(con):
             ufs = [m.get("UfParlamentar") for m in lista((p.get("Mandatos") or {}).get("Mandato")) if m.get("UfParlamentar")]
             garantir_mandato(con, pid, leg, (ufs[0] if ufs else ident.get("UfParlamentar")),
                              ident.get("SiglaPartidoParlamentar"))
+            if ident.get("UrlFotoParlamentar"):
+                c.guardar_foto(con, pid, ident["UrlFotoParlamentar"])
             total += 1
         con.commit()
         print(f"  Senado, legislatura {leg}: {len(pars)} registros")
