@@ -22,13 +22,13 @@
   <script type="application/json" data-mapa-dados>{{ mapa_uf | safe }}</script>
   <div class="cg-grade">
     <div class="cg-mapa">
-      <div class="mapa-svg" data-mapa-svg></div>
-      <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados" hidden></div>
-      <p class="cg-modo" data-mapa-modo aria-live="polite"></p>
       <div class="cg-mapa-topo">
         <label hidden>Dinheiro <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos parlamentares do estado</option></select></label>
-        <label>Período <select data-mapa-ano><option value="0">Tudo desde 2014</option><optgroup label="Por legislatura"><option value="L57">57ª legislatura (2023–2026)</option><option value="L56">56ª legislatura (2019–2022)</option><option value="L55">55ª legislatura (2015–2018)</option></optgroup><optgroup label="Por ano completo">{% for a in anos_mapa %}<option value="{{ a }}"{% if a == ano_ref %} selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</optgroup></select></label>
+        <label>Período <select data-mapa-ano><option value="0">Tudo desde 2014</option><optgroup label="Por legislatura"><option value="L57" selected>57ª legislatura (2023–2026)</option><option value="L56">56ª legislatura (2019–2022)</option><option value="L55">55ª legislatura (2015–2018)</option></optgroup><optgroup label="Por ano completo">{% for a in anos_mapa %}<option value="{{ a }}">{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</optgroup></select></label>
       </div>
+      <p class="cg-modo" data-mapa-modo aria-live="polite"></p>
+      <div class="mapa-svg" data-mapa-svg></div>
+      <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados" hidden></div>
     </div>
     <div class="cg-hemis">
       <figure class="cg-hemi"><figcaption>Câmara dos Deputados</figcaption><div class="hemi-svg" data-hemi-svg="d"></div></figure>
