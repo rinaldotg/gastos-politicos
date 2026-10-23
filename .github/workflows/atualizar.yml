@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 9 5 * *"   # todo dia 5, 06h no horario de Brasilia
   workflow_dispatch:
+    inputs:
+      coletar:
+        description: "Coletar dados novos do governo (lento). Desmarcado: so refaz o site com o banco ja existente."
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # guardar o banco numa release
@@ -42,49 +47,59 @@ jobs:
           fi
 
       - name: Camara e Senado (ano passado e atual)
+        if: ${{ inputs.coletar == true }}
         run: |
           Y=$(date +%Y)
           python -m pipeline.run --db data/gastos.db --desde $((Y-1)) --so camara senado
 
       - name: Portal da Transparencia (Presidencia, emendas, orcamento)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true   # se o Portal bloquear, o site ainda e publicado com os dados ja existentes
         run: |
           Y=$(date +%Y)
           python -m pipeline.run --db data/gastos.db --pular-cadastro --so presidencia emendas orcamento --recarregar-desde $((Y-1))
 
       - name: Obras (Obras.gov.br) e populacao dos municipios (IBGE)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         timeout-minutes: 45
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so obras ibge
 
       - name: Despesa dos municipios paulistas (TCE-SP, piloto)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         timeout-minutes: 60
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so tcesp
 
       - name: Cadastros de sancoes (CEIS, CNEP, CEPIM)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so sancoes
 
       - name: Dinheiro dos partidos (TSE - fundos, campanhas e contas anuais)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         timeout-minutes: 60
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so partidos
 
       - name: Equipe dos gabinetes (assessores)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so gabinete
 
       - name: Candidaturas 2026 (registro no TSE)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so candidaturas
 
       - name: Remuneracao dos assessores (Camara e Senado)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         timeout-minutes: 30
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so remuneracao
 
       - name: Atuacao legislativa (projetos, normas, votacoes)
+        if: ${{ inputs.coletar == true }}
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao
 
@@ -99,6 +114,7 @@ jobs:
         run: python site/build.py --resumo resumo --saida dist --anterior snapshot_anterior.json --base-url "https://oquepagamos.com.br"
 
       - name: Guardar o banco atualizado
+        if: ${{ inputs.coletar == true }}
         run: |
           gzip -kf data/gastos.db
           gh release view Dados >/dev/null 2>&1 || gh release create Dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."
