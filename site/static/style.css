@@ -409,3 +409,4 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .cg-modo{margin:.2rem 0;min-height:0}
 @media(min-width:721px){.cg-mapa .mapa-svg svg{max-width:400px}}
 .so-leitor{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cg-mapa-topo label[hidden]{display:none}

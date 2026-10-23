@@ -26,7 +26,7 @@
       <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados" hidden></div>
       <p class="cg-modo" data-mapa-modo aria-live="polite"></p>
       <div class="cg-mapa-topo">
-        <label>Dinheiro <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos parlamentares do estado</option></select></label>
+        <label hidden>Dinheiro <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos parlamentares do estado</option></select></label>
         <label>Período <select data-mapa-ano><option value="0">Desde 2014</option>{% for a in anos_mapa %}<option value="{{ a }}"{% if a == ano_ref %} selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</select></label>
       </div>
     </div>
