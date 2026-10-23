@@ -1383,10 +1383,14 @@
       h += '<p class="apoio"><strong>' + nd + '</strong> deputado' + (nd === 1 ? '' : 's') + ' e <strong>' + ns_ + '</strong> senador' + (ns_ === 1 ? '' : 'es') + (cg.lista().length ? ' em ' + esc(cg.lista().join(', ')) : '') +
         ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong>' + (lista.length ? ' (média ' + brl(soma / lista.length) + ' por parlamentar)' : '') + '</p>';
       h += '<p class="hemi-acoes"><button type="button" class="botao botao-leve" data-limpar>Limpar partidos</button>' + (cg.lista().length ? ' <button type="button" class="botao botao-leve" data-limpar-uf>Tirar estados (' + esc(cg.lista().join(', ')) + ')</button>' : '') + '</p>';
-      h += '<ol class="hemi-lista">' + lista.slice(0, 300).map(function (x) {
+      function li(x) {
         var d = x.d, im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
-        return '<li' + (d[0] === cg.dest ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + (x.k === 'd' ? 'Dep.' : 'Sen.') + ' ' + esc(x.p.s) + '-' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
-      }).join('') + '</ol>' + (lista.length > 300 ? '<p class="nota">Mostrando os 300 maiores de ' + lista.length + '. Filtre por estado no mapa.</p>' : '');
+        return '<li' + (d[0] === cg.dest ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + esc(x.p.s) + '-' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
+      }
+      function coluna(tit, arr) {
+        return '<div class="hemi-col"><h4>' + tit + ' <span>(' + arr.length + ')</span></h4>' + (arr.length ? '<ol class="hemi-lista">' + arr.slice(0, 200).map(li).join('') + '</ol>' + (arr.length > 200 ? '<p class="nota">Mostrando os 200 maiores.</p>' : '') : '<p class="apoio">Nenhum.</p>') + '</div>';
+      }
+      h += '<div class="hemi-duas">' + coluna('Deputados', lista.filter(function (x) { return x.k === 'd'; })) + coluna('Senadores', lista.filter(function (x) { return x.k === 'n'; })) + '</div>';
       if (!modoUf && ids.length === 1 && P[ids[0]].l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + P[ids[0]].l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
       painel.innerHTML = h;
       var l1 = painel.querySelector('[data-limpar]'); if (l1) l1.addEventListener('click', function () { cg.sel = {}; cg.dest = ''; cg.notificar(); });
