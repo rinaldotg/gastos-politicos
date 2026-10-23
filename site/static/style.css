@@ -415,3 +415,7 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .hemi-duas{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.4rem}
 .hemi-col{min-width:0}.hemi-col h4{margin:.2rem 0;font:700 1rem var(--titulo)}.hemi-col h4 span{font-weight:400;color:var(--tinta-2)}
 @media(max-width:720px){.hemi-duas{grid-template-columns:1fr}}
+.abertura-grade{padding:0 0 .2rem;margin-top:-.8rem}
+.abertura-grade .busca{margin-top:0}
+.congresso{margin-top:2rem}
+@media(max-width:720px){.abertura-grade{margin-top:0;padding-top:.7rem}}
