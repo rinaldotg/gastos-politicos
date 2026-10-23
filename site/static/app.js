@@ -1288,74 +1288,105 @@
   }
 
 
-  function iniciarHemiciclo(raiz) {
+  function iniciarCongresso(raiz) {
+    var cg = { sel: {}, uf: '', dest: '', ouv: [], contar: null, nomes: null, n: 0 };
+    cg.notificar = function () { cg.ouv.forEach(function (f) { f(); }); };
+    iniciarHemiciclo(raiz, cg);
+    iniciarMapaDinheiro(raiz, cg);
+  }
+
+  function iniciarHemiciclo(raiz, cg) {
     var esc = function (v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
     var el = raiz.querySelector('[data-hemi-dados]'); if (!el) return;
     var P; try { P = JSON.parse(el.textContent); } catch (e) { return; }
-    var tot = 0; P.forEach(function (p) { tot += p.d.length; }); if (!tot) return;
+    if (!P.length) return;
     var cores = ['#1f6feb', '#d9822b', '#2a9d6f', '#8e5bd1', '#c2417a', '#0f9bb3', '#a9852a', '#5b6b7a', '#e0533d', '#4f8a2f', '#7a4fb0', '#2f7f9e', '#b5651d', '#3b4cc0', '#8a8a2a', '#c0392b'];
-    P.forEach(function (p, i) { p.cor = cores[i % cores.length]; p.d.sort(function (a, b) { return b[3] - a[3]; }); });
-    // cadeiras em arcos concentricos; ordem pelo angulo para cada partido ocupar uma fatia
-    var linhas = Math.max(3, Math.round(Math.sqrt(tot / 3.2))), raios = [], soma = 0, i, j;
-    for (i = 0; i < linhas; i++) { raios.push(1 + i * 0.5 / (linhas - 1) * (linhas - 1) / linhas * 2); }
-    raios = []; for (i = 0; i < linhas; i++) raios.push(0.42 + 0.58 * i / (linhas - 1));
-    raios.forEach(function (r) { soma += r; });
-    var seats = [], resto = tot;
-    raios.forEach(function (r, k) {
-      var n = k === linhas - 1 ? resto : Math.round(tot * r / soma); resto -= n;
-      for (j = 0; j < n; j++) seats.push({ a: n === 1 ? 0.5 : j / (n - 1), r: r });
-    });
-    seats.sort(function (x, y) { return x.a - y.a || x.r - y.r; });
-    var W = 600, H = 320, cx = W / 2, cy = H - 14, R = 270, rs = Math.max(3.2, Math.min(7, R * 0.58 / linhas * 0.5));
-    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', 'Hemiciclo da Câmara com ' + tot + ' deputados, agrupados por partido');
-    var k2 = 0, pts = [];
-    P.forEach(function (p, pi) { p.d.forEach(function (d, di) { pts.push({ pi: pi, di: di }); }); });
-    pts.forEach(function (q, idx) {
-      var s = seats[idx], ang = Math.PI * (1 - s.a), c = document.createElementNS(ns, 'circle');
-      c.setAttribute('cx', (cx + Math.cos(ang) * s.r * R).toFixed(1)); c.setAttribute('cy', (cy - Math.sin(ang) * s.r * R).toFixed(1));
-      c.setAttribute('r', rs.toFixed(1)); c.setAttribute('fill', P[q.pi].cor); c.setAttribute('class', 'cad');
-      c.setAttribute('data-p', q.pi); c.setAttribute('data-d', q.di); c.setAttribute('tabindex', '-1');
-      var t = document.createElementNS(ns, 'title'); t.textContent = P[q.pi].d[q.di][0] + ' (' + P[q.pi].s + ')'; c.appendChild(t);
-      svg.appendChild(c);
-    });
-    var cen = document.createElementNS(ns, 'text'); cen.setAttribute('x', cx); cen.setAttribute('y', cy - 10); cen.setAttribute('text-anchor', 'middle'); cen.setAttribute('class', 'hemi-n');
-    cen.textContent = tot + ' deputados'; svg.appendChild(cen);
-    raiz.querySelector('[data-hemi-svg]').appendChild(svg);
-    var leg = raiz.querySelector('[data-hemi-leg]'), painel = raiz.querySelector('[data-hemi-painel]'), sel = -1, uf = '';
+    P.forEach(function (p, i) { p.cor = cores[i % cores.length]; p.d.sort(function (a, b) { return b[3] - a[3]; }); p.n.sort(function (a, b) { return b[3] - a[3]; }); });
+    var ns = 'http://www.w3.org/2000/svg', svgs = [];
+    var ROT = { d: ['deputado', 'deputados', 'Câmara'], n: ['senador', 'senadores', 'Senado'] };
+    function cadeiras(chave) {
+      var box = raiz.querySelector('[data-hemi-svg="' + chave + '"]'); if (!box) return;
+      var tot = 0, i, j; P.forEach(function (p) { tot += p[chave].length; }); if (!tot) return;
+      var linhas = Math.max(3, Math.round(Math.sqrt(tot / 3.2))), raios = [], soma = 0;
+      for (i = 0; i < linhas; i++) raios.push(0.42 + 0.58 * i / (linhas - 1));
+      raios.forEach(function (r) { soma += r; });
+      var seats = [], resto = tot;
+      raios.forEach(function (r, k) {
+        var n = k === linhas - 1 ? resto : Math.round(tot * r / soma); resto -= n;
+        for (j = 0; j < n; j++) seats.push({ a: n === 1 ? 0.5 : j / (n - 1), r: r });
+      });
+      seats.sort(function (x, y) { return x.a - y.a || x.r - y.r; });
+      var W = 600, H = 300, cx = W / 2, cy = H - 14, R = 270, rs = Math.max(3.2, Math.min(8, R * 0.58 / linhas * 0.5));
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', ROT[chave][2] + ' com ' + tot + ' ' + ROT[chave][1] + ', agrupados por partido');
+      var pts = []; P.forEach(function (p, pi) { p[chave].forEach(function (d, di) { pts.push({ pi: pi, di: di }); }); });
+      pts.forEach(function (q, idx) {
+        var s = seats[idx], ang = Math.PI * (1 - s.a), c = document.createElementNS(ns, 'circle'), d = P[q.pi][chave][q.di];
+        c.setAttribute('cx', (cx + Math.cos(ang) * s.r * R).toFixed(1)); c.setAttribute('cy', (cy - Math.sin(ang) * s.r * R).toFixed(1));
+        c.setAttribute('r', rs.toFixed(1)); c.setAttribute('fill', P[q.pi].cor); c.setAttribute('class', 'cad');
+        c.setAttribute('data-p', q.pi); c.setAttribute('data-c', chave); c.setAttribute('data-d', q.di); c.setAttribute('data-u', d[2]);
+        var t = document.createElementNS(ns, 'title'); t.textContent = d[0] + ' (' + P[q.pi].s + '-' + d[2] + ')'; c.appendChild(t);
+        svg.appendChild(c);
+      });
+      var cen = document.createElementNS(ns, 'text'); cen.setAttribute('x', cx); cen.setAttribute('y', cy - 10); cen.setAttribute('text-anchor', 'middle'); cen.setAttribute('class', 'hemi-n');
+      cen.textContent = tot + ' ' + ROT[chave][1]; svg.appendChild(cen);
+      box.appendChild(svg); svgs.push(svg);
+      svg.addEventListener('click', function (e) {
+        var c = e.target.closest ? e.target.closest('.cad') : null; if (!c) return;
+        var pi = +c.getAttribute('data-p'); cg.sel[pi] = true; cg.dest = P[pi][chave][+c.getAttribute('data-d')][0]; cg.notificar();
+      });
+    }
+    cadeiras('d'); cadeiras('n');
+    var leg = raiz.querySelector('[data-hemi-leg]'), painel = raiz.querySelector('[data-hemi-painel]');
     P.forEach(function (p, pi) {
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'hemi-chip'; b.setAttribute('data-p', pi);
-      b.innerHTML = '<i style="background:' + p.cor + '"></i>' + esc(p.s) + ' <b>' + p.d.length + '</b>';
-      b.addEventListener('click', function () { escolher(pi, ''); }); leg.appendChild(b);
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'hemi-chip'; b.setAttribute('data-p', pi); b.setAttribute('aria-pressed', 'false');
+      b.title = p.d.length + ' deputado(s) e ' + p.n.length + ' senador(es)';
+      b.innerHTML = '<i style="background:' + p.cor + '"></i>' + esc(p.s) + ' <b>' + (p.d.length + p.n.length) + '</b>';
+      b.addEventListener('click', function () { if (cg.sel[pi]) delete cg.sel[pi]; else cg.sel[pi] = true; cg.dest = ''; cg.notificar(); });
+      leg.appendChild(b);
     });
+    function escolhidos() { return P.map(function (p, i) { return cg.sel[i] ? i : -1; }).filter(function (i) { return i >= 0; }); }
+    cg.contar = function () {
+      var out = {}; escolhidos().forEach(function (i) { ['d', 'n'].forEach(function (k) { P[i][k].forEach(function (d) { out[d[2]] = (out[d[2]] || 0) + 1; }); }); }); return out;
+    };
+    cg.nomes = function () { return escolhidos().map(function (i) { return P[i].s; }); };
     function marcar() {
-      svg.classList.toggle('foco', sel >= 0);
-      svg.querySelectorAll('.cad').forEach(function (c) { c.classList.toggle('on', +c.getAttribute('data-p') === sel); });
-      leg.querySelectorAll('.hemi-chip').forEach(function (b) { b.classList.toggle('on', +b.getAttribute('data-p') === sel); });
+      var n = escolhidos().length;
+      svgs.forEach(function (svg) {
+        svg.classList.toggle('foco', n > 0 || !!cg.uf);
+        svg.querySelectorAll('.cad').forEach(function (c) {
+          var ok = (!n || cg.sel[+c.getAttribute('data-p')]) && (!cg.uf || c.getAttribute('data-u') === cg.uf);
+          c.classList.toggle('on', !!ok);
+        });
+      });
+      leg.querySelectorAll('.hemi-chip').forEach(function (b) { var on = !!cg.sel[+b.getAttribute('data-p')]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
     }
-    function escolher(pi, nomeDestaque) {
-      sel = pi; uf = ''; marcar(); desenhar(nomeDestaque);
-    }
-    function desenhar(destaque) {
-      var p = P[sel], ufs = {}, soma = 0;
-      p.d.forEach(function (d) { ufs[d[2]] = 1; soma += d[3]; });
-      var lista = p.d.filter(function (d) { return !uf || d[2] === uf; });
-      var h = '<h3><i style="background:' + p.cor + '"></i>' + esc(p.s) + '</h3><p class="apoio">' + p.d.length + ' deputado' + (p.d.length > 1 ? 's' : '') + ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong> (média ' + brl(soma / p.d.length) + ' por deputado)</p>';
-      h += '<label class="hemi-uf">Estado <select data-hemi-uf><option value="">Todos</option>' + Object.keys(ufs).sort().map(function (u) { return '<option' + (u === uf ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></label>';
-      h += '<ol class="hemi-lista">' + lista.map(function (d) {
-        var im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
-        return '<li' + (d[0] === destaque ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
-      }).join('') + '</ol>';
-      if (p.l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + p.l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
+    function desenhar() {
+      var ids = escolhidos();
+      if (!ids.length) { painel.innerHTML = '<p class="apoio">Escolha um ou mais partidos na legenda, ou toque numa cadeira.' + (cg.uf ? ' Estado em foco: <strong>' + esc(cg.uf) + '</strong>.' : '') + '</p>'; return; }
+      var lista = [], nd = 0, ns_ = 0, soma = 0;
+      ids.forEach(function (i) { ['d', 'n'].forEach(function (k) { P[i][k].forEach(function (d) {
+        if (cg.uf && d[2] !== cg.uf) return;
+        lista.push({ d: d, k: k, p: P[i] }); soma += d[3]; if (k === 'd') nd++; else ns_++;
+      }); }); });
+      lista.sort(function (a, b) { return b.d[3] - a.d[3]; });
+      var h = '<h3>' + ids.map(function (i) { return '<span class="hemi-sel"><i style="background:' + P[i].cor + '"></i>' + esc(P[i].s) + '</span>'; }).join(' ') + '</h3>';
+      h += '<p class="apoio"><strong>' + nd + '</strong> deputado' + (nd === 1 ? '' : 's') + ' e <strong>' + ns_ + '</strong> senador' + (ns_ === 1 ? '' : 'es') + (cg.uf ? ' em ' + esc(cg.uf) : '') +
+        ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong>' + (lista.length ? ' (média ' + brl(soma / lista.length) + ' por parlamentar)' : '') + '</p>';
+      h += '<p class="hemi-acoes"><button type="button" class="botao botao-leve" data-limpar>Limpar partidos</button>' + (cg.uf ? ' <button type="button" class="botao botao-leve" data-limpar-uf>Tirar filtro de ' + esc(cg.uf) + '</button>' : '') + '</p>';
+      h += '<ol class="hemi-lista">' + lista.slice(0, 300).map(function (x) {
+        var d = x.d, im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
+        return '<li' + (d[0] === cg.dest ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + (x.k === 'd' ? 'Dep.' : 'Sen.') + ' ' + esc(x.p.s) + '-' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
+      }).join('') + '</ol>' + (lista.length > 300 ? '<p class="nota">Mostrando os 300 maiores de ' + lista.length + '. Filtre por estado no mapa.</p>' : '');
+      if (ids.length === 1 && P[ids[0]].l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + P[ids[0]].l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
       painel.innerHTML = h;
-      painel.querySelector('[data-hemi-uf]').addEventListener('change', function (e) { uf = e.target.value; desenhar(''); });
+      var l1 = painel.querySelector('[data-limpar]'); if (l1) l1.addEventListener('click', function () { cg.sel = {}; cg.dest = ''; cg.notificar(); });
+      var l2 = painel.querySelector('[data-limpar-uf]'); if (l2) l2.addEventListener('click', function () { cg.uf = ''; cg.notificar(); });
       var dst = painel.querySelector('.dest'); if (dst && dst.scrollIntoView) dst.scrollIntoView({ block: 'nearest' });
     }
-    svg.addEventListener('click', function (e) {
-      var c = e.target.closest ? e.target.closest('.cad') : null; if (!c) return;
-      var pi = +c.getAttribute('data-p'); escolher(pi, P[pi].d[+c.getAttribute('data-d')][0]);
-    });
+    cg.ouv.push(function () { marcar(); desenhar(); });
+    marcar(); desenhar();
   }
 
   function iniciarPosicao(sec) {
@@ -1389,20 +1420,21 @@
     });
   }
 
-  function iniciarMapaDinheiro(raiz) {
+  function iniciarMapaDinheiro(raiz, cg) {
     var el = raiz.querySelector('[data-mapa-dados]'); if (!el) return;
     var D; try { D = JSON.parse(el.textContent); } catch (e) { return; }
     var esc = function (v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
     var POS = { RR: [2, 0], AP: [4, 0], AM: [1, 1], PA: [3, 1], MA: [4, 1], CE: [5, 1], RN: [6, 1], AC: [0, 2], RO: [1, 2], MT: [2, 2], TO: [3, 2], PI: [4, 2], PE: [5, 2], PB: [6, 2],
       GO: [2, 3], DF: [3, 3], BA: [4, 3], AL: [5, 3], SE: [6, 3], MS: [2, 4], MG: [3, 4], ES: [4, 4], PR: [2, 5], SP: [3, 5], RJ: [4, 5], SC: [2, 6], RS: [2, 7] };
     var selT = raiz.querySelector('[data-mapa-tipo]'), selA = raiz.querySelector('[data-mapa-ano]'), grade = raiz.querySelector('[data-mapa-grade]'), painel = raiz.querySelector('[data-mapa-painel]');
-    var atual = '';
+    var modo = raiz.querySelector('[data-mapa-modo]');
+    function clicar(uf) { cg.uf = cg.uf === uf ? '' : uf; cg.notificar(); }
     function curto(v) { return v >= 1e9 ? (v / 1e9).toFixed(1).replace('.', ',') + ' bi' : v >= 1e6 ? Math.round(v / 1e6) + ' mi' : v >= 1e3 ? Math.round(v / 1e3) + ' mil' : String(Math.round(v)); }
     Object.keys(POS).forEach(function (uf) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'uf-tile'; b.setAttribute('data-uf', uf);
       b.style.gridColumn = String(POS[uf][0] + 1); b.style.gridRow = String(POS[uf][1] + 1);
       b.innerHTML = '<b>' + uf + '</b><span></span>';
-      b.addEventListener('click', function () { atual = uf; mostrar(); desenhar(); });
+      b.addEventListener('click', function () { clicar(uf); });
       grade.appendChild(b);
     });
     var svgBox = raiz.querySelector('[data-mapa-svg]'), paths = {}, NS = 'http://www.w3.org/2000/svg';
@@ -1411,8 +1443,8 @@
       m.locais.forEach(function (l) {
         var p = document.createElementNS(NS, 'path'); p.setAttribute('d', l[1]); p.setAttribute('class', 'uf-path'); p.setAttribute('data-uf', l[0]);
         p.setAttribute('tabindex', '0'); p.setAttribute('role', 'button');
-        p.addEventListener('click', function () { atual = l[0]; mostrar(); desenhar(); });
-        p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atual = l[0]; mostrar(); desenhar(); } });
+        p.addEventListener('click', function () { clicar(l[0]); });
+        p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clicar(l[0]); } });
         svg.appendChild(p); paths[l[0]] = p;
       });
       svgBox.appendChild(svg); desenhar();
@@ -1423,35 +1455,39 @@
     }
     raiz.querySelectorAll('[data-mapa-vis]').forEach(function (b) { b.addEventListener('click', function () { setVis(b.getAttribute('data-mapa-vis')); }); });
     function valores() {
-      var t = selT.value, a = selA.value, out = {}, max = 0;
-      Object.keys(POS).forEach(function (uf) { var v = (D[uf] && D[uf][t] && D[uf][t][a]) || 0; out[uf] = v; if (v > max) max = v; });
-      return { v: out, max: max };
+      var t = selT.value, a = selA.value, out = {}, max = 0, ct = cg.nomes && cg.nomes().length ? cg.contar() : null;
+      Object.keys(POS).forEach(function (uf) { var v = ct ? (ct[uf] || 0) : ((D[uf] && D[uf][t] && D[uf][t][a]) || 0); out[uf] = v; if (v > max) max = v; });
+      return { v: out, max: max, ct: !!ct };
     }
     function desenhar() {
-      var r = valores();
+      var r = valores(), nm = cg.nomes ? cg.nomes() : [];
+      if (modo) modo.textContent = r.ct ? 'Cor do mapa: quantos parlamentares de ' + nm.join(', ') + ' (deputados e senadores) cada estado tem.' :
+        'Cor do mapa: ' + (selT.value === 'e' ? 'emendas pagas ao estado' : 'cota usada pelos parlamentares do estado') + ' (' + (selA.value === '0' ? 'desde 2014' : selA.value) + '). Mais forte = mais dinheiro.';
+      var rot = function (uf) { return r.v[uf] ? (r.ct ? r.v[uf] + ' parlamentar(es)' : brl(r.v[uf])) : (r.ct ? 'nenhum' : 'sem dados'); };
       Object.keys(paths).forEach(function (uf) {
         var i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0, p = paths[uf];
-        p.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3)); p.classList.toggle('sel', uf === atual);
-        p.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + (r.v[uf] ? brl(r.v[uf]) : 'sem dados'));
-        if (uf === atual && p.parentNode) p.parentNode.appendChild(p);
+        p.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3)); p.classList.toggle('sel', uf === cg.uf);
+        p.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + rot(uf));
+        if (uf === cg.uf && p.parentNode) p.parentNode.appendChild(p);
       });
       grade.querySelectorAll('.uf-tile').forEach(function (b) {
         var uf = b.getAttribute('data-uf'), i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0;
         b.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3));
-        b.classList.toggle('forte', i > 0.55); b.classList.toggle('sel', uf === atual);
-        b.querySelector('span').textContent = r.v[uf] ? curto(r.v[uf]) : '—';
-        b.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + (r.v[uf] ? brl(r.v[uf]) : 'sem dados'));
+        b.classList.toggle('forte', i > 0.55); b.classList.toggle('sel', uf === cg.uf);
+        b.querySelector('span').textContent = r.v[uf] ? (r.ct ? String(r.v[uf]) : curto(r.v[uf])) : '—';
+        b.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + rot(uf));
       });
     }
     function mostrar() {
-      var d = D[atual]; if (!d) return;
+      var d = D[cg.uf]; if (!d) { painel.innerHTML = '<p class="apoio">Toque num estado.</p>'; return; }
       var a = selA.value, per = a === '0' ? 'desde 2014' : 'em ' + a, e = d.e[a] || 0, c = d.c[a] || 0;
-      var slug = atual.toLowerCase();
+      var slug = cg.uf.toLowerCase();
       painel.innerHTML = '<h3>' + esc(d.n) + '</h3><dl class="mapa-num"><div><dt>Emendas pagas ao estado ' + per + '</dt><dd>' + (e ? brl(e) : '—') + '</dd></div>' +
         '<div><dt>Cota usada por seus ' + d.p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
         '<p><a class="botao botao-leve" href="' + RAIZ + 'estado/' + slug + '/">Ver ' + esc(d.n) + ' por área e parlamentar</a></p>';
     }
-    [selT, selA].forEach(function (s) { s.addEventListener('change', function () { desenhar(); if (atual) mostrar(); }); });
+    [selT, selA].forEach(function (s) { s.addEventListener('change', function () { desenhar(); mostrar(); }); });
+    cg.ouv.push(function () { desenhar(); mostrar(); });
     desenhar();
   }
   document.querySelectorAll('[data-busca]').forEach(function (f) {
@@ -1461,8 +1497,7 @@
   document.querySelectorAll('[data-uf-select]').forEach(function (s) { s.addEventListener('change', function () { if (s.value) location.href = RAIZ + 'estado/' + s.value + '/'; }); });
   var es = document.querySelector('[data-estado]'); if (es) iniciarEstado(es);
   var po_ = document.querySelector('[data-posicao]'); if (po_) iniciarPosicao(po_);
-  var mp_ = document.querySelector('[data-mapa]'); if (mp_) iniciarMapaDinheiro(mp_);
-  var hm_ = document.querySelector('[data-hemi]'); if (hm_) iniciarHemiciclo(hm_);
+  var cg_ = document.querySelector('[data-congresso]'); if (cg_) iniciarCongresso(cg_);
   var r = document.querySelector('[data-ranking]'); if (r) iniciarRanking(r);
   document.querySelectorAll('[data-emendas]').forEach(function (b) { iniciarEmendas(b); carregarTce().then(function () { b.dispatchEvent(new Event('tce')); }); });
   var te = document.querySelector('[data-emenda]'); if (te) iniciarTelaEmenda(te);

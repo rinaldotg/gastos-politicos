@@ -20,6 +20,35 @@
   </aside>
 </section>
 
+<section id="congresso" class="congresso" data-congresso data-ano="{{ ano_ref }}" aria-label="O Congresso por partido e por estado">
+  <h2>O Congresso: partido, estado e dinheiro</h2>
+  <p class="apoio"><strong>Toque em um ou mais partidos</strong> (toque de novo para tirar). O mapa e as cadeiras mostram onde eles estão. Toque num estado para filtrar. As cores só separam os partidos; não indicam posição política.</p>
+  <script type="application/json" data-hemi-dados>{{ hemiciclo | safe }}</script>
+  <script type="application/json" data-mapa-dados>{{ mapa_uf | safe }}</script>
+  <div class="cg-grade">
+    <div class="cg-mapa">
+      <div class="cg-mapa-topo">
+        <div class="mapa-vis" role="group" aria-label="Forma de ver"><button type="button" data-mapa-vis="mapa" aria-pressed="true">Mapa</button><button type="button" data-mapa-vis="grade" aria-pressed="false">Quadrados</button></div>
+        <label>Dinheiro <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos parlamentares do estado</option></select></label>
+        <label>Período <select data-mapa-ano><option value="0">Desde 2014</option>{% for a in anos_mapa %}<option value="{{ a }}"{% if a == ano_ref %} selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</select></label>
+      </div>
+      <p class="cg-modo" data-mapa-modo aria-live="polite"></p>
+      <div class="mapa-svg" data-mapa-svg></div>
+      <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados" hidden></div>
+    </div>
+    <div class="cg-hemis">
+      <figure class="cg-hemi"><figcaption>Câmara dos Deputados</figcaption><div class="hemi-svg" data-hemi-svg="d"></div></figure>
+      <figure class="cg-hemi"><figcaption>Senado Federal</figcaption><div class="hemi-svg" data-hemi-svg="n"></div></figure>
+    </div>
+  </div>
+  <div class="hemi-legenda" data-hemi-leg role="group" aria-label="Partidos (escolha um ou mais)"></div>
+  <div class="cg-paineis">
+    <div class="hemi-painel" data-hemi-painel aria-live="polite"><p class="apoio">Escolha um ou mais partidos na legenda, ou toque numa cadeira.</p></div>
+    <div class="mapa-painel" data-mapa-painel aria-live="polite"><p class="apoio">Toque num estado.</p></div>
+  </div>
+  <p class="nota">Cada bolinha é um parlamentar em exercício com gasto registrado. Valores totais, não por habitante: estados grandes aparecem mais fortes. Emendas pagas: Portal da Transparência, pelo estado de destino (bancada e “múltiplos” podem ficar sem estado). Mapa: <a href="https://github.com/VictorCazanave/svg-maps" rel="noopener" target="_blank">svg-maps/brazil</a>, de Victor Cazanave, <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="noopener" target="_blank">CC BY 4.0</a>.</p>
+</section>
+
 <section aria-label="Por onde começar">
   <h2>O que você quer saber?</h2>
   <p class="apoio">O caminho do dinheiro: <strong>parlamentar → emenda → quem recebeu → município → onde foi gasto</strong>. Escolha por onde começar.</p>
@@ -48,37 +77,6 @@
     <a class="cartao c-fis" href="atencao/"><span class="cartao-ico">{{ ico("lupa") }}</span><strong>O que vale perguntar?</strong><span>Obras paralisadas, recebedores muito procurados e concentração de fornecedores: fatos, sem acusação.</span></a>
     <a class="cartao c-fis" href="novidades/"><span class="cartao-ico">{{ ico("novo") }}</span><strong>O que mudou?</strong><span>Novidades desde a última atualização.</span></a>
   </div>
-</section>
-
-<section id="hemiciclo" class="hemi" data-hemi data-ano="{{ ano_ref }}" aria-label="Câmara dos Deputados por partido">
-  <h2>A Câmara, cadeira por cadeira</h2>
-  <p class="apoio">Cada bolinha é um deputado. <strong>Toque em um partido ou numa cadeira</strong> para ver quem é, quanto gastou da cota em {{ ano_ref }} e abrir a página dele. As cores só separam os partidos; não indicam posição política.</p>
-  <script type="application/json" data-hemi-dados>{{ hemiciclo | safe }}</script>
-  <div class="hemi-corpo">
-    <div class="hemi-svg" data-hemi-svg></div>
-    <div class="hemi-legenda" data-hemi-leg role="group" aria-label="Partidos"></div>
-    <div class="hemi-painel" data-hemi-painel aria-live="polite"><p class="apoio">Escolha um partido na legenda ou toque numa cadeira.</p></div>
-  </div>
-</section>
-
-<section id="mapa-dinheiro" class="mapa-din" data-mapa aria-label="Para onde vai o dinheiro, por estado">
-  <h2>Para onde vai o dinheiro, estado por estado</h2>
-  <p class="apoio">Cada estado é pintado conforme o valor. <strong>Quanto mais forte a cor, mais dinheiro.</strong> Toque num estado para ver os números e abrir a página dele.</p>
-  <script type="application/json" data-mapa-dados>{{ mapa_uf | safe }}</script>
-  <div class="controles">
-    <label>O que mostrar <select data-mapa-tipo><option value="e">Emendas pagas ao estado</option><option value="c">Cota usada pelos deputados e senadores do estado</option></select></label>
-    <label>Período <select data-mapa-ano><option value="0">Todos os anos (desde 2014)</option>{% for a in anos_mapa %}<option value="{{ a }}"{% if a == ano_ref %} selected{% endif %}>{{ a }}{% if a == ano_atual %} (parcial){% endif %}</option>{% endfor %}</select></label>
-  </div>
-  <div class="mapa-corpo">
-    <div class="mapa-esq">
-      <div class="mapa-vis" role="group" aria-label="Forma de ver"><button type="button" data-mapa-vis="mapa" aria-pressed="true">Mapa</button><button type="button" data-mapa-vis="grade" aria-pressed="false">Quadrados</button></div>
-      <div class="mapa-svg" data-mapa-svg></div>
-      <div class="mapa-grade" data-mapa-grade role="group" aria-label="Estados" hidden></div>
-      <p class="nota mapa-cred">Mapa: <a href="https://github.com/VictorCazanave/svg-maps" rel="noopener" target="_blank">svg-maps/brazil</a>, de Victor Cazanave, licença <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="noopener" target="_blank">CC BY 4.0</a>. Estados pequenos (DF, SE, AL, RJ, ES) ficam mais fáceis de tocar em “Quadrados”.</p>
-    </div>
-    <div class="mapa-painel" data-mapa-painel aria-live="polite"><p class="apoio">Toque num estado.</p></div>
-  </div>
-  <p class="nota">São valores totais, não por habitante: estados grandes aparecem mais fortes. Emendas pagas: Portal da Transparência, pelo estado de destino (emendas de bancada e “múltiplos” podem ficar sem estado definido). Cota: soma dos deputados e senadores eleitos pelo estado.</p>
 </section>
 
 <section id="ranking" class="ranking" data-ranking data-ano-ref="{{ ano_ref }}" data-ano-atual="{{ ano_atual }}">

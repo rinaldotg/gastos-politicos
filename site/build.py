@@ -1106,7 +1106,7 @@ def main():
         cand_t[r_["sigla"]][int(r_["ano"])].append([r_["candidato"], r_["cargo"], r_["uf"], round(f(r_["fefc"])), round(f(r_["total"]))])
     parl_part, rot_part = defaultdict(list), {}
     for x_ in lista:
-        if x_["cargo"] in ("deputado_federal", "senador") and x_["partido"] and (x_["anos"].get(ano_atual) or x_["anos"].get(ano_ref)):
+        if x_["cargo"] in ("deputado_federal", "senador") and x_["partido"] and x_["anos"].get(ano_atual):
             k_ = chave_partido(x_["partido"])
             parl_part[k_].append(x_)
             rot_part.setdefault(k_, x_["partido"])
@@ -1123,11 +1123,12 @@ def main():
                       emendas=sum(sum(v_.values()) for v_ in emendas_tipo.values()))
     hemi = {}
     for x_ in lista:
-        if x_["cargo"] == "deputado_federal" and x_["partido"] and (x_["anos"].get(ano_atual) or x_["anos"].get(ano_ref)):
+        if x_["cargo"] in ("deputado_federal", "senador") and x_["partido"] and x_["anos"].get(ano_atual):
             k_ = chave_partido(x_["partido"])
-            hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[]))["d"].append(
+            h_ = hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[], n=[]))
+            h_["d" if x_["cargo"] == "deputado_federal" else "n"].append(
                 [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0)), x_["foto"]])
-    hemi_l = sorted(hemi.values(), key=lambda h_: -len(h_["d"]))
+    hemi_l = sorted(hemi.values(), key=lambda h_: -(len(h_["d"]) + len(h_["n"])))
     mapa_uf = {}
     for sig_, nome_uf_ in UFS.items():
         em_ = defaultdict(float)

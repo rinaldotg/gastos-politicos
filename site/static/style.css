@@ -365,3 +365,27 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .foto-pessoa{width:96px;height:128px;object-fit:cover;object-position:center top;border-radius:12px;border:1px solid var(--linha);background:var(--acento-fundo)}
 @media(max-width:560px){.foto-pessoa{width:76px;height:101px}}
 .mini-foto{width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:center top;flex:none;background:var(--acento-fundo);border:1px solid var(--linha)}
+
+/* congresso: mapa + hemiciclos + partidos (multi-selecao) */
+.cg-grade{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.2rem;align-items:start;margin-top:.8rem}
+.cg-mapa-topo{display:flex;flex-wrap:wrap;gap:.6rem .9rem;align-items:end}
+.cg-mapa-topo label{display:flex;flex-direction:column;font-size:.85rem;gap:.2rem}
+.cg-mapa-topo select{min-height:44px}
+.cg-mapa-topo .mapa-vis{margin-bottom:0}
+.cg-modo{font-size:.88rem;color:var(--tinta-2);margin:.5rem 0;min-height:2.6em}
+.cg-hemis{display:grid;gap:.8rem}
+.cg-hemi{margin:0}.cg-hemi figcaption{font:700 .95rem var(--titulo);margin-bottom:.1rem}
+.congresso .hemi-legenda{margin-top:1rem}
+.cg-paineis{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1rem;margin-top:1rem;align-items:start}
+.hemi-sel{display:inline-flex;align-items:center;gap:.3rem;margin-right:.4rem;font-size:1rem}
+.hemi-sel i{display:inline-block;width:.8rem;height:.8rem;border-radius:50%}
+.hemi-acoes{display:flex;flex-wrap:wrap;gap:.5rem;margin:.4rem 0}
+.hemi-chip[aria-pressed=true]{font-weight:700}
+@media(max-width:720px){.cg-grade,.cg-paineis{grid-template-columns:1fr}.cg-modo{min-height:0}}
+.congresso .hemi-legenda,.congresso .hemi-painel,.congresso .hemi-svg{grid-area:auto}
+.congresso .hemi-painel,.congresso .mapa-painel{min-width:0;min-height:6rem}
+.cg-grade>*,.cg-paineis>*,.cg-hemis>*{min-width:0}
+.cg-mapa-topo select{max-width:100%}
+.congresso .hemi-lista li{flex-wrap:wrap}
+.congresso .mapa-num dd{font-size:1.2rem}
+@media(max-width:720px){.cg-mapa-topo label{width:100%}.cg-mapa-topo select{width:100%;box-sizing:border-box}}
