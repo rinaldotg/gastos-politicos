@@ -1289,7 +1289,8 @@
 
 
   function iniciarCongresso(raiz) {
-    var cg = { sel: {}, uf: '', dest: '', ouv: [], contar: null, nomes: null, n: 0 };
+    var cg = { sel: {}, ufs: {}, dest: '', ouv: [], contar: null, nomes: null, n: 0 };
+    cg.lista = function () { return Object.keys(cg.ufs).sort(); };
     cg.notificar = function () { cg.ouv.forEach(function (f) { f(); }); };
     iniciarHemiciclo(raiz, cg);
     iniciarMapaDinheiro(raiz, cg);
@@ -1354,9 +1355,9 @@
     function marcar() {
       var n = escolhidos().length;
       svgs.forEach(function (svg) {
-        svg.classList.toggle('foco', n > 0 || !!cg.uf);
+        svg.classList.toggle('foco', n > 0 || cg.lista().length > 0);
         svg.querySelectorAll('.cad').forEach(function (c) {
-          var ok = (!n || cg.sel[+c.getAttribute('data-p')]) && (!cg.uf || c.getAttribute('data-u') === cg.uf);
+          var ok = (!n || cg.sel[+c.getAttribute('data-p')]) && (!cg.lista().length || cg.ufs[c.getAttribute('data-u')]);
           c.classList.toggle('on', !!ok);
         });
       });
@@ -1364,17 +1365,17 @@
     }
     function desenhar() {
       var ids = escolhidos();
-      if (!ids.length) { painel.innerHTML = '<p class="apoio">Escolha um ou mais partidos na legenda, ou toque numa cadeira.' + (cg.uf ? ' Estado em foco: <strong>' + esc(cg.uf) + '</strong>.' : '') + '</p>'; return; }
+      if (!ids.length) { painel.innerHTML = '<p class="apoio">Escolha um ou mais partidos na legenda, ou toque numa cadeira.' + (cg.lista().length ? ' Em foco: <strong>' + esc(cg.lista().join(', ')) + '</strong>.' : '') + '</p>'; return; }
       var lista = [], nd = 0, ns_ = 0, soma = 0;
       ids.forEach(function (i) { ['d', 'n'].forEach(function (k) { P[i][k].forEach(function (d) {
-        if (cg.uf && d[2] !== cg.uf) return;
+        if (cg.lista().length && !cg.ufs[d[2]]) return;
         lista.push({ d: d, k: k, p: P[i] }); soma += d[3]; if (k === 'd') nd++; else ns_++;
       }); }); });
       lista.sort(function (a, b) { return b.d[3] - a.d[3]; });
       var h = '<h3>' + ids.map(function (i) { return '<span class="hemi-sel"><i style="background:' + P[i].cor + '"></i>' + esc(P[i].s) + '</span>'; }).join(' ') + '</h3>';
-      h += '<p class="apoio"><strong>' + nd + '</strong> deputado' + (nd === 1 ? '' : 's') + ' e <strong>' + ns_ + '</strong> senador' + (ns_ === 1 ? '' : 'es') + (cg.uf ? ' em ' + esc(cg.uf) : '') +
+      h += '<p class="apoio"><strong>' + nd + '</strong> deputado' + (nd === 1 ? '' : 's') + ' e <strong>' + ns_ + '</strong> senador' + (ns_ === 1 ? '' : 'es') + (cg.lista().length ? ' em ' + esc(cg.lista().join(', ')) : '') +
         ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong>' + (lista.length ? ' (média ' + brl(soma / lista.length) + ' por parlamentar)' : '') + '</p>';
-      h += '<p class="hemi-acoes"><button type="button" class="botao botao-leve" data-limpar>Limpar partidos</button>' + (cg.uf ? ' <button type="button" class="botao botao-leve" data-limpar-uf>Tirar filtro de ' + esc(cg.uf) + '</button>' : '') + '</p>';
+      h += '<p class="hemi-acoes"><button type="button" class="botao botao-leve" data-limpar>Limpar partidos</button>' + (cg.lista().length ? ' <button type="button" class="botao botao-leve" data-limpar-uf>Tirar estados (' + esc(cg.lista().join(', ')) + ')</button>' : '') + '</p>';
       h += '<ol class="hemi-lista">' + lista.slice(0, 300).map(function (x) {
         var d = x.d, im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
         return '<li' + (d[0] === cg.dest ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + (x.k === 'd' ? 'Dep.' : 'Sen.') + ' ' + esc(x.p.s) + '-' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
@@ -1382,7 +1383,7 @@
       if (ids.length === 1 && P[ids[0]].l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + P[ids[0]].l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
       painel.innerHTML = h;
       var l1 = painel.querySelector('[data-limpar]'); if (l1) l1.addEventListener('click', function () { cg.sel = {}; cg.dest = ''; cg.notificar(); });
-      var l2 = painel.querySelector('[data-limpar-uf]'); if (l2) l2.addEventListener('click', function () { cg.uf = ''; cg.notificar(); });
+      var l2 = painel.querySelector('[data-limpar-uf]'); if (l2) l2.addEventListener('click', function () { cg.ufs = {}; cg.notificar(); });
       var dst = painel.querySelector('.dest'); if (dst && dst.scrollIntoView) dst.scrollIntoView({ block: 'nearest' });
     }
     cg.ouv.push(function () { marcar(); desenhar(); });
@@ -1435,7 +1436,7 @@
       return m[a] || 0;
     }
     function nomePer(a) { return a === '0' ? 'desde 2014' : LEG[a] ? 'na legislatura ' + LEG[a][0] + '–' + LEG[a][1] : 'em ' + a; }
-    function clicar(uf) { cg.uf = cg.uf === uf ? '' : uf; cg.notificar(); }
+    function clicar(uf) { if (cg.ufs[uf]) delete cg.ufs[uf]; else cg.ufs[uf] = true; cg.notificar(); }
     function curto(v) { return v >= 1e9 ? (v / 1e9).toFixed(1).replace('.', ',') + ' bi' : v >= 1e6 ? Math.round(v / 1e6) + ' mi' : v >= 1e3 ? Math.round(v / 1e3) + ' mil' : String(Math.round(v)); }
     Object.keys(POS).forEach(function (uf) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'uf-tile'; b.setAttribute('data-uf', uf);
@@ -1473,25 +1474,26 @@
       var rot = function (uf) { return r.v[uf] ? (r.ct ? r.v[uf] + ' parlamentar(es)' : brl(r.v[uf])) : (r.ct ? 'nenhum' : 'sem dados'); };
       Object.keys(paths).forEach(function (uf) {
         var i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0, p = paths[uf];
-        p.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3)); p.classList.toggle('sel', uf === cg.uf);
+        p.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3)); p.classList.toggle('sel', !!cg.ufs[uf]);
         p.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + rot(uf));
-        if (uf === cg.uf && p.parentNode) p.parentNode.appendChild(p);
+        if (cg.ufs[uf] && p.parentNode) p.parentNode.appendChild(p);
       });
       grade.querySelectorAll('.uf-tile').forEach(function (b) {
         var uf = b.getAttribute('data-uf'), i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0;
         b.style.setProperty('--i', (0.08 + 0.92 * i).toFixed(3));
-        b.classList.toggle('forte', i > 0.55); b.classList.toggle('sel', uf === cg.uf);
+        b.classList.toggle('forte', i > 0.55); b.classList.toggle('sel', !!cg.ufs[uf]);
         b.querySelector('span').textContent = r.v[uf] ? (r.ct ? String(r.v[uf]) : curto(r.v[uf])) : '—';
         b.setAttribute('aria-label', (D[uf] ? D[uf].n : uf) + ': ' + rot(uf));
       });
     }
     function mostrar() {
-      var d = D[cg.uf]; if (!d) { painel.innerHTML = '<p class="apoio">Toque num estado.</p>'; return; }
-      var a = selA.value, per = nomePer(a), e = soma(d, 'e', a), c = soma(d, 'c', a);
-      var slug = cg.uf.toLowerCase();
-      painel.innerHTML = '<h3>' + esc(d.n) + '</h3><dl class="mapa-num"><div><dt>Emendas pagas ao estado ' + per + '</dt><dd>' + (e ? brl(e) : '—') + '</dd></div>' +
-        '<div><dt>Cota usada por seus ' + d.p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
-        '<p><a class="botao botao-leve" href="' + RAIZ + 'estado/' + slug + '/">Ver ' + esc(d.n) + ' por área e parlamentar</a></p>';
+      var L = cg.lista(); if (!L.length) { painel.innerHTML = '<p class="apoio">Toque num ou mais estados (toque de novo para tirar).</p>'; return; }
+      var a = selA.value, per = nomePer(a), e = 0, c = 0, p = 0;
+      L.forEach(function (u) { if (D[u]) { e += soma(D[u], 'e', a); c += soma(D[u], 'c', a); p += D[u].p; } });
+      var tit = L.length === 1 ? esc(D[L[0]] ? D[L[0]].n : L[0]) : L.length + ' estados: ' + esc(L.join(', '));
+      painel.innerHTML = '<h3>' + tit + '</h3><dl class="mapa-num"><div><dt>Emendas pagas ' + (L.length === 1 ? 'ao estado ' : 'aos estados ') + per + '</dt><dd>' + (e ? brl(e) : '—') + '</dd></div>' +
+        '<div><dt>Cota usada por ' + p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
+        '<p class="hemi-acoes">' + L.map(function (u) { return '<a class="botao botao-leve" href="' + RAIZ + 'estado/' + u.toLowerCase() + '/">Ver ' + esc(D[u] ? D[u].n : u) + '</a>'; }).join('') + '</p>';
     }
     [selT, selA].forEach(function (s) { s.addEventListener('change', function () { desenhar(); mostrar(); }); });
     cg.ouv.push(function () { desenhar(); mostrar(); });
