@@ -389,3 +389,22 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .congresso .hemi-lista li{flex-wrap:wrap}
 .congresso .mapa-num dd{font-size:1.2rem}
 @media(max-width:720px){.cg-mapa-topo label{width:100%}.cg-mapa-topo select{width:100%;box-sizing:border-box}}
+
+/* home compacta: o mapa e os hemiciclos aparecem logo na primeira tela */
+.abertura-grade{grid-template-columns:1fr;gap:.6rem;padding:.8rem 0 .2rem}
+.abertura-grade h1{font-size:clamp(1.35rem,3vw,1.9rem);margin:0 0 .5rem}
+.abertura-grade .busca label{font-size:.9rem}
+.abertura-grade .busca .campo input,.abertura-grade .busca .campo button{min-height:48px}
+.abertura-grade .abertura-texto>.apoio{display:none}
+.abertura-grade .numeros{grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.abertura-grade .numeros div{padding:.4rem .7rem;display:block}
+.abertura-grade .numeros strong{font-size:1.25rem;min-width:0}
+.abertura-grade .numeros span{font-size:.78rem;line-height:1.25;display:block}
+.congresso{margin-top:.6rem}
+.congresso>h2{margin:.2rem 0 .3rem;font-size:1.25rem}
+.congresso>.apoio{margin:.2rem 0;font-size:.92rem}
+@media(max-width:520px){.abertura-grade .numeros div{display:block}.abertura-grade .numeros strong{font-size:1.05rem}.abertura-grade .numeros span{font-size:.7rem}}
+.cg-mapa-topo{margin-top:.6rem}
+.cg-mapa-topo label{flex:1 1 10rem}
+.cg-modo{margin:.2rem 0;min-height:0}
+@media(min-width:721px){.cg-mapa .mapa-svg svg{max-width:400px}}
