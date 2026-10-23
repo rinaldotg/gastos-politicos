@@ -1428,6 +1428,13 @@
       GO: [2, 3], DF: [3, 3], BA: [4, 3], AL: [5, 3], SE: [6, 3], MS: [2, 4], MG: [3, 4], ES: [4, 4], PR: [2, 5], SP: [3, 5], RJ: [4, 5], SC: [2, 6], RS: [2, 7] };
     var selT = raiz.querySelector('[data-mapa-tipo]'), selA = raiz.querySelector('[data-mapa-ano]'), grade = raiz.querySelector('[data-mapa-grade]'), painel = raiz.querySelector('[data-mapa-painel]');
     var modo = raiz.querySelector('[data-mapa-modo]');
+    var LEG = { L57: [2023, 2026], L56: [2019, 2022], L55: [2015, 2018] };
+    function soma(d, t, a) {
+      var m = d && d[t]; if (!m) return 0;
+      if (LEG[a]) { var s = 0, y; for (y = LEG[a][0]; y <= LEG[a][1]; y++) s += m[String(y)] || 0; return s; }
+      return m[a] || 0;
+    }
+    function nomePer(a) { return a === '0' ? 'desde 2014' : LEG[a] ? 'na legislatura ' + LEG[a][0] + '–' + LEG[a][1] : 'em ' + a; }
     function clicar(uf) { cg.uf = cg.uf === uf ? '' : uf; cg.notificar(); }
     function curto(v) { return v >= 1e9 ? (v / 1e9).toFixed(1).replace('.', ',') + ' bi' : v >= 1e6 ? Math.round(v / 1e6) + ' mi' : v >= 1e3 ? Math.round(v / 1e3) + ' mil' : String(Math.round(v)); }
     Object.keys(POS).forEach(function (uf) {
@@ -1456,13 +1463,13 @@
     raiz.querySelectorAll('[data-mapa-vis]').forEach(function (b) { b.addEventListener('click', function () { setVis(b.getAttribute('data-mapa-vis')); }); });
     function valores() {
       var t = selT.value, a = selA.value, out = {}, max = 0, ct = cg.nomes && cg.nomes().length ? cg.contar() : null;
-      Object.keys(POS).forEach(function (uf) { var v = ct ? (ct[uf] || 0) : ((D[uf] && D[uf][t] && D[uf][t][a]) || 0); out[uf] = v; if (v > max) max = v; });
+      Object.keys(POS).forEach(function (uf) { var v = ct ? (ct[uf] || 0) : soma(D[uf], t, a); out[uf] = v; if (v > max) max = v; });
       return { v: out, max: max, ct: !!ct };
     }
     function desenhar() {
       var r = valores(), nm = cg.nomes ? cg.nomes() : [];
       if (modo) modo.textContent = r.ct ? 'Cor do mapa: quantos parlamentares de ' + nm.join(', ') + ' (deputados e senadores) cada estado tem.' :
-        'Cor do mapa: ' + (selT.value === 'e' ? 'emendas pagas ao estado' : 'cota usada pelos parlamentares do estado') + ' (' + (selA.value === '0' ? 'desde 2014' : selA.value) + '). Mais forte = mais dinheiro.';
+        'Cor do mapa: ' + (selT.value === 'e' ? 'emendas pagas ao estado' : 'cota usada pelos parlamentares do estado') + ' (' + nomePer(selA.value) + '). Mais forte = mais dinheiro.';
       var rot = function (uf) { return r.v[uf] ? (r.ct ? r.v[uf] + ' parlamentar(es)' : brl(r.v[uf])) : (r.ct ? 'nenhum' : 'sem dados'); };
       Object.keys(paths).forEach(function (uf) {
         var i = r.max ? Math.sqrt(r.v[uf] / r.max) : 0, p = paths[uf];
@@ -1480,7 +1487,7 @@
     }
     function mostrar() {
       var d = D[cg.uf]; if (!d) { painel.innerHTML = '<p class="apoio">Toque num estado.</p>'; return; }
-      var a = selA.value, per = a === '0' ? 'desde 2014' : 'em ' + a, e = d.e[a] || 0, c = d.c[a] || 0;
+      var a = selA.value, per = nomePer(a), e = soma(d, 'e', a), c = soma(d, 'c', a);
       var slug = cg.uf.toLowerCase();
       painel.innerHTML = '<h3>' + esc(d.n) + '</h3><dl class="mapa-num"><div><dt>Emendas pagas ao estado ' + per + '</dt><dd>' + (e ? brl(e) : '—') + '</dd></div>' +
         '<div><dt>Cota usada por seus ' + d.p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
