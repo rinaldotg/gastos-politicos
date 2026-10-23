@@ -419,3 +419,4 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .abertura-grade .busca{margin-top:0}
 .congresso{margin-top:2rem}
 @media(max-width:720px){.abertura-grade{margin-top:0;padding-top:.7rem}}
+.congresso .mapa-painel{order:-1}.congresso .mapa-painel[hidden]{display:none}

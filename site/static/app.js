@@ -1498,7 +1498,7 @@
       });
     }
     function mostrar() {
-      var L = cg.lista(); if (!L.length) { painel.innerHTML = '<p class="apoio">Toque num ou mais estados (toque de novo para tirar).</p>'; return; }
+      var L = cg.lista(); painel.hidden = !L.length; if (!L.length) { painel.innerHTML = ''; return; }
       var a = selA.value, per = nomePer(a), e = 0, c = 0, p = 0;
       L.forEach(function (u) { if (D[u]) { e += soma(D[u], 'e', a); c += soma(D[u], 'c', a); p += D[u].p; } });
       var tit = L.length === 1 ? esc(D[L[0]] ? D[L[0]].n : L[0]) : L.length + ' estados: ' + esc(L.join(', '));
