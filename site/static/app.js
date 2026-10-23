@@ -63,7 +63,7 @@
   function carregarBusca() { return buscaCache || (buscaCache = get('data/busca.json')); }
 
   function iniciarBusca(form, aoEscolher) {
-    var input = form.querySelector('input'), lista = form.querySelector('ul'), itens = [], ativo = -1, comM = form.hasAttribute('data-com-municipios');
+    var input = form.querySelector('input'), lista = form.querySelector('ul'), itens = [], ativo = -1, comM = form.hasAttribute('data-com-municipios'), soParl = form.hasAttribute('data-so-parlamentares');
     function fechar() { lista.hidden = true; input.setAttribute('aria-expanded', 'false'); ativo = -1; }
     function marcar() {
       Array.prototype.forEach.call(lista.children, function (li, i) { li.setAttribute('aria-selected', i === ativo ? 'true' : 'false'); });
@@ -74,7 +74,7 @@
       if (q.length < 2) { fechar(); return; }
       var partes = q.split(/\s+/);
       carregarBusca().then(function (dados) {
-        itens = dados.filter(function (d) { return (comM || d.c !== 'm') && partes.every(function (p) { return d.a.indexOf(p) >= 0; }); })
+        itens = dados.filter(function (d) { return (comM || d.c !== 'm') && (!soParl || d.c === 'deputado' || d.c === 'senador') && partes.every(function (p) { return d.a.indexOf(p) >= 0; }); })
           .sort(function (a, b) { return (a.a.indexOf(partes[0]) === 0 ? 0 : 1) - (b.a.indexOf(partes[0]) === 0 ? 0 : 1) || a.n.localeCompare(b.n); })
           .slice(0, 8);
         lista.textContent = '';
