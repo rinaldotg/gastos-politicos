@@ -1335,7 +1335,7 @@
       box.appendChild(svg); svgs.push(svg);
       svg.addEventListener('click', function (e) {
         var c = e.target.closest ? e.target.closest('.cad') : null; if (!c) return;
-        var pi = +c.getAttribute('data-p'); cg.sel[pi] = true; cg.dest = P[pi][chave][+c.getAttribute('data-d')][0]; cg.notificar();
+        var pi = +c.getAttribute('data-p'); cg.ufs = {}; cg.sel = {}; cg.sel[pi] = true; cg.dest = P[pi][chave][+c.getAttribute('data-d')][0]; cg.notificar();
       });
     }
     cadeiras('d'); cadeiras('n');
@@ -1344,7 +1344,7 @@
       var b = document.createElement('button'); b.type = 'button'; b.className = 'hemi-chip'; b.setAttribute('data-p', pi); b.setAttribute('aria-pressed', 'false');
       b.title = p.d.length + ' deputado(s) e ' + p.n.length + ' senador(es)';
       b.innerHTML = '<i style="background:' + p.cor + '"></i>' + esc(p.s) + ' <b>' + (p.d.length + p.n.length) + '</b>';
-      b.addEventListener('click', function () { if (cg.sel[pi]) delete cg.sel[pi]; else cg.sel[pi] = true; cg.dest = ''; cg.notificar(); });
+      b.addEventListener('click', function () { if (cg.lista().length) { cg.ufs = {}; cg.sel = {}; } if (cg.sel[pi]) delete cg.sel[pi]; else cg.sel[pi] = true; cg.dest = ''; cg.notificar(); });
       leg.appendChild(b);
     });
     function escolhidos() { return P.map(function (p, i) { return cg.sel[i] ? i : -1; }).filter(function (i) { return i >= 0; }); }
@@ -1361,10 +1361,17 @@
           c.classList.toggle('on', !!ok);
         });
       });
-      leg.querySelectorAll('.hemi-chip').forEach(function (b) { var on = !!cg.sel[+b.getAttribute('data-p')]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      var temUf = cg.lista().length > 0;
+      leg.querySelectorAll('.hemi-chip').forEach(function (b) {
+        var pi = +b.getAttribute('data-p'), on = !!cg.sel[pi], tot = 0;
+        ['d', 'n'].forEach(function (k) { P[pi][k].forEach(function (d) { if (!temUf || cg.ufs[d[2]]) tot++; }); });
+        b.querySelector('b').textContent = tot; b.classList.toggle('zero', temUf && !tot);
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
     }
     function desenhar() {
-      var ids = escolhidos();
+      var ids = escolhidos(), modoUf = !ids.length && cg.lista().length > 0;
+      if (modoUf) ids = P.map(function (p, i) { return i; });
       if (!ids.length) { painel.innerHTML = '<p class="apoio">Escolha um ou mais partidos na legenda, ou toque numa cadeira.' + (cg.lista().length ? ' Em foco: <strong>' + esc(cg.lista().join(', ')) + '</strong>.' : '') + '</p>'; return; }
       var lista = [], nd = 0, ns_ = 0, soma = 0;
       ids.forEach(function (i) { ['d', 'n'].forEach(function (k) { P[i][k].forEach(function (d) {
@@ -1372,7 +1379,7 @@
         lista.push({ d: d, k: k, p: P[i] }); soma += d[3]; if (k === 'd') nd++; else ns_++;
       }); }); });
       lista.sort(function (a, b) { return b.d[3] - a.d[3]; });
-      var h = '<h3>' + ids.map(function (i) { return '<span class="hemi-sel"><i style="background:' + P[i].cor + '"></i>' + esc(P[i].s) + '</span>'; }).join(' ') + '</h3>';
+      var h = '<h3>' + (modoUf ? 'Deputados e senadores de ' + esc(cg.lista().join(', ')) : ids.map(function (i) { return '<span class="hemi-sel"><i style="background:' + P[i].cor + '"></i>' + esc(P[i].s) + '</span>'; }).join(' ')) + '</h3>';
       h += '<p class="apoio"><strong>' + nd + '</strong> deputado' + (nd === 1 ? '' : 's') + ' e <strong>' + ns_ + '</strong> senador' + (ns_ === 1 ? '' : 'es') + (cg.lista().length ? ' em ' + esc(cg.lista().join(', ')) : '') +
         ' · cota usada em ' + raiz.getAttribute('data-ano') + ': <strong>' + brl(soma) + '</strong>' + (lista.length ? ' (média ' + brl(soma / lista.length) + ' por parlamentar)' : '') + '</p>';
       h += '<p class="hemi-acoes"><button type="button" class="botao botao-leve" data-limpar>Limpar partidos</button>' + (cg.lista().length ? ' <button type="button" class="botao botao-leve" data-limpar-uf>Tirar estados (' + esc(cg.lista().join(', ')) + ')</button>' : '') + '</p>';
@@ -1380,7 +1387,7 @@
         var d = x.d, im = d[4] ? '<img class="mini-foto" src="' + esc(d[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
         return '<li' + (d[0] === cg.dest ? ' class="dest"' : '') + '>' + im + '<a href="' + RAIZ + d[1] + '">' + esc(d[0]) + '</a> <span>' + (x.k === 'd' ? 'Dep.' : 'Sen.') + ' ' + esc(x.p.s) + '-' + esc(d[2]) + '</span><b>' + brl(d[3]) + '</b></li>';
       }).join('') + '</ol>' + (lista.length > 300 ? '<p class="nota">Mostrando os 300 maiores de ' + lista.length + '. Filtre por estado no mapa.</p>' : '');
-      if (ids.length === 1 && P[ids[0]].l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + P[ids[0]].l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
+      if (!modoUf && ids.length === 1 && P[ids[0]].l) h += '<p><a class="botao botao-leve" href="' + RAIZ + 'partido/' + P[ids[0]].l + '/">Dinheiro do partido (fundos e gastos)</a></p>';
       painel.innerHTML = h;
       var l1 = painel.querySelector('[data-limpar]'); if (l1) l1.addEventListener('click', function () { cg.sel = {}; cg.dest = ''; cg.notificar(); });
       var l2 = painel.querySelector('[data-limpar-uf]'); if (l2) l2.addEventListener('click', function () { cg.ufs = {}; cg.notificar(); });
@@ -1436,7 +1443,7 @@
       return m[a] || 0;
     }
     function nomePer(a) { return a === '0' ? 'desde 2014' : LEG[a] ? 'na legislatura ' + LEG[a][0] + '–' + LEG[a][1] : 'em ' + a; }
-    function clicar(uf) { if (cg.ufs[uf]) delete cg.ufs[uf]; else cg.ufs[uf] = true; cg.notificar(); }
+    function clicar(uf) { if (cg.nomes().length) { cg.sel = {}; cg.ufs = {}; } if (cg.ufs[uf]) delete cg.ufs[uf]; else cg.ufs[uf] = true; cg.dest = ''; cg.notificar(); }
     function curto(v) { return v >= 1e9 ? (v / 1e9).toFixed(1).replace('.', ',') + ' bi' : v >= 1e6 ? Math.round(v / 1e6) + ' mi' : v >= 1e3 ? Math.round(v / 1e3) + ' mil' : String(Math.round(v)); }
     Object.keys(POS).forEach(function (uf) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'uf-tile'; b.setAttribute('data-uf', uf);
