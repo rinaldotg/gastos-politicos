@@ -1401,6 +1401,19 @@
     }
     var pag = raiz.querySelector('[data-pag]'), cache = {}, aba = 'c', gen = 0;
     function carregar(k) { return cache[k] || (cache[k] = get('data/cg/' + k + '.json').catch(function () { return { c: {}, f: {} }; })); }
+    function abrirForn(e, gente, fmtDoc) {
+      var dlg = raiz.querySelector('dialog.cg-dialog');
+      if (!dlg) { dlg = document.createElement('dialog'); dlg.className = 'cg-dialog'; raiz.appendChild(dlg); dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); }); }
+      var ids = Object.keys(e.pes).sort(function (x, y) { return e.pes[y] - e.pes[x]; });
+      dlg.innerHTML = '<h3>' + esc(e.nome) + '</h3><p class="apoio">CNPJ/CPF: <strong>' + esc(fmtDoc(e.doc)) + '</strong> · total recebido dos parlamentares abaixo: <strong>' + brl(e.total) + '</strong></p>' +
+        '<ol class="hemi-lista">' + ids.map(function (id) {
+          var g = gente[id]; if (!g) return '';
+          var im = g[4] ? '<img class="mini-foto" src="' + esc(g[4]) + '" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>';
+          return '<li>' + im + '<a href="' + RAIZ + g[1] + '">' + esc(g[0]) + '</a> <span>' + esc(g[3]) + '-' + esc(g[2]) + '</span><b>' + brl(e.pes[id]) + '</b></li>';
+        }).join('') + '</ol><p><button type="button" class="botao" data-fechar>Fechar</button></p>';
+      dlg.querySelector('[data-fechar]').addEventListener('click', function () { dlg.close(); });
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    }
     function pagamentos() {
       if (!pag) return;
       var chaves = [], rot = [];
@@ -1411,21 +1424,49 @@
       Promise.all(chaves.map(carregar)).then(function (rs) {
         if (meu !== gen) return;
         var ok = function (y) { y = +y; return per === '0' || (cg.LEG[per] ? y >= cg.LEG[per][0] && y <= cg.LEG[per][1] : String(y) === per); };
-        var cat = {}, forn = {};
+        var cat = {}, forn = {}, gente = {};
         rs.forEach(function (r) {
+          Object.keys(r.g || {}).forEach(function (k) { gente[k] = r.g[k]; });
           Object.keys(r.c).forEach(function (y) { if (ok(y)) r.c[y].forEach(function (t) { cat[t[0]] = (cat[t[0]] || 0) + t[1]; }); });
-          Object.keys(r.f).forEach(function (y) { if (ok(y)) r.f[y].forEach(function (t) { forn[t[0]] = (forn[t[0]] || 0) + t[1]; }); });
+          Object.keys(r.f).forEach(function (y) { if (ok(y)) r.f[y].forEach(function (t) {
+            var dg = String(t[2] || '').replace(/\D/g, ''), k = dg.length >= 11 ? dg : 'n:' + t[0].toUpperCase();
+            var e = forn[k] || (forn[k] = { nome: t[0], doc: t[2] || '', total: 0, pes: {} });
+            e.total += t[1]; if (!e.doc && t[2]) e.doc = t[2];
+            t[3].forEach(function (q) { e.pes[q[0]] = (e.pes[q[0]] || 0) + q[1]; });
+          }); });
         });
+        function fmtDoc(d) {
+          var n = String(d || '').replace(/\D/g, '');
+          if (/^\d{14}$/.test(d || '') || (n.length === 14 && !/[*]/.test(d))) return n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+          if (n.length === 11 && !/[*]/.test(d)) return n.replace(/^\d{3}(\d{3})(\d{3})\d{2}$/, '***.$1.$2-**');
+          return d || '—';
+        }
         var ordenar = function (o) { return Object.keys(o).map(function (k) { return [k, o[k]]; }).sort(function (a, b) { return b[1] - a[1]; }); };
-        var C = ordenar(cat), F = ordenar(forn), tot = 0; C.forEach(function (t) { tot += t[1]; });
+        var C = ordenar(cat), F = Object.keys(forn).map(function (k) { return forn[k]; }).sort(function (x, y) { return y.total - x.total; }), tot = 0; C.forEach(function (t) { tot += t[1]; });
         var perTxt = per === '0' ? 'desde 2014' : cg.LEG[per] ? 'na legislatura ' + cg.LEG[per][0] + '–' + cg.LEG[per][1] : 'em ' + per;
         var h = '<h3>Pagamentos da cota feitos por ' + esc(rot.join(', ')) + '</h3><p class="apoio">Período: <strong>' + perTxt + '</strong> (muda no seletor acima do mapa) · total pago: <strong>' + brl(tot) + '</strong></p>';
         h += '<div class="mapa-vis" role="group"><button type="button" data-pag-aba="c" aria-pressed="' + (aba === 'c') + '">Por tipo de gasto</button><button type="button" data-pag-aba="f" aria-pressed="' + (aba === 'f') + '">Para quem pagaram</button></div>';
-        var L = aba === 'c' ? C.slice(0, 20) : F.slice(0, 30);
-        h += L.length ? '<table class="tabela-pag"><thead><tr><th>' + (aba === 'c' ? 'Tipo de gasto' : 'Fornecedor') + '</th><th class="num">Valor</th>' + (aba === 'c' ? '<th class="num">%</th>' : '') + '</tr></thead><tbody>' +
-          L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td>' + (aba === 'c' && tot ? '<td class="num">' + Math.round(t[1] / tot * 100) + '%</td>' : '') + '</tr>'; }).join('') + '</tbody></table>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+        function avatar(pid, v) {
+          var g = gente[pid]; if (!g) return '';
+          var t = g[0] + ' (' + g[3] + '-' + g[2] + '): ' + brl(v);
+          return '<a class="av" href="' + RAIZ + g[1] + '" title="' + esc(t) + '">' + (g[4] ? '<img class="mini-foto" src="' + esc(g[4]) + '" alt="' + esc(g[0]) + '" width="30" height="30" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '<i class="mini-foto"></i>') + '</a>';
+        }
+        function quem(e, i) {
+          var ids = Object.keys(e.pes).sort(function (x, y) { return e.pes[y] - e.pes[x]; });
+          var mostra = ids.slice(0, 4).map(function (id) { return avatar(id, e.pes[id]); }).join('');
+          return '<div class="avs">' + mostra + '</div><button type="button" class="link-ver" data-forn="' + i + '">' + (ids.length > 4 ? '+' + (ids.length - 4) + ' · ver todos (' + ids.length + ')' : ids.length + ' parlamentar' + (ids.length > 1 ? 'es' : '')) + '</button>';
+        }
+        var FL = F.slice(0, 30), L = aba === 'c' ? C.slice(0, 20) : FL;
+        if (aba === 'c') {
+          h += L.length ? '<div class="tabela-rolagem"><table class="tabela-pag"><thead><tr><th>Tipo de gasto</th><th class="num">Valor</th><th class="num">%</th></tr></thead><tbody>' +
+            L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td><td class="num">' + (tot ? Math.round(t[1] / tot * 100) : 0) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+        } else {
+          h += L.length ? '<div class="tabela-rolagem"><table class="tabela-pag"><thead><tr><th>Fornecedor</th><th>CNPJ/CPF</th><th class="num">Valor</th><th>Parlamentares que pagaram</th></tr></thead><tbody>' +
+            FL.map(function (e, i) { return '<tr><td>' + esc(e.nome) + '</td><td class="doc">' + esc(fmtDoc(e.doc)) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+        }
         h += '<p class="nota">' + (aba === 'f' ? 'Fornecedores: os maiores de cada parlamentar em cada ano (até 15), por isso a lista pode somar menos que o total. ' : '') + 'Cota para o exercício da atividade parlamentar (Câmara) e CEAPS (Senado); gasto não é irregularidade.</p>';
         pag.innerHTML = h;
+        pag.querySelectorAll('[data-forn]').forEach(function (b) { b.addEventListener('click', function () { abrirForn(FL[+b.getAttribute('data-forn')], gente, fmtDoc); }); });
         pag.querySelectorAll('[data-pag-aba]').forEach(function (b) { b.addEventListener('click', function () { aba = b.getAttribute('data-pag-aba'); pagamentos(); }); });
       });
     }

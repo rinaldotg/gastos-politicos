@@ -504,9 +504,11 @@ def main():
     for y_ in anos_pares:
         gravar_pares(f"pares-{y_}.json", calcular_stats(lambda a_, y_=y_: a_ == y_, 200000), f"em {y_}")
     forn_a = defaultdict(lambda: defaultdict(list))  # pid -> ano -> [[fornecedor, total, n]]
+    forn_doc = {}  # (pid, ano, fornecedor) -> cnpj/cpf como veio da fonte
     try:
         for r_ in ler(a.resumo, "fornecedor_ano_pessoa"):
             forn_a[int(r_["pessoa_id"])][str(int(f(r_["ano"])))].append([r_["fornecedor"], round(f(r_["total"])), int(f(r_["n"]))])
+            forn_doc[(int(r_["pessoa_id"]), str(int(f(r_["ano"]))), r_["fornecedor"])] = (r_.get("cnpj_cpf") or "").strip()
     except FileNotFoundError:
         pass
     equipe = defaultdict(list)  # pessoa_id -> [[nome, cargo, nomeacao]]
@@ -1133,18 +1135,26 @@ def main():
             h_["d" if x_["cargo"] == "deputado_federal" else "n"].append(
                 [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0)), x_["foto"]])
     (saida / "data" / "cg").mkdir(parents=True, exist_ok=True)
+    por_id_ = {x_["id"]: x_ for x_ in lista}
     for gk_, pids_ in grupo_pids.items():
-        cat_g, forn_g = defaultdict(lambda: defaultdict(float)), defaultdict(lambda: defaultdict(float))
+        cat_g, forn_g, gente = defaultdict(lambda: defaultdict(float)), defaultdict(lambda: defaultdict(lambda: [0.0, "", {}])), {}
         for pid_ in pids_:
+            xp_ = por_id_[pid_]
+            gente[str(pid_)] = [xp_["nome"], xp_["url"], xp_["uf"] or "", xp_["partido"] or "", xp_["foto"]]
             for ano_g, cs_ in anos.get(pid_, {}).items():
                 for c_, v_ in cs_.items():
                     cat_g[str(ano_g)][c_] += v_
             for ano_g, fl_ in forn_a.get(pid_, {}).items():
                 for nome_f, tot_f, _n in fl_:
-                    forn_g[ano_g][nome_f] += tot_f
+                    e_ = forn_g[ano_g][nome_f]
+                    e_[0] += tot_f
+                    e_[1] = e_[1] or forn_doc.get((pid_, ano_g, nome_f), "")
+                    e_[2][pid_] = e_[2].get(pid_, 0) + tot_f
         gravar_json = dict(
+            g=gente,
             c={a_: [[c_, round(v_)] for c_, v_ in sorted(d_.items(), key=lambda t: -t[1]) if v_ > 0][:25] for a_, d_ in sorted(cat_g.items())},
-            f={a_: [[n_, round(v_)] for n_, v_ in sorted(d_.items(), key=lambda t: -t[1])[:40]] for a_, d_ in sorted(forn_g.items())})
+            f={a_: [[n_, round(e_[0]), e_[1], [[pp_, round(vv_)] for pp_, vv_ in sorted(e_[2].items(), key=lambda t: -t[1])]]
+                    for n_, e_ in sorted(d_.items(), key=lambda t: -t[1][0])[:50]] for a_, d_ in sorted(forn_g.items())})
         (saida / "data" / "cg" / f"{gk_}.json").write_text(json.dumps(gravar_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     hemi_l = sorted(hemi.values(), key=lambda h_: -(len(h_["d"]) + len(h_["n"])))
     mapa_uf = {}
