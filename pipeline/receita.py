@@ -21,11 +21,15 @@ import requests
 
 from . import common as c
 
-MODELOS = [
-    "https://arquivos.receitafederal.gov.br/index.php/s/YggdBLfdninEJX9/download?path=%2F{mes}&files={arq}",
-    "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/{mes}/{arq}",
-    "https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/{mes}/{arq}",
+TOKEN = "YggdBLfdninEJX9"  # compartilhamento publico (Nextcloud) dos dados abertos de CNPJ
+MODELOS = [  # (modelo do endereco, autenticacao basica ou None)
+    ("https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/{mes}/{arq}", None),
+    ("https://arquivos.receitafederal.gov.br/public.php/webdav/{mes}/{arq}", (TOKEN, "")),
+    ("https://arquivos.receitafederal.gov.br/index.php/s/" + TOKEN + "/download?path=%2F{mes}&files={arq}", None),
+    ("https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/{mes}/{arq}", None),
 ]
+CABECALHO = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+             "Accept": "application/zip,application/octet-stream,*/*", "Accept-Language": "pt-BR,pt;q=0.9"}
 MESES_ATRAS = 6
 MIN_TOTAL = 30000      # so empresas que receberam ao menos isso (somando todos os parlamentares)
 MAX_REL_SOCIO = 40     # outras empresas listadas por socio
@@ -51,31 +55,36 @@ def _mes(hoje, k):
     return f"{a}-{m:02d}"
 
 
-def _existe(url):
+def _existe(url, auth=None, relatar=False):
     try:
-        r = requests.get(url, stream=True, timeout=60, headers=c.HEADERS)
-        ok = r.status_code in (200, 206) and "text/html" not in r.headers.get("content-type", "")
+        r = requests.get(url, stream=True, timeout=60, headers=CABECALHO, auth=auth)
+        tipo = r.headers.get("content-type", "")
+        ok = r.status_code in (200, 206) and "text/html" not in tipo
+        if relatar:
+            print(f"    {r.status_code} {tipo[:40]} {url[:110]}", file=sys.stderr)
         r.close()
         return ok
-    except requests.RequestException:
+    except requests.RequestException as e:
+        if relatar:
+            print(f"    erro {type(e).__name__}: {str(e)[:120]} {url[:110]}", file=sys.stderr)
         return False
 
 
 def descobrir(modelos=None, hoje=None):
-    """Acha o modelo de endereco e o mes mais recente publicado."""
+    """Acha o modelo de endereco e o mes mais recente publicado. Devolve ((modelo, auth), mes)."""
     hoje = hoje or date.today()
-    for modelo in modelos or MODELOS:
+    for modelo, auth in modelos or MODELOS:
         for k in range(MESES_ATRAS):
             mes = _mes(hoje, k)
-            if _existe(modelo.format(mes=mes, arq="Socios0.zip")):
-                return modelo, mes
+            if _existe(modelo.format(mes=mes, arq="Socios0.zip"), auth, relatar=(k < 2)):
+                return (modelo, auth), mes
     return None, None
 
 
-def _baixar(url, destino):
+def _baixar(url, destino, auth=None):
     for t in range(3):
         try:
-            with requests.get(url, stream=True, timeout=(30, 300), headers=c.HEADERS) as r:
+            with requests.get(url, stream=True, timeout=(30, 300), headers=CABECALHO, auth=auth) as r:
                 r.raise_for_status()
                 with open(destino, "wb") as f:
                     for pedaco in r.iter_content(1 << 20):
@@ -90,13 +99,14 @@ def _baixar(url, destino):
     return False
 
 
-def baixar_tudo(pasta, modelo, mes):
+def baixar_tudo(pasta, fonte, mes):
+    modelo, auth = fonte
     os.makedirs(pasta, exist_ok=True)
     for tipo in ("Socios", "Estabelecimentos", "Empresas"):
         n = 0
         for i in range(10):
             dest = os.path.join(pasta, f"{tipo}{i}.zip")
-            if not os.path.exists(dest) and not _baixar(modelo.format(mes=mes, arq=f"{tipo}{i}.zip"), dest):
+            if not os.path.exists(dest) and not _baixar(modelo.format(mes=mes, arq=f"{tipo}{i}.zip"), dest, auth):
                 if os.path.exists(dest):
                     os.remove(dest)
                 break
@@ -104,7 +114,7 @@ def baixar_tudo(pasta, modelo, mes):
         print(f"  {tipo}: {n} arquivos")
     dest = os.path.join(pasta, "Municipios.zip")
     if not os.path.exists(dest):
-        _baixar(modelo.format(mes=mes, arq="Municipios.zip"), dest)
+        _baixar(modelo.format(mes=mes, arq="Municipios.zip"), dest, auth)
 
 
 def _zips(pasta, tipo):
@@ -280,13 +290,13 @@ def rodar(con, pasta="data/rfb", url_modelo=None, minimo=MIN_TOTAL, baixar=True,
         return 0
     print(f"  Receita: {len(alvos)} empresas pagas a procurar")
     if baixar:
-        modelo, mes = descobrir([url_modelo] if url_modelo else None)
-        if not modelo:
+        fonte, mes = descobrir([(url_modelo, None)] if url_modelo else None)
+        if not fonte:
             print("  AVISO: nao achei os arquivos de CNPJ da Receita. Informe o endereco no campo 'rfb_url' do workflow "
                   "(com {mes} e {arq}).", file=sys.stderr)
             return 0
-        print(f"  Receita: usando {mes} ({modelo.split('{')[0]}...)")
-        baixar_tudo(pasta, modelo, mes)
+        print(f"  Receita: usando {mes} ({fonte[0].split('{')[0]}...)")
+        baixar_tudo(pasta, fonte, mes)
     if not _zips(pasta, "Socios") or not _zips(pasta, "Estabelecimentos") or not _zips(pasta, "Empresas"):
         print("  AVISO: faltam arquivos da Receita em " + pasta, file=sys.stderr)
         return 0
