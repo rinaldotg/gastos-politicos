@@ -1122,12 +1122,30 @@ def main():
     stats_home = dict(cota=sum(x["anos"].get(ano_ref, 0) for x in parl_), parlamentares=len(parl_),
                       emendas=sum(sum(v_.values()) for v_ in emendas_tipo.values()))
     hemi = {}
+    grupo_pids = defaultdict(list)  # "uf-SP" / "p-pl" -> pessoas do quadro do Congresso
     for x_ in lista:
         if x_["cargo"] in ("deputado_federal", "senador") and x_["partido"] and x_["anos"].get(ano_atual):
             k_ = chave_partido(x_["partido"])
-            h_ = hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), d=[], n=[]))
+            h_ = hemi.setdefault(k_, dict(s=x_["partido"], l=slug_part.get(k_, ""), k=slugify(x_["partido"]) or k_.lower(), d=[], n=[]))
+            grupo_pids["p-" + h_["k"]].append(x_["id"])
+            if x_["uf"]:
+                grupo_pids["uf-" + x_["uf"]].append(x_["id"])
             h_["d" if x_["cargo"] == "deputado_federal" else "n"].append(
                 [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0)), x_["foto"]])
+    (saida / "data" / "cg").mkdir(parents=True, exist_ok=True)
+    for gk_, pids_ in grupo_pids.items():
+        cat_g, forn_g = defaultdict(lambda: defaultdict(float)), defaultdict(lambda: defaultdict(float))
+        for pid_ in pids_:
+            for ano_g, cs_ in anos.get(pid_, {}).items():
+                for c_, v_ in cs_.items():
+                    cat_g[str(ano_g)][c_] += v_
+            for ano_g, fl_ in forn_a.get(pid_, {}).items():
+                for nome_f, tot_f, _n in fl_:
+                    forn_g[ano_g][nome_f] += tot_f
+        gravar_json = dict(
+            c={a_: [[c_, round(v_)] for c_, v_ in sorted(d_.items(), key=lambda t: -t[1]) if v_ > 0][:25] for a_, d_ in sorted(cat_g.items())},
+            f={a_: [[n_, round(v_)] for n_, v_ in sorted(d_.items(), key=lambda t: -t[1])[:40]] for a_, d_ in sorted(forn_g.items())})
+        (saida / "data" / "cg" / f"{gk_}.json").write_text(json.dumps(gravar_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     hemi_l = sorted(hemi.values(), key=lambda h_: -(len(h_["d"]) + len(h_["n"])))
     mapa_uf = {}
     for sig_, nome_uf_ in UFS.items():

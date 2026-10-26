@@ -1291,6 +1291,8 @@
   function iniciarCongresso(raiz) {
     var cg = { sel: {}, ufs: {}, dest: '', ouv: [], contar: null, nomes: null, n: 0 };
     cg.lista = function () { return Object.keys(cg.ufs).sort(); };
+    cg.LEG = { L57: [2023, 2026], L56: [2019, 2022], L55: [2015, 2018] };
+    cg.periodo = function () { return '0'; };
     cg.notificar = function () { cg.ouv.forEach(function (f) { f(); }); };
     iniciarHemiciclo(raiz, cg);
     iniciarMapaDinheiro(raiz, cg);
@@ -1397,8 +1399,38 @@
       var l2 = painel.querySelector('[data-limpar-uf]'); if (l2) l2.addEventListener('click', function () { cg.ufs = {}; cg.notificar(); });
       var dst = painel.querySelector('.dest'); if (dst && dst.scrollIntoView) dst.scrollIntoView({ block: 'nearest' });
     }
-    cg.ouv.push(function () { marcar(); desenhar(); });
-    marcar(); desenhar();
+    var pag = raiz.querySelector('[data-pag]'), cache = {}, aba = 'c', gen = 0;
+    function carregar(k) { return cache[k] || (cache[k] = get('data/cg/' + k + '.json').catch(function () { return { c: {}, f: {} }; })); }
+    function pagamentos() {
+      if (!pag) return;
+      var chaves = [], rot = [];
+      escolhidos().forEach(function (i) { chaves.push('p-' + P[i].k); rot.push(P[i].s); });
+      if (!chaves.length) cg.lista().forEach(function (u) { chaves.push('uf-' + u); rot.push(u); });
+      pag.hidden = !chaves.length; if (!chaves.length) return;
+      var per = cg.periodo(), meu = ++gen;
+      Promise.all(chaves.map(carregar)).then(function (rs) {
+        if (meu !== gen) return;
+        var ok = function (y) { y = +y; return per === '0' || (cg.LEG[per] ? y >= cg.LEG[per][0] && y <= cg.LEG[per][1] : String(y) === per); };
+        var cat = {}, forn = {};
+        rs.forEach(function (r) {
+          Object.keys(r.c).forEach(function (y) { if (ok(y)) r.c[y].forEach(function (t) { cat[t[0]] = (cat[t[0]] || 0) + t[1]; }); });
+          Object.keys(r.f).forEach(function (y) { if (ok(y)) r.f[y].forEach(function (t) { forn[t[0]] = (forn[t[0]] || 0) + t[1]; }); });
+        });
+        var ordenar = function (o) { return Object.keys(o).map(function (k) { return [k, o[k]]; }).sort(function (a, b) { return b[1] - a[1]; }); };
+        var C = ordenar(cat), F = ordenar(forn), tot = 0; C.forEach(function (t) { tot += t[1]; });
+        var perTxt = per === '0' ? 'desde 2014' : cg.LEG[per] ? 'na legislatura ' + cg.LEG[per][0] + '–' + cg.LEG[per][1] : 'em ' + per;
+        var h = '<h3>Pagamentos da cota feitos por ' + esc(rot.join(', ')) + '</h3><p class="apoio">Período: <strong>' + perTxt + '</strong> (muda no seletor acima do mapa) · total pago: <strong>' + brl(tot) + '</strong></p>';
+        h += '<div class="mapa-vis" role="group"><button type="button" data-pag-aba="c" aria-pressed="' + (aba === 'c') + '">Por tipo de gasto</button><button type="button" data-pag-aba="f" aria-pressed="' + (aba === 'f') + '">Para quem pagaram</button></div>';
+        var L = aba === 'c' ? C.slice(0, 20) : F.slice(0, 30);
+        h += L.length ? '<table class="tabela-pag"><thead><tr><th>' + (aba === 'c' ? 'Tipo de gasto' : 'Fornecedor') + '</th><th class="num">Valor</th>' + (aba === 'c' ? '<th class="num">%</th>' : '') + '</tr></thead><tbody>' +
+          L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td>' + (aba === 'c' && tot ? '<td class="num">' + Math.round(t[1] / tot * 100) + '%</td>' : '') + '</tr>'; }).join('') + '</tbody></table>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+        h += '<p class="nota">' + (aba === 'f' ? 'Fornecedores: os maiores de cada parlamentar em cada ano (até 15), por isso a lista pode somar menos que o total. ' : '') + 'Cota para o exercício da atividade parlamentar (Câmara) e CEAPS (Senado); gasto não é irregularidade.</p>';
+        pag.innerHTML = h;
+        pag.querySelectorAll('[data-pag-aba]').forEach(function (b) { b.addEventListener('click', function () { aba = b.getAttribute('data-pag-aba'); pagamentos(); }); });
+      });
+    }
+    cg.ouv.push(function () { marcar(); desenhar(); pagamentos(); });
+    marcar(); desenhar(); pagamentos();
   }
 
   function iniciarPosicao(sec) {
@@ -1440,7 +1472,7 @@
       GO: [2, 3], DF: [3, 3], BA: [4, 3], AL: [5, 3], SE: [6, 3], MS: [2, 4], MG: [3, 4], ES: [4, 4], PR: [2, 5], SP: [3, 5], RJ: [4, 5], SC: [2, 6], RS: [2, 7] };
     var selT = raiz.querySelector('[data-mapa-tipo]'), selA = raiz.querySelector('[data-mapa-ano]'), grade = raiz.querySelector('[data-mapa-grade]'), painel = raiz.querySelector('[data-mapa-painel]');
     var modo = raiz.querySelector('[data-mapa-modo]');
-    var LEG = { L57: [2023, 2026], L56: [2019, 2022], L55: [2015, 2018] };
+    var LEG = cg.LEG; cg.periodo = function () { return selA.value; };
     function soma(d, t, a) {
       var m = d && d[t]; if (!m) return 0;
       if (LEG[a]) { var s = 0, y; for (y = LEG[a][0]; y <= LEG[a][1]; y++) s += m[String(y)] || 0; return s; }
@@ -1506,7 +1538,7 @@
         '<div><dt>Cota usada por ' + p + ' deputados e senadores ' + per + '</dt><dd>' + (c ? brl(c) : '—') + '</dd></div></dl>' +
         '<p class="hemi-acoes">' + L.map(function (u) { return '<a class="botao botao-leve" href="' + RAIZ + 'estado/' + u.toLowerCase() + '/">Ver ' + esc(D[u] ? D[u].n : u) + '</a>'; }).join('') + '</p>';
     }
-    [selT, selA].forEach(function (s) { s.addEventListener('change', function () { desenhar(); mostrar(); }); });
+    [selT, selA].forEach(function (s) { s.addEventListener('change', function () { cg.notificar(); }); });
     cg.ouv.push(function () { desenhar(); mostrar(); });
     desenhar();
   }

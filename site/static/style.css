@@ -420,3 +420,8 @@ select{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--l
 .congresso{margin-top:2rem}
 @media(max-width:720px){.abertura-grade{margin-top:0;padding-top:.7rem}}
 .congresso .mapa-painel{order:-1}.congresso .mapa-painel[hidden]{display:none}
+.cg-pag{margin-top:1rem}.cg-pag h3{margin:.2rem 0}
+.tabela-pag{width:100%;border-collapse:collapse;margin:.6rem 0}
+.tabela-pag th,.tabela-pag td{padding:.5rem .4rem;border-bottom:1px solid var(--linha);text-align:left;font-size:.92rem}
+.tabela-pag th.num,.tabela-pag td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cg-pag .mapa-vis{margin:.4rem 0}
