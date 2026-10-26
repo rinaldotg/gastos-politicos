@@ -59,6 +59,13 @@ def main():
                               ROUND(t.total_global,2) total_global, t.n_pessoas
                        FROM g JOIN t ON t.doc=g.doc GROUP BY g.pessoa_id, g.doc
                        HAVING SUM(g.valor)>=20000 AND SUM(g.valor)>=0.8*t.total_global""",
+        "rf_empresa": "SELECT cnpj8, razao, natureza, capital, porte, alvo FROM rf_empresa",
+        "rf_estab": "SELECT cnpj, cnpj8, matriz, fantasia, situacao, abertura, cnae, logradouro, numero, complemento, bairro, cep, uf, municipio, chave_end FROM rf_estab",
+        "rf_socio": "SELECT cnpj8, tipo, nome, doc, qualificacao, entrada, chave FROM rf_socio",
+        "rf_relacao": "SELECT alvo8, tipo, chave, outro8, cnpj, total FROM rf_relacao",
+        "fornecedor_total": """SELECT d documento, ROUND(SUM(valor)) total, COUNT(DISTINCT pessoa_id) n_pessoas FROM (
+                       SELECT pessoa_id, valor, REPLACE(REPLACE(REPLACE(COALESCE(cnpj_cpf,''),'.',''),'/',''),'-','') d
+                       FROM gasto WHERE fonte NOT LIKE 'pres%') WHERE LENGTH(d)=14 GROUP BY d""",
         "pessoa_foto": "SELECT pessoa_id, url FROM pessoa_foto",
         "candidatura": "SELECT pessoa_id, ano, cargo, partido, numero, nome_urna, situacao FROM candidatura ORDER BY pessoa_id",
         "gabinete_remun": "SELECT pessoa_id, ano, mes, nome, cargo, bruto, fonte FROM gabinete_remun ORDER BY pessoa_id, ano, mes, nome",

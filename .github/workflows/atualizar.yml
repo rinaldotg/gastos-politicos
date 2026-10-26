@@ -9,6 +9,14 @@ on:
         description: "Coletar dados novos do governo (lento). Desmarcado: so refaz o site com o banco ja existente."
         type: boolean
         default: false
+      receita:
+        description: "Baixar o cadastro de CNPJ da Receita (socios e enderecos das empresas pagas). Lento: ~8 GB e ate 2h."
+        type: boolean
+        default: false
+      rfb_url:
+        description: "Opcional: modelo do endereco dos zips da Receita, com {mes} e {arq} (ex.: https://.../2026-10/{arq})."
+        type: string
+        default: ""
 
 permissions:
   contents: write   # guardar o banco numa release
@@ -103,6 +111,19 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao
 
+      - name: Cadastro da Receita (socios e enderecos das empresas pagas)
+        if: ${{ inputs.receita == true }}
+        continue-on-error: true
+        timeout-minutes: 240
+        env:
+          RFB_URL: ${{ inputs.rfb_url }}
+        run: |
+          if [ -n "$RFB_URL" ]; then
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita --rfb-url "$RFB_URL"
+          else
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita
+          fi
+
       - name: Conferir e gerar resumo
         run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
 
@@ -114,7 +135,7 @@ jobs:
         run: python site/build.py --resumo resumo --saida dist --anterior snapshot_anterior.json --base-url "https://oquepagamos.com.br"
 
       - name: Guardar o banco atualizado
-        if: ${{ inputs.coletar == true }}
+        if: ${{ inputs.coletar == true || inputs.receita == true }}
         run: |
           gzip -kf data/gastos.db
           gh release view Dados >/dev/null 2>&1 || gh release create Dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."

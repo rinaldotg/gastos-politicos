@@ -179,3 +179,12 @@ CREATE TABLE IF NOT EXISTS partido_carga (ano INTEGER, base TEXT, linhas INTEGER
 CREATE TABLE IF NOT EXISTS pessoa_foto (pessoa_id INTEGER PRIMARY KEY, url TEXT);
 CREATE TABLE IF NOT EXISTS candidatura (pessoa_id INTEGER NOT NULL, ano INTEGER, cargo TEXT, partido TEXT, numero TEXT, nome_urna TEXT, situacao TEXT);
 CREATE INDEX IF NOT EXISTS ix_candidatura ON candidatura (pessoa_id, ano);
+
+CREATE TABLE IF NOT EXISTS rf_empresa (cnpj8 TEXT PRIMARY KEY, razao TEXT, natureza TEXT, capital TEXT, porte TEXT, alvo INTEGER);
+CREATE TABLE IF NOT EXISTS rf_estab (cnpj TEXT PRIMARY KEY, cnpj8 TEXT, matriz INTEGER, fantasia TEXT, situacao TEXT, abertura TEXT, cnae TEXT,
+  logradouro TEXT, numero TEXT, complemento TEXT, bairro TEXT, cep TEXT, uf TEXT, municipio TEXT, chave_end TEXT);
+CREATE TABLE IF NOT EXISTS rf_socio (cnpj8 TEXT, tipo TEXT, nome TEXT, doc TEXT, qualificacao TEXT, entrada TEXT, chave TEXT);
+CREATE TABLE IF NOT EXISTS rf_relacao (alvo8 TEXT, tipo TEXT, chave TEXT, outro8 TEXT, cnpj TEXT, total INTEGER);
+CREATE INDEX IF NOT EXISTS ix_rf_estab8 ON rf_estab (cnpj8);
+CREATE INDEX IF NOT EXISTS ix_rf_socio8 ON rf_socio (cnpj8);
+CREATE INDEX IF NOT EXISTS ix_rf_rel ON rf_relacao (alvo8);

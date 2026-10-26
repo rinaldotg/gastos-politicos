@@ -1135,6 +1135,55 @@ def main():
             h_["d" if x_["cargo"] == "deputado_federal" else "n"].append(
                 [x_["nome"], x_["url"], x_["uf"] or "", round(x_["anos"].get(ano_ref, 0)), x_["foto"]])
     (saida / "data" / "cg").mkdir(parents=True, exist_ok=True)
+    # cadastro da Receita (socios e enderecos): uma pagina de dados por grupo de 3 digitos do CNPJ basico
+    rf_tem = set()
+    try:
+        rf_emp = {r_["cnpj8"]: r_ for r_ in ler(a.resumo, "rf_empresa")}
+        rf_est = defaultdict(list)
+        for r_ in ler(a.resumo, "rf_estab"):
+            rf_est[r_["cnpj8"]].append(r_)
+        rf_soc = defaultdict(list)
+        for r_ in ler(a.resumo, "rf_socio"):
+            rf_soc[r_["cnpj8"]].append(r_)
+        rf_rel = defaultdict(list)
+        for r_ in ler(a.resumo, "rf_relacao"):
+            rf_rel[r_["alvo8"]].append(r_)
+        cota_8 = defaultdict(float)
+        try:
+            for r_ in ler(a.resumo, "fornecedor_total"):
+                cota_8[re.sub(r"\D", "", r_["documento"])[:8]] += f(r_["total"])
+        except FileNotFoundError:
+            pass
+    except FileNotFoundError:
+        rf_emp, rf_est, rf_soc, rf_rel, cota_8 = {}, {}, {}, {}, {}
+
+    def rf_resumo_empresa(b_):
+        ms_ = next((e_ for e_ in rf_est.get(b_, []) if e_["matriz"] == "1"), (rf_est.get(b_) or [None])[0])
+        return [b_, (rf_emp.get(b_) or {}).get("razao", ""), (ms_ or {}).get("situacao", ""), (ms_ or {}).get("uf", ""), round(cota_8.get(b_, 0)), (ms_ or {}).get("cnpj", "")]
+    rf_dir = saida / "data" / "rf"
+    rf_dir.mkdir(parents=True, exist_ok=True)
+    rf_shards = defaultdict(dict)
+    for b_, e_ in rf_emp.items():
+        if e_.get("alvo") != "1":
+            continue
+        rs_, re_ = {}, {}
+        for r_ in rf_rel.get(b_, []):
+            if r_["tipo"] == "socio":
+                ent_ = rs_.setdefault(r_["chave"], [int(f(r_["total"])), []])
+                ent_[1].append(rf_resumo_empresa(r_["outro8"]))
+            else:
+                ent_ = re_.setdefault(r_["chave"], [int(f(r_["total"])), []])
+                oc_ = next((x_ for x_ in rf_est.get(r_["outro8"], []) if x_["cnpj"] == r_["cnpj"]), None) or {}
+                ent_[1].append(rf_resumo_empresa(r_["outro8"]) + [r_["cnpj"], (oc_.get("logradouro") or "")])
+        rf_shards[b_[:3]][b_] = dict(
+            r=e_["razao"], p=e_["porte"], cap=e_["capital"], cota=round(cota_8.get(b_, 0)),
+            e=[[x_["cnpj"], x_["fantasia"], x_["situacao"], x_["abertura"], ", ".join(t_ for t_ in (x_["logradouro"], x_["numero"], x_["complemento"], x_["bairro"]) if t_),
+                x_["municipio"], x_["uf"], x_["cep"], x_["matriz"], x_["chave_end"]] for x_ in rf_est.get(b_, [])],
+            s=[[x_["nome"], x_["doc"], x_["qualificacao"], x_["entrada"], x_["tipo"], x_["chave"]] for x_ in rf_soc.get(b_, [])],
+            rs=rs_, re=re_)
+        rf_tem.add(b_)
+    for k_, d_ in rf_shards.items():
+        (rf_dir / f"{k_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     por_id_ = {x_["id"]: x_ for x_ in lista}
     for gk_, pids_ in grupo_pids.items():
         cat_g, forn_g, gente = defaultdict(lambda: defaultdict(float)), defaultdict(lambda: defaultdict(lambda: [0.0, "", {}])), {}
@@ -1153,7 +1202,7 @@ def main():
         gravar_json = dict(
             g=gente,
             c={a_: [[c_, round(v_)] for c_, v_ in sorted(d_.items(), key=lambda t: -t[1]) if v_ > 0][:25] for a_, d_ in sorted(cat_g.items())},
-            f={a_: [[n_, round(e_[0]), e_[1], [[pp_, round(vv_)] for pp_, vv_ in sorted(e_[2].items(), key=lambda t: -t[1])]]
+            f={a_: [[n_, round(e_[0]), e_[1], [[pp_, round(vv_)] for pp_, vv_ in sorted(e_[2].items(), key=lambda t: -t[1])], 1 if re.sub(r"\D", "", e_[1])[:8] in rf_tem and len(re.sub(r"\D", "", e_[1])) == 14 else 0]
                     for n_, e_ in sorted(d_.items(), key=lambda t: -t[1][0])[:50]] for a_, d_ in sorted(forn_g.items())})
         (saida / "data" / "cg" / f"{gk_}.json").write_text(json.dumps(gravar_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     hemi_l = sorted(hemi.values(), key=lambda h_: -(len(h_["d"]) + len(h_["n"])))

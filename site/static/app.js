@@ -1401,6 +1401,88 @@
     }
     var pag = raiz.querySelector('[data-pag]'), cache = {}, aba = 'c', gen = 0;
     function carregar(k) { return cache[k] || (cache[k] = get('data/cg/' + k + '.json').catch(function () { return { c: {}, f: {} }; })); }
+    var SIT = { '01': 'Nula', '02': 'Ativa', '03': 'Suspensa', '04': 'Inapta', '08': 'Baixada' };
+    function cnpjFmt(d) { d = String(d || '').replace(/\D/g, ''); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d.length === 8 ? d.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1.$2.$3') + '/…' : d; }
+    function dataBr(d) { return /^\d{8}$/.test(d || '') ? d.slice(6) + '/' + d.slice(4, 6) + '/' + d.slice(0, 4) : (d || ''); }
+    function curtoN(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+    var shardsRf = {};
+    function carregarRf(b8) { var k = b8.slice(0, 3); return shardsRf[k] || (shardsRf[k] = get('data/rf/' + k + '.json').catch(function () { return {}; })); }
+    var cytoP = null;
+    function carregarCyto() {
+      if (window.cytoscape) return Promise.resolve(window.cytoscape);
+      return cytoP || (cytoP = new Promise(function (ok, no) {
+        var sc = document.createElement('script'); sc.src = RAIZ + 'static/cytoscape.min.js';
+        sc.onload = function () { ok(window.cytoscape); }; sc.onerror = function () { no(); }; document.head.appendChild(sc);
+      }));
+    }
+    function abrirRelacoes(cnpj, b8, voltar) {
+      b8 = b8 || String(cnpj).replace(/\D/g, '').slice(0, 8);
+      var dlg = raiz.querySelector('dialog.cg-rel');
+      if (!dlg) { dlg = document.createElement('dialog'); dlg.className = 'cg-dialog cg-rel'; raiz.appendChild(dlg); dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); }); }
+      dlg.innerHTML = '<p class="apoio">Carregando…</p>';
+      if (dlg.showModal) { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+      carregarRf(b8).then(function (sh) {
+        var d = sh[b8];
+        if (!d) { dlg.innerHTML = '<h3>' + esc(cnpjFmt(cnpj || b8)) + '</h3><p class="apoio">Ainda não há dados do cadastro da Receita para esta empresa.</p><p><button type="button" class="botao" data-fechar>Fechar</button></p>'; dlg.querySelector('[data-fechar]').addEventListener('click', function () { dlg.close(); }); return; }
+        var est = d.e.filter(function (x) { return x[0] === cnpj; })[0] || d.e.filter(function (x) { return x[8] === '1'; })[0] || d.e[0] || [];
+        var h = '<h3>' + esc(d.r) + '</h3><p class="apoio">' + (est[1] ? esc(est[1]) + ' · ' : '') + 'CNPJ <strong>' + esc(cnpjFmt(est[0] || cnpj)) + '</strong> · situação <strong>' + esc(SIT[est[2]] || est[2] || '—') + '</strong>' + (est[3] ? ' · aberta em ' + esc(dataBr(est[3])) : '') + '</p>';
+        if (est[4]) h += '<p class="apoio">' + esc(est[4]) + (est[5] ? ' — ' + esc(est[5]) + '/' + esc(est[6]) : '') + (est[7] ? ' · CEP ' + esc(est[7]) : '') + '</p>';
+        if (d.cota) h += '<p class="apoio">Recebeu <strong>' + brl(d.cota) + '</strong> da cota parlamentar (soma no site, desde 2014).</p>';
+        h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
+        var socs = {}; d.s.forEach(function (x) { var k = x[5] || ('n:' + x[0]); if (!socs[k]) socs[k] = x; });
+        var ks = Object.keys(socs);
+        h += '<details open><summary>Sócios (' + ks.length + ')</summary><ul class="rel-lista">' + ks.map(function (k) { var x = socs[k]; return '<li><strong>' + esc(x[0]) + '</strong> <span>' + esc(x[2]) + (x[1] ? ' · ' + esc(x[1]) : '') + (x[3] ? ' · desde ' + esc(dataBr(x[3])) : '') + '</span></li>'; }).join('') + '</ul></details>';
+        ks.forEach(function (k) {
+          var r = d.rs[k]; if (!r || !r[1].length) return;
+          h += '<details><summary>Outras empresas de ' + esc(socs[k][0]) + ' (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[5] || e[0])) + ' · ' + esc(SIT[e[2]] || e[2] || '—') + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+        });
+        Object.keys(d.re).forEach(function (k) {
+          var r = d.re[k];
+          h += '<details><summary>Outras empresas ativas no mesmo endereço (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[6] || e[5])) + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+        });
+        h += '<p class="nota">Dados abertos do cadastro de CNPJ da Receita Federal. Ter sócio ou endereço em comum é comum (mesmo contador, família, prédio comercial) e <strong>não indica irregularidade</strong>. Sócios pessoa física são ligados por nome e dígitos centrais do CPF; homônimos podem se misturar.</p>';
+        h += '<p class="hemi-acoes">' + (voltar ? '<button type="button" class="botao botao-leve" data-voltar>Voltar</button>' : '') + '<button type="button" class="botao" data-fechar>Fechar</button></p>';
+        dlg.innerHTML = h;
+        dlg.querySelector('[data-fechar]').addEventListener('click', function () { dlg.close(); });
+        var bv = dlg.querySelector('[data-voltar]'); if (bv) bv.addEventListener('click', function () { abrirRelacoes(voltar[0], voltar[1], voltar[2]); });
+        var info = dlg.querySelector('[data-rel-info]'), box = dlg.querySelector('[data-grafo]');
+        carregarCyto().then(function (cy) {
+          var els = [], vistos = {}, nid = 0;
+          function no(id, label, tipo, extra) { if (vistos[id]) return; vistos[id] = 1; els.push({ group: 'nodes', data: Object.assign({ id: id, label: curtoN(label, 30), tipo: tipo }, extra || {}) }); }
+          function liga(a, b, rot) { els.push({ group: 'edges', data: { id: 'x' + (nid++), source: a, target: b, label: rot || '' } }); }
+          no('e:' + b8, d.r, 'alvo', { b8: b8, cnpj: est[0] || cnpj, razao: d.r });
+          ks.forEach(function (k) {
+            var x = socs[k]; no('s:' + k, x[0], 'socio', { razao: x[0], qual: x[2], doc: x[1] }); liga('e:' + b8, 's:' + k, curtoN(x[2], 18));
+            ((d.rs[k] || [0, []])[1]).forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('s:' + k, 'e:' + e[0]); });
+          });
+          Object.keys(d.re).forEach(function (k) {
+            no('a:' + k, 'Mesmo endereço', 'end', { razao: est[4] || 'Endereço', n: d.re[k][0] }); liga('e:' + b8, 'a:' + k);
+            d.re[k][1].forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[6] || e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('a:' + k, 'e:' + e[0]); });
+          });
+          var css = getComputedStyle(document.documentElement), cor = function (v, f) { return (css.getPropertyValue(v) || '').trim() || f; };
+          var tinta = cor('--tinta', '#14213d'), acento = cor('--acento', '#1f4fd8'), linha = cor('--linha', '#c9d1e0'), papel = cor('--papel', '#fff');
+          var g = cy({ container: box, elements: els, minZoom: 0.3, maxZoom: 2.5, wheelSensitivity: 0.25,
+            style: [
+              { selector: 'node', style: { label: 'data(label)', 'font-size': 10, color: tinta, 'text-wrap': 'wrap', 'text-max-width': 90, 'text-valign': 'bottom', 'text-margin-y': 4, 'background-color': '#8fa3c7', 'border-width': 2, 'border-color': papel, width: 22, height: 22 } },
+              { selector: 'node[tipo="alvo"]', style: { 'background-color': acento, width: 44, height: 44, 'font-weight': 700 } },
+              { selector: 'node[tipo="socio"]', style: { shape: 'diamond', 'background-color': '#7a4fb0', width: 28, height: 28 } },
+              { selector: 'node[tipo="end"]', style: { shape: 'round-rectangle', 'background-color': '#4f8a2f', width: 28, height: 22 } },
+              { selector: 'node[tipo="cota"]', style: { 'background-color': '#d9822b', width: 26, height: 26 } },
+              { selector: 'edge', style: { width: 1.5, 'line-color': linha, label: 'data(label)', 'font-size': 8, color: tinta, 'text-rotation': 'autorotate', 'text-background-color': papel, 'text-background-opacity': 0.8 } },
+              { selector: ':selected', style: { 'border-color': tinta, 'border-width': 3 } }],
+            layout: { name: 'cose', animate: false, nodeRepulsion: 9000, idealEdgeLength: 70, padding: 20 } });
+          g.on('tap', 'node', function (ev) {
+            var n = ev.target.data(), t = '';
+            if (n.tipo === 'socio') t = '<strong>' + esc(n.razao) + '</strong> · ' + esc(n.qual || 'sócio') + (n.doc ? ' · ' + esc(n.doc) : '');
+            else if (n.tipo === 'end') t = '<strong>Endereço da empresa</strong>: ' + esc(n.razao) + ' · ' + n.n + ' outra(s) empresa(s) ativa(s) neste endereço.';
+            else t = '<strong>' + esc(n.razao) + '</strong>' + (n.cnpj ? ' · ' + esc(cnpjFmt(n.cnpj)) : '') + (n.sit ? ' · ' + esc(SIT[n.sit] || n.sit) : '') + (n.uf ? ' · ' + esc(n.uf) : '') + (n.cota ? ' · recebeu ' + brl(n.cota) + ' de parlamentares' : '');
+            if (n.b8 && n.b8 !== b8) t += ' <button type="button" class="link-ver" data-centrar="' + esc(n.b8) + '" data-cnpj="' + esc(n.cnpj || '') + '">ver relações desta empresa</button>';
+            info.innerHTML = t;
+            var bt = info.querySelector('[data-centrar]'); if (bt) bt.addEventListener('click', function () { abrirRelacoes(bt.getAttribute('data-cnpj'), bt.getAttribute('data-centrar'), [cnpj, b8, voltar]); });
+          });
+        }).catch(function () { box.innerHTML = '<p class="apoio">Não consegui carregar o gráfico; use as listas abaixo.</p>'; });
+      });
+    }
     function abrirForn(e, gente, fmtDoc) {
       var dlg = raiz.querySelector('dialog.cg-dialog');
       if (!dlg) { dlg = document.createElement('dialog'); dlg.className = 'cg-dialog'; raiz.appendChild(dlg); dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); }); }
@@ -1430,7 +1512,8 @@
           Object.keys(r.c).forEach(function (y) { if (ok(y)) r.c[y].forEach(function (t) { cat[t[0]] = (cat[t[0]] || 0) + t[1]; }); });
           Object.keys(r.f).forEach(function (y) { if (ok(y)) r.f[y].forEach(function (t) {
             var dg = String(t[2] || '').replace(/\D/g, ''), k = dg.length >= 11 ? dg : 'n:' + t[0].toUpperCase();
-            var e = forn[k] || (forn[k] = { nome: t[0], doc: t[2] || '', total: 0, pes: {} });
+            var e = forn[k] || (forn[k] = { nome: t[0], doc: t[2] || '', total: 0, pes: {}, rf: 0 });
+            if (t[4]) e.rf = 1;
             e.total += t[1]; if (!e.doc && t[2]) e.doc = t[2];
             t[3].forEach(function (q) { e.pes[q[0]] = (e.pes[q[0]] || 0) + q[1]; });
           }); });
@@ -1462,11 +1545,12 @@
             L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td><td class="num">' + (tot ? Math.round(t[1] / tot * 100) : 0) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         } else {
           h += L.length ? '<div class="tabela-rolagem"><table class="tabela-pag"><thead><tr><th>Fornecedor</th><th>CNPJ/CPF</th><th class="num">Valor</th><th>Parlamentares que pagaram</th></tr></thead><tbody>' +
-            FL.map(function (e, i) { return '<tr><td>' + esc(e.nome) + '</td><td class="doc">' + esc(fmtDoc(e.doc)) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+            FL.map(function (e, i) { return '<tr><td>' + esc(e.nome) + '</td><td class="doc">' + (e.rf ? '<a href="#" class="doc-link" data-rel="' + esc(String(e.doc).replace(/\D/g, '')) + '" title="Ver sócios e empresas ligadas">' + esc(fmtDoc(e.doc)) + '</a>' : esc(fmtDoc(e.doc))) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         }
         h += '<p class="nota">' + (aba === 'f' ? 'Fornecedores: os maiores de cada parlamentar em cada ano (até 15), por isso a lista pode somar menos que o total. ' : '') + 'Cota para o exercício da atividade parlamentar (Câmara) e CEAPS (Senado); gasto não é irregularidade.</p>';
         pag.innerHTML = h;
         pag.querySelectorAll('[data-forn]').forEach(function (b) { b.addEventListener('click', function () { abrirForn(FL[+b.getAttribute('data-forn')], gente, fmtDoc); }); });
+        pag.querySelectorAll('[data-rel]').forEach(function (l) { l.addEventListener('click', function (ev) { ev.preventDefault(); abrirRelacoes(l.getAttribute('data-rel')); }); });
         pag.querySelectorAll('[data-pag-aba]').forEach(function (b) { b.addEventListener('click', function () { aba = b.getAttribute('data-pag-aba'); pagamentos(); }); });
       });
     }
