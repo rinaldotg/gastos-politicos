@@ -13,6 +13,7 @@ import io
 import os
 import re
 import sys
+import time
 import zipfile
 from collections import defaultdict
 from datetime import date
@@ -81,25 +82,39 @@ def descobrir(modelos=None, hoje=None):
     return None, None
 
 
-def _baixar(url, destino, auth=None):
-    for t in range(3):
+def _baixar(url, destino, auth=None, tentativas=8):
+    """True: baixou. False: o arquivo nao existe (404, fim da lista). Levanta RuntimeError se a rede falhar de vez.
+    Retoma de onde parou (Range) e espera mais a cada falha: o servidor da Receita derruba conexoes seguidas."""
+    parcial = destino + ".part"
+    for t in range(tentativas):
         try:
-            with requests.get(url, stream=True, timeout=(30, 300), headers=CABECALHO, auth=auth) as r:
+            ja = os.path.getsize(parcial) if os.path.exists(parcial) else 0
+            cab = dict(CABECALHO)
+            if ja:
+                cab["Range"] = f"bytes={ja}-"
+            with requests.get(url, stream=True, timeout=(30, 300), headers=cab, auth=auth) as r:
+                if r.status_code == 404:
+                    return False
+                if r.status_code == 416:  # ja completo
+                    os.replace(parcial, destino)
+                    return True
                 r.raise_for_status()
-                with open(destino, "wb") as f:
+                modo = "ab" if (ja and r.status_code == 206) else "wb"
+                with open(parcial, modo) as f:
                     for pedaco in r.iter_content(1 << 20):
                         f.write(pedaco)
+            os.replace(parcial, destino)
             return True
-        except requests.HTTPError as e:
-            if e.response is not None and e.response.status_code == 404:
-                return False
-            print(f"  nova tentativa {t + 1} ({e})", file=sys.stderr)
         except requests.RequestException as e:
-            print(f"  nova tentativa {t + 1} ({e})", file=sys.stderr)
-    return False
+            espera = min(15 * (t + 1), 120)
+            print(f"  {os.path.basename(destino)}: tentativa {t + 1}/{tentativas} falhou ({type(e).__name__}: {str(e)[:100]}); espero {espera}s", file=sys.stderr)
+            time.sleep(espera)
+    raise RuntimeError(f"nao consegui baixar {os.path.basename(destino)}")
 
 
 def baixar_tudo(pasta, fonte, mes):
+    """Baixa Socios, Estabelecimentos e Empresas. Se a rede falhar no meio, levanta erro: com arquivos faltando
+    as relacoes ficariam incompletas, entao e melhor nao gravar nada."""
     modelo, auth = fonte
     os.makedirs(pasta, exist_ok=True)
     for tipo in ("Socios", "Estabelecimentos", "Empresas"):
@@ -107,14 +122,17 @@ def baixar_tudo(pasta, fonte, mes):
         for i in range(10):
             dest = os.path.join(pasta, f"{tipo}{i}.zip")
             if not os.path.exists(dest) and not _baixar(modelo.format(mes=mes, arq=f"{tipo}{i}.zip"), dest, auth):
-                if os.path.exists(dest):
-                    os.remove(dest)
                 break
             n += 1
-        print(f"  {tipo}: {n} arquivos")
+            print(f"  {tipo}{i}.zip ok ({os.path.getsize(dest) // (1 << 20)} MB)", flush=True)
+        if n == 0:
+            raise RuntimeError(f"nenhum arquivo de {tipo} encontrado")
     dest = os.path.join(pasta, "Municipios.zip")
     if not os.path.exists(dest):
-        _baixar(modelo.format(mes=mes, arq="Municipios.zip"), dest, auth)
+        try:
+            _baixar(modelo.format(mes=mes, arq="Municipios.zip"), dest, auth)
+        except RuntimeError:
+            print("  AVISO: sem a tabela de municipios; o nome da cidade ficara como codigo", file=sys.stderr)
 
 
 def _zips(pasta, tipo):
@@ -296,7 +314,11 @@ def rodar(con, pasta="data/rfb", url_modelo=None, minimo=MIN_TOTAL, baixar=True,
                   "(com {mes} e {arq}).", file=sys.stderr)
             return 0
         print(f"  Receita: usando {mes} ({fonte[0].split('{')[0]}...)")
-        baixar_tudo(pasta, fonte, mes)
+        try:
+            baixar_tudo(pasta, fonte, mes)
+        except RuntimeError as e:
+            print(f"  ERRO: {e}. Nada foi gravado; rode de novo (os arquivos ja baixados nao sao baixados outra vez neste mesmo job).", file=sys.stderr)
+            return 0
     if not _zips(pasta, "Socios") or not _zips(pasta, "Estabelecimentos") or not _zips(pasta, "Empresas"):
         print("  AVISO: faltam arquivos da Receita em " + pasta, file=sys.stderr)
         return 0
