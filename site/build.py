@@ -1156,6 +1156,16 @@ def main():
             pass
     except FileNotFoundError:
         rf_emp, rf_est, rf_soc, rf_rel, cota_8 = {}, {}, {}, {}, {}
+    doa_por = defaultdict(list)  # "e:cnpj8" ou chave do socio -> doacoes a campanhas de parlamentares
+    try:
+        por_pid_ = {x_["id"]: x_ for x_ in lista}
+        for r_ in ler(a.resumo, "doacao_campanha"):
+            x_ = por_pid_.get(int(f(r_["pessoa_id"])))
+            if x_:
+                doa_por[("e:" + r_["chave"]) if r_["tipo"] == "empresa" else r_["chave"]].append(
+                    [int(f(r_["ano"])), x_["nome"], x_["url"], "Senador" if x_["cargo"] == "senador" else "Deputado federal", r_["partido"], round(f(r_["valor"])), r_["doador"]])
+    except FileNotFoundError:
+        pass
 
     def rf_resumo_empresa(b_):
         ms_ = next((e_ for e_ in rf_est.get(b_, []) if e_["matriz"] == "1"), (rf_est.get(b_) or [None])[0])
@@ -1183,6 +1193,12 @@ def main():
                 x_["municipio"], x_["uf"], x_["cep"], x_["matriz"], x_["chave_end"]] for x_ in rf_est.get(b_, [])],
             s=[[x_["nome"], x_["doc"], x_["qualificacao"], x_["entrada"], x_["tipo"], x_["chave"]] for x_ in rf_soc.get(b_, [])],
             rs=rs_, re=re_)
+        chd_ = {"e:" + b_} | {x_["chave"] for x_ in rf_soc.get(b_, []) if x_["chave"]}
+        for ent_ in list(rs_.values()) + list(re_.values()):
+            for o_ in ent_[1]:
+                chd_ |= {"e:" + o_[0]} | {sc_[3] for sc_ in o_[-1] if sc_[3]}
+        rf_shards[b_[:3]][b_]["doa"] = {k_: sorted(doa_por[k_], key=lambda t: (-t[0], -t[5])) for k_ in chd_ if k_ in doa_por}
+        rf_shards[b_[:3]][b_]["dok"] = 1 if doa_por else 0
         rf_tem.add(b_)
     for k_, d_ in rf_shards.items():
         (rf_dir / f"{k_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

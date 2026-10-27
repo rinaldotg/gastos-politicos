@@ -111,7 +111,7 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so atuacao
 
-      - name: Cadastro da Receita (socios e enderecos das empresas pagas)
+      - name: Cadastro da Receita (socios e enderecos) e doacoes de campanha
         if: ${{ inputs.receita == true }}
         continue-on-error: true
         timeout-minutes: 240
@@ -119,9 +119,9 @@ jobs:
           RFB_URL: ${{ inputs.rfb_url }}
         run: |
           if [ -n "$RFB_URL" ]; then
-            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita --rfb-url "$RFB_URL"
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes --rfb-url "$RFB_URL"
           else
-            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes
           fi
 
       - name: Conferir e gerar resumo

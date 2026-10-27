@@ -188,3 +188,5 @@ CREATE TABLE IF NOT EXISTS rf_relacao (alvo8 TEXT, tipo TEXT, chave TEXT, outro8
 CREATE INDEX IF NOT EXISTS ix_rf_estab8 ON rf_estab (cnpj8);
 CREATE INDEX IF NOT EXISTS ix_rf_socio8 ON rf_socio (cnpj8);
 CREATE INDEX IF NOT EXISTS ix_rf_rel ON rf_relacao (alvo8);
+CREATE TABLE IF NOT EXISTS doacao_campanha (ano INTEGER, tipo TEXT, chave TEXT, doador TEXT, pessoa_id INTEGER, partido TEXT, valor REAL, n INTEGER);
+CREATE INDEX IF NOT EXISTS ix_doacao_chave ON doacao_campanha (chave);

@@ -460,3 +460,4 @@ dialog.cg-rel details{margin:.4rem 0}dialog.cg-rel summary{cursor:pointer;font-w
 .tabela-pag tr.linha-rel:hover td{background:var(--fundo-suave,rgba(31,111,235,.08))}
 .rel-opc{display:inline-flex;gap:.5rem;align-items:center;min-height:36px;font-size:.92rem;margin-top:.4rem}.rel-lista li[hidden]{display:none}
 .rel-opcs{display:flex;flex-wrap:wrap;gap:.2rem 1.2rem}.rel-socs{color:var(--tinta-2);font-size:.78rem}
+.b-doa{background:transparent;border:3px solid #e0a800;width:.7rem!important;height:.7rem!important}

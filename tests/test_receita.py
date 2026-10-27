@@ -60,3 +60,37 @@ outros = sorted(r[2] for r in con.execute("SELECT cnpj8, chave, nome FROM rf_soc
 assert "PEDRO LIMA" in outros, outros
 assert con.execute("SELECT COUNT(*) FROM rf_socio WHERE cnpj8='88888888' AND nome='PEDRO LIMA'").fetchone()[0] == 1
 print("receita ok")
+
+# ---- doacoes de campanha ----
+from pipeline import doacoes
+con.execute("INSERT INTO pessoa (id, nome, cargo) VALUES (2,'Beltrano Urna','deputado_federal')")
+con.execute("INSERT INTO mandato (pessoa_id, cargo, legislatura, uf, partido) VALUES (2,'deputado_federal',57,'SP','XX')")
+con.execute("INSERT INTO pessoa (id, nome, cargo) VALUES (3,'Outro Nome','senador')")
+con.execute("INSERT INTO mandato (pessoa_id, cargo, legislatura, uf, partido) VALUES (3,'senador',57,'SP','YY')")
+con.commit()
+def _z(nome, texto):
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, "w") as z: z.writestr(nome, texto.encode("utf-8-sig"))
+    return zipfile.ZipFile(io.BytesIO(b.getvalue()))
+rec = ("SQ_CANDIDATO;NM_CANDIDATO;DS_CARGO;SG_UF;SG_PARTIDO;NR_CPF_CNPJ_DOADOR;NM_DOADOR;NM_DOADOR_RFB;VR_RECEITA\n"
+       "1;BELTRANO DA SILVA;Deputado Federal;SP;XX;12345678909;JOAO DA SILVA;JOAO DA SILVA;1.500,00\n"        # socio (CPF com digitos centrais 456789? ver abaixo)
+       "1;BELTRANO DA SILVA;Deputado Federal;SP;XX;11111111000191;ALFA LTDA;ALFA LTDA;2.000,50\n"             # empresa 11111111
+       "9;OUTRO;Governador;SP;XX;11111111000191;ALFA LTDA;ALFA LTDA;999,00\n"                                 # cargo fora
+       "2;OUTRO NOME;Senador;SP;YY;99999999999;FULANO QUALQUER;FULANO QUALQUER;50,00\n")                      # doador desconhecido
+cand = "SQ_CANDIDATO;NM_CANDIDATO;NM_URNA_CANDIDATO;SG_UF\n1;BELTRANO DA SILVA;BELTRANO URNA;SP\n2;OUTRO NOME;OUTRO NOME;SP\n"
+_antes = doacoes._baixar
+def _fake(u):
+    return _z("receitas_candidatos_2022_BRASIL.csv", rec) if "prestacao" in u else _z("consulta_cand_2022_BRASIL.csv", cand)
+doacoes._baixar = _fake
+# CPF do socio JOAO DA SILVA tem digitos centrais 123456 (na Receita: ***123456**) -> CPF completo 000123456xx
+rec = rec.replace("12345678909", "00012345600")
+_fake2 = lambda u: _z("receitas_candidatos_2022_BRASIL.csv", rec) if "prestacao" in u else _z("consulta_cand_2022_BRASIL.csv", cand)
+doacoes._baixar = _fake2
+n = doacoes.rodar(con, anos=(2022,))
+doacoes._baixar = _antes
+print(con.execute("SELECT * FROM doacao_campanha").fetchall())
+assert n == 2
+r = {(x[0], x[1]): x for x in con.execute("SELECT tipo, chave, doador, pessoa_id, valor FROM doacao_campanha")}
+assert r[("socio", "pf:123456:joao da silva")][3] == 2 and r[("socio", "pf:123456:joao da silva")][4] == 1500.0
+assert r[("empresa", "11111111")][4] == 2000.5
+print("doacoes ok")

@@ -1433,9 +1433,17 @@
         Object.keys(d.re).forEach(function (k) { d.re[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
         var nbx = Object.keys(bxs).length;
         h += '<div class="rel-opcs">' + (nbx ? '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>' : '') + '<label class="rel-opc"><input type="checkbox" data-socios2 checked> Mostrar outros sócios das empresas ligadas</label></div>';
-        h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
+        h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span> <span><i class="b b-doa"></i>doou a campanha</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
         var socs = {}; d.s.forEach(function (x) { var k = x[5] || ('n:' + x[0]); if (!socs[k]) socs[k] = x; });
         var ks = Object.keys(socs);
+        var doa = d.doa || {}, dl = [];
+        Object.keys(doa).forEach(function (k) { doa[k].forEach(function (x) { dl.push({ k: k, x: x }); }); });
+        dl.sort(function (a, b) { return b.x[0] - a.x[0] || b.x[5] - a.x[5]; });
+        h += '<details open><summary>Doações a campanhas de deputados e senadores (' + dl.length + ')</summary>';
+        if (!d.dok) h += '<p class="apoio">As doações de campanha ainda não foram coletadas.</p>';
+        else if (!dl.length) h += '<p class="apoio">Nenhuma doação desta empresa, de seus sócios ou das empresas ligadas foi encontrada nas campanhas de 2014, 2018 e 2022.</p>';
+        else h += '<ul class="rel-lista">' + dl.map(function (o) { var x = o.x; return '<li><strong>' + esc(x[6]) + '</strong> <span>(' + (o.k.indexOf('e:') === 0 ? 'empresa' : 'sócio') + ')</span> doou <b>' + brl(x[5]) + '</b> em ' + x[0] + ' à campanha de <a href="' + RAIZ + x[2] + '">' + esc(x[1]) + '</a> <span>' + esc(x[3]) + (x[4] ? ' · ' + esc(x[4]) : '') + '</span></li>'; }).join('') + '</ul>';
+        h += '<p class="nota">Valores declarados ao TSE. Doar a campanha é legal e público; o site só informa o fato. Doações de sócios (pessoa física) são ligadas por nome e dígitos centrais do CPF.</p></details>';
         h += '<details open><summary>Sócios (' + ks.length + ')</summary><ul class="rel-lista">' + ks.map(function (k) { var x = socs[k]; return '<li><strong>' + esc(x[0]) + '</strong> <span>' + esc(x[2]) + (x[1] ? ' · ' + esc(x[1]) : '') + (x[3] ? ' · desde ' + esc(dataBr(x[3])) : '') + '</span></li>'; }).join('') + '</ul></details>';
         ks.forEach(function (k) {
           var r = d.rs[k]; if (!r || !r[1].length) return;
@@ -1453,7 +1461,7 @@
         var info = dlg.querySelector('[data-rel-info]'), box = dlg.querySelector('[data-grafo]');
         carregarCyto().then(function (cy) {
           var els = [], vistos = {}, nid = 0;
-          function no(id, label, tipo, extra) { if (vistos[id]) return; vistos[id] = 1; els.push({ group: 'nodes', data: Object.assign({ id: id, label: curtoN(label, 30), tipo: tipo }, extra || {}) }); }
+          function no(id, label, tipo, extra) { if (vistos[id]) return; vistos[id] = 1; var dk = id.charAt(0) === 's' ? id.slice(2) : id.charAt(0) === 'e' ? id : null; if (dk && doa[dk]) { extra = extra || {}; extra.doa = 1; extra.dk = dk; } els.push({ group: 'nodes', data: Object.assign({ id: id, label: curtoN(label, 30), tipo: tipo }, extra || {}) }); }
           var arestas = {};
           function liga(a, b, rot) { var k = a + '|' + b; if (arestas[k] || arestas[b + '|' + a]) return; arestas[k] = 1; els.push({ group: 'edges', data: { id: 'x' + (nid++), source: a, target: b, label: rot || '' } }); }
           function socios2(o8, soc) { (soc || []).slice(0, 6).forEach(function (x) { var k = x[3] || ('n:' + x[0] + ':' + o8); no('s:' + k, x[0], 'socio2', { razao: x[0], qual: x[2], doc: x[1] }); liga('s:' + k, 'e:' + o8, curtoN(x[2], 16)); }); }
@@ -1477,6 +1485,7 @@
               { selector: 'node[tipo="end"]', style: { shape: 'round-rectangle', 'background-color': '#4f8a2f', width: 28, height: 22 } },
               { selector: 'node[tipo="cota"]', style: { 'background-color': '#d9822b', width: 26, height: 26 } },
               { selector: 'edge', style: { width: 1.5, 'line-color': linha, label: 'data(label)', 'font-size': 8, color: tinta, 'text-rotation': 'autorotate', 'text-background-color': papel, 'text-background-opacity': 0.8 } },
+              { selector: 'node[doa]', style: { 'border-color': '#e0a800', 'border-width': 5 } },
               { selector: ':selected', style: { 'border-color': tinta, 'border-width': 3 } }],
             layout: { name: 'cose', animate: false, nodeRepulsion: 9000, idealEdgeLength: 70, padding: 20 } });
           var cb = dlg.querySelector('[data-baixadas]'), cs = dlg.querySelector('[data-socios2]');
@@ -1499,6 +1508,7 @@
             else if (n.tipo === 'end') t = '<strong>Endereço da empresa</strong>: ' + esc(n.razao) + ' · ' + n.n + ' outra(s) empresa(s) ativa(s) neste endereço.';
             else t = '<strong>' + esc(n.razao) + '</strong>' + (n.cnpj ? ' · ' + esc(cnpjFmt(n.cnpj)) : '') + (n.sit ? ' · ' + esc(SIT[n.sit] || n.sit) : '') + (n.uf ? ' · ' + esc(n.uf) : '') + (n.cota ? ' · recebeu ' + brl(n.cota) + ' de parlamentares' : '');
             if (n.b8 && n.b8 !== b8) t += ' <button type="button" class="link-ver" data-centrar="' + esc(n.b8) + '" data-cnpj="' + esc(n.cnpj || '') + '">ver relações desta empresa</button>';
+            if (n.dk && doa[n.dk]) t += '<br><b>Doações a campanhas:</b> ' + doa[n.dk].map(function (x) { return esc(x[1]) + ' (' + x[0] + ', ' + brl(x[5]) + ')'; }).join('; ');
             info.innerHTML = t;
             var bt = info.querySelector('[data-centrar]'); if (bt) bt.addEventListener('click', function () { abrirRelacoes(bt.getAttribute('data-cnpj'), bt.getAttribute('data-centrar'), [cnpj, b8, voltar]); });
           });

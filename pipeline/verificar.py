@@ -63,6 +63,7 @@ def main():
         "rf_estab": "SELECT cnpj, cnpj8, matriz, fantasia, situacao, abertura, cnae, logradouro, numero, complemento, bairro, cep, uf, municipio, chave_end FROM rf_estab",
         "rf_socio": "SELECT cnpj8, tipo, nome, doc, qualificacao, entrada, chave FROM rf_socio",
         "rf_relacao": "SELECT alvo8, tipo, chave, outro8, cnpj, total FROM rf_relacao",
+        "doacao_campanha": "SELECT ano, tipo, chave, doador, pessoa_id, partido, ROUND(valor,2) valor, n FROM doacao_campanha",
         "fornecedor_total": """SELECT d documento, ROUND(SUM(valor)) total, COUNT(DISTINCT pessoa_id) n_pessoas FROM (
                        SELECT pessoa_id, valor, REPLACE(REPLACE(REPLACE(COALESCE(cnpj_cpf,''),'.',''),'/',''),'-','') d
                        FROM gasto WHERE fonte NOT LIKE 'pres%') WHERE LENGTH(d)=14 GROUP BY d""",
