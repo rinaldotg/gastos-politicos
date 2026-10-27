@@ -458,3 +458,4 @@ dialog.cg-rel details{margin:.4rem 0}dialog.cg-rel summary{cursor:pointer;font-w
 .doc-link{color:inherit;text-decoration:underline dotted}.doc-link:hover{text-decoration:underline}
 .tabela-pag tr.linha-rel{cursor:pointer}
 .tabela-pag tr.linha-rel:hover td{background:var(--fundo-suave,rgba(31,111,235,.08))}
+.rel-opc{display:inline-flex;gap:.5rem;align-items:center;min-height:36px;font-size:.92rem;margin-top:.4rem}.rel-lista li[hidden]{display:none}

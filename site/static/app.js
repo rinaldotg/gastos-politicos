@@ -1428,17 +1428,21 @@
         var h = '<h3>' + esc(d.r) + '</h3><p class="apoio">' + (est[1] ? esc(est[1]) + ' · ' : '') + 'CNPJ <strong>' + esc(cnpjFmt(est[0] || cnpj)) + '</strong> · situação <strong>' + esc(SIT[est[2]] || est[2] || '—') + '</strong>' + (est[3] ? ' · aberta em ' + esc(dataBr(est[3])) : '') + '</p>';
         if (est[4]) h += '<p class="apoio">' + esc(est[4]) + (est[5] ? ' — ' + esc(est[5]) + '/' + esc(est[6]) : '') + (est[7] ? ' · CEP ' + esc(est[7]) : '') + '</p>';
         if (d.cota) h += '<p class="apoio">Recebeu <strong>' + brl(d.cota) + '</strong> da cota parlamentar (soma no site, desde 2014).</p>';
+        var bxs = {}; Object.keys(d.rs).forEach(function (k) { d.rs[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
+        Object.keys(d.re).forEach(function (k) { d.re[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
+        var nbx = Object.keys(bxs).length;
+        if (nbx) h += '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>';
         h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
         var socs = {}; d.s.forEach(function (x) { var k = x[5] || ('n:' + x[0]); if (!socs[k]) socs[k] = x; });
         var ks = Object.keys(socs);
         h += '<details open><summary>Sócios (' + ks.length + ')</summary><ul class="rel-lista">' + ks.map(function (k) { var x = socs[k]; return '<li><strong>' + esc(x[0]) + '</strong> <span>' + esc(x[2]) + (x[1] ? ' · ' + esc(x[1]) : '') + (x[3] ? ' · desde ' + esc(dataBr(x[3])) : '') + '</span></li>'; }).join('') + '</ul></details>';
         ks.forEach(function (k) {
           var r = d.rs[k]; if (!r || !r[1].length) return;
-          h += '<details><summary>Outras empresas de ' + esc(socs[k][0]) + ' (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[5] || e[0])) + ' · ' + esc(SIT[e[2]] || e[2] || '—') + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+          h += '<details><summary>Outras empresas de ' + esc(socs[k][0]) + ' (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[5] || e[0])) + ' · ' + esc(SIT[e[2]] || e[2] || '—') + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
         });
         Object.keys(d.re).forEach(function (k) {
           var r = d.re[k];
-          h += '<details><summary>Outras empresas ativas no mesmo endereço (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[6] || e[5])) + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+          h += '<details><summary>Outras empresas ativas no mesmo endereço (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[6] || e[5])) + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
         });
         h += '<p class="nota">Dados abertos do cadastro de CNPJ da Receita Federal. Ter sócio ou endereço em comum é comum (mesmo contador, família, prédio comercial) e <strong>não indica irregularidade</strong>. Sócios pessoa física são ligados por nome e dígitos centrais do CPF; homônimos podem se misturar.</p>';
         h += '<p class="hemi-acoes">' + (voltar ? '<button type="button" class="botao botao-leve" data-voltar>Voltar</button>' : '') + '<button type="button" class="botao" data-fechar>Fechar</button></p>';
@@ -1471,6 +1475,11 @@
               { selector: 'edge', style: { width: 1.5, 'line-color': linha, label: 'data(label)', 'font-size': 8, color: tinta, 'text-rotation': 'autorotate', 'text-background-color': papel, 'text-background-opacity': 0.8 } },
               { selector: ':selected', style: { 'border-color': tinta, 'border-width': 3 } }],
             layout: { name: 'cose', animate: false, nodeRepulsion: 9000, idealEdgeLength: 70, padding: 20 } });
+          var cb = dlg.querySelector('[data-baixadas]');
+          if (cb) cb.addEventListener('change', function () {
+            g.nodes('[sit = "08"]').style('display', cb.checked ? 'element' : 'none');
+            dlg.querySelectorAll('li.baixada').forEach(function (li) { li.hidden = !cb.checked; });
+          });
           g.on('tap', 'node', function (ev) {
             var n = ev.target.data(), t = '';
             if (n.tipo === 'socio') t = '<strong>' + esc(n.razao) + '</strong> · ' + esc(n.qual || 'sócio') + (n.doc ? ' · ' + esc(n.doc) : '');
