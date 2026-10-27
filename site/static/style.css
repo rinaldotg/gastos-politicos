@@ -456,3 +456,5 @@ dialog.cg-rel{width:min(920px,96vw)}
 .rel-lista li{padding:.35rem 0;border-bottom:1px solid var(--linha);font-size:.9rem}.rel-lista li span{color:var(--tinta-2);font-size:.82rem}
 dialog.cg-rel details{margin:.4rem 0}dialog.cg-rel summary{cursor:pointer;font-weight:600;min-height:32px}
 .doc-link{color:inherit;text-decoration:underline dotted}.doc-link:hover{text-decoration:underline}
+.tabela-pag tr.linha-rel{cursor:pointer}
+.tabela-pag tr.linha-rel:hover td{background:var(--fundo-suave,rgba(31,111,235,.08))}

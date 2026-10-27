@@ -1484,7 +1484,7 @@
       });
     }
     function abrirForn(e, gente, fmtDoc) {
-      var dlg = raiz.querySelector('dialog.cg-dialog');
+      var dlg = raiz.querySelector('dialog.cg-dialog:not(.cg-rel)');
       if (!dlg) { dlg = document.createElement('dialog'); dlg.className = 'cg-dialog'; raiz.appendChild(dlg); dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); }); }
       var ids = Object.keys(e.pes).sort(function (x, y) { return e.pes[y] - e.pes[x]; });
       dlg.innerHTML = '<h3>' + esc(e.nome) + '</h3><p class="apoio">CNPJ/CPF: <strong>' + esc(fmtDoc(e.doc)) + '</strong> · total recebido dos parlamentares abaixo: <strong>' + brl(e.total) + '</strong></p>' +
@@ -1545,11 +1545,14 @@
             L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td><td class="num">' + (tot ? Math.round(t[1] / tot * 100) : 0) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         } else {
           h += L.length ? '<div class="tabela-rolagem"><table class="tabela-pag"><thead><tr><th>Fornecedor</th><th>CNPJ/CPF</th><th class="num">Valor</th><th>Parlamentares que pagaram</th></tr></thead><tbody>' +
-            FL.map(function (e, i) { return '<tr><td>' + esc(e.nome) + '</td><td class="doc">' + (e.rf ? '<a href="#" class="doc-link" data-rel="' + esc(String(e.doc).replace(/\D/g, '')) + '" title="Ver sócios e empresas ligadas">' + esc(fmtDoc(e.doc)) + '</a>' : esc(fmtDoc(e.doc))) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+            FL.map(function (e, i) { return '<tr' + (e.rf ? ' class="linha-rel" data-rel-linha="' + esc(String(e.doc).replace(/\\D/g, '')) + '"' : '') + '><td>' + esc(e.nome) + '</td><td class="doc">' + (e.rf ? '<a href="#" class="doc-link" data-rel="' + esc(String(e.doc).replace(/\D/g, '')) + '" title="Ver sócios e empresas ligadas">' + esc(fmtDoc(e.doc)) + '</a>' : esc(fmtDoc(e.doc))) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         }
         h += '<p class="nota">' + (aba === 'f' ? 'Fornecedores: os maiores de cada parlamentar em cada ano (até 15), por isso a lista pode somar menos que o total. ' : '') + 'Cota para o exercício da atividade parlamentar (Câmara) e CEAPS (Senado); gasto não é irregularidade.</p>';
         pag.innerHTML = h;
         pag.querySelectorAll('[data-forn]').forEach(function (b) { b.addEventListener('click', function () { abrirForn(FL[+b.getAttribute('data-forn')], gente, fmtDoc); }); });
+        pag.querySelectorAll('tr[data-rel-linha]').forEach(function (tr) {
+          tr.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('a,button')) return; abrirRelacoes(tr.getAttribute('data-rel-linha')); });
+        });
         pag.querySelectorAll('[data-rel]').forEach(function (l) { l.addEventListener('click', function (ev) { ev.preventDefault(); abrirRelacoes(l.getAttribute('data-rel')); }); });
         pag.querySelectorAll('[data-pag-aba]').forEach(function (b) { b.addEventListener('click', function () { aba = b.getAttribute('data-pag-aba'); pagamentos(); }); });
       });
