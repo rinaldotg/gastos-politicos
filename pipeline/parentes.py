@@ -53,7 +53,7 @@ def _wikidata():
     for t in range(3):
         try:
             r = c.get(SPARQL, params={"query": CONSULTA, "format": "json"}, tentativas=1, timeout=170)
-            linhas = r.json()["results"]["bindings"]
+            linhas = json.loads(r.text, strict=False)["results"]["bindings"]   # rotulos podem ter caractere de controle
             out = []
             for b in linhas:
                 p, rr = b["p"]["value"].rsplit("/", 1)[-1], b["r"]["value"].rsplit("/", 1)[-1]
