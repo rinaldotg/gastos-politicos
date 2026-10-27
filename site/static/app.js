@@ -1415,6 +1415,7 @@
         sc.onload = function () { ok(window.cytoscape); }; sc.onerror = function () { no(); }; document.head.appendChild(sc);
       }));
     }
+    function semSoc(l) { return l && l.length ? '<br><small class="rel-socs">Sócios: ' + l.map(function (x) { return esc(x[0]); }).join(', ') + '</small>' : ''; }
     function abrirRelacoes(cnpj, b8, voltar) {
       b8 = b8 || String(cnpj).replace(/\D/g, '').slice(0, 8);
       var dlg = raiz.querySelector('dialog.cg-rel');
@@ -1431,18 +1432,18 @@
         var bxs = {}; Object.keys(d.rs).forEach(function (k) { d.rs[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
         Object.keys(d.re).forEach(function (k) { d.re[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
         var nbx = Object.keys(bxs).length;
-        if (nbx) h += '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>';
+        h += '<div class="rel-opcs">' + (nbx ? '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>' : '') + '<label class="rel-opc"><input type="checkbox" data-socios2 checked> Mostrar outros sócios das empresas ligadas</label></div>';
         h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
         var socs = {}; d.s.forEach(function (x) { var k = x[5] || ('n:' + x[0]); if (!socs[k]) socs[k] = x; });
         var ks = Object.keys(socs);
         h += '<details open><summary>Sócios (' + ks.length + ')</summary><ul class="rel-lista">' + ks.map(function (k) { var x = socs[k]; return '<li><strong>' + esc(x[0]) + '</strong> <span>' + esc(x[2]) + (x[1] ? ' · ' + esc(x[1]) : '') + (x[3] ? ' · desde ' + esc(dataBr(x[3])) : '') + '</span></li>'; }).join('') + '</ul></details>';
         ks.forEach(function (k) {
           var r = d.rs[k]; if (!r || !r[1].length) return;
-          h += '<details><summary>Outras empresas de ' + esc(socs[k][0]) + ' (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[5] || e[0])) + ' · ' + esc(SIT[e[2]] || e[2] || '—') + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+          h += '<details><summary>Outras empresas de ' + esc(socs[k][0]) + ' (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[5] || e[0])) + ' · ' + esc(SIT[e[2]] || e[2] || '—') + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + semSoc(e[6]) + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
         });
         Object.keys(d.re).forEach(function (k) {
           var r = d.re[k];
-          h += '<details><summary>Outras empresas ativas no mesmo endereço (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[6] || e[5])) + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
+          h += '<details><summary>Outras empresas ativas no mesmo endereço (' + r[0] + ')</summary><ul class="rel-lista">' + r[1].map(function (e) { return '<li' + (e[2] === '08' ? ' class="baixada"' : '') + '>' + esc(e[1]) + ' <span>' + esc(cnpjFmt(e[6] || e[5])) + (e[3] ? ' · ' + esc(e[3]) : '') + '</span>' + (e[4] ? ' <b>recebeu ' + brl(e[4]) + '</b>' : '') + semSoc(e[8]) + '</li>'; }).join('') + '</ul>' + (r[0] > r[1].length ? '<p class="nota">Mostrando ' + r[1].length + ' de ' + r[0] + '.</p>' : '') + '</details>';
         });
         h += '<p class="nota">Dados abertos do cadastro de CNPJ da Receita Federal. Ter sócio ou endereço em comum é comum (mesmo contador, família, prédio comercial) e <strong>não indica irregularidade</strong>. Sócios pessoa física são ligados por nome e dígitos centrais do CPF; homônimos podem se misturar.</p>';
         h += '<p class="hemi-acoes">' + (voltar ? '<button type="button" class="botao botao-leve" data-voltar>Voltar</button>' : '') + '<button type="button" class="botao" data-fechar>Fechar</button></p>';
@@ -1453,15 +1454,17 @@
         carregarCyto().then(function (cy) {
           var els = [], vistos = {}, nid = 0;
           function no(id, label, tipo, extra) { if (vistos[id]) return; vistos[id] = 1; els.push({ group: 'nodes', data: Object.assign({ id: id, label: curtoN(label, 30), tipo: tipo }, extra || {}) }); }
-          function liga(a, b, rot) { els.push({ group: 'edges', data: { id: 'x' + (nid++), source: a, target: b, label: rot || '' } }); }
+          var arestas = {};
+          function liga(a, b, rot) { var k = a + '|' + b; if (arestas[k] || arestas[b + '|' + a]) return; arestas[k] = 1; els.push({ group: 'edges', data: { id: 'x' + (nid++), source: a, target: b, label: rot || '' } }); }
+          function socios2(o8, soc) { (soc || []).slice(0, 6).forEach(function (x) { var k = x[3] || ('n:' + x[0] + ':' + o8); no('s:' + k, x[0], 'socio2', { razao: x[0], qual: x[2], doc: x[1] }); liga('s:' + k, 'e:' + o8, curtoN(x[2], 16)); }); }
           no('e:' + b8, d.r, 'alvo', { b8: b8, cnpj: est[0] || cnpj, razao: d.r });
           ks.forEach(function (k) {
             var x = socs[k]; no('s:' + k, x[0], 'socio', { razao: x[0], qual: x[2], doc: x[1] }); liga('e:' + b8, 's:' + k, curtoN(x[2], 18));
-            ((d.rs[k] || [0, []])[1]).forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('s:' + k, 'e:' + e[0]); });
+            ((d.rs[k] || [0, []])[1]).forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('s:' + k, 'e:' + e[0]); socios2(e[0], e[6]); });
           });
           Object.keys(d.re).forEach(function (k) {
             no('a:' + k, 'Mesmo endereço', 'end', { razao: est[4] || 'Endereço', n: d.re[k][0] }); liga('e:' + b8, 'a:' + k);
-            d.re[k][1].forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[6] || e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('a:' + k, 'e:' + e[0]); });
+            d.re[k][1].forEach(function (e) { no('e:' + e[0], e[1], e[4] ? 'cota' : 'rel', { b8: e[0], cnpj: e[6] || e[5], razao: e[1], sit: e[2], uf: e[3], cota: e[4] }); liga('a:' + k, 'e:' + e[0]); socios2(e[0], e[8]); });
           });
           var css = getComputedStyle(document.documentElement), cor = function (v, f) { return (css.getPropertyValue(v) || '').trim() || f; };
           var tinta = cor('--tinta', '#14213d'), acento = cor('--acento', '#1f4fd8'), linha = cor('--linha', '#c9d1e0'), papel = cor('--papel', '#fff');
@@ -1470,16 +1473,26 @@
               { selector: 'node', style: { label: 'data(label)', 'font-size': 10, color: tinta, 'text-wrap': 'wrap', 'text-max-width': 90, 'text-valign': 'bottom', 'text-margin-y': 4, 'background-color': '#8fa3c7', 'border-width': 2, 'border-color': papel, width: 22, height: 22 } },
               { selector: 'node[tipo="alvo"]', style: { 'background-color': acento, width: 44, height: 44, 'font-weight': 700 } },
               { selector: 'node[tipo="socio"]', style: { shape: 'diamond', 'background-color': '#7a4fb0', width: 28, height: 28 } },
+              { selector: 'node[tipo="socio2"]', style: { shape: 'diamond', 'background-color': '#b9a3d9', width: 20, height: 20, 'font-size': 9 } },
               { selector: 'node[tipo="end"]', style: { shape: 'round-rectangle', 'background-color': '#4f8a2f', width: 28, height: 22 } },
               { selector: 'node[tipo="cota"]', style: { 'background-color': '#d9822b', width: 26, height: 26 } },
               { selector: 'edge', style: { width: 1.5, 'line-color': linha, label: 'data(label)', 'font-size': 8, color: tinta, 'text-rotation': 'autorotate', 'text-background-color': papel, 'text-background-opacity': 0.8 } },
               { selector: ':selected', style: { 'border-color': tinta, 'border-width': 3 } }],
             layout: { name: 'cose', animate: false, nodeRepulsion: 9000, idealEdgeLength: 70, padding: 20 } });
-          var cb = dlg.querySelector('[data-baixadas]');
-          if (cb) cb.addEventListener('change', function () {
-            g.nodes('[sit = "08"]').style('display', cb.checked ? 'element' : 'none');
-            dlg.querySelectorAll('li.baixada').forEach(function (li) { li.hidden = !cb.checked; });
-          });
+          var cb = dlg.querySelector('[data-baixadas]'), cs = dlg.querySelector('[data-socios2]');
+          function atualizar() {
+            var mostraB = !cb || cb.checked, mostraS = !cs || cs.checked;
+            g.nodes().forEach(function (n) {
+              var t = n.data('tipo');
+              if (t === 'rel' || t === 'cota') n.style('display', (n.data('sit') === '08' && !mostraB) ? 'none' : 'element');
+            });
+            g.nodes('[tipo = "socio2"]').forEach(function (n) {
+              var vivo = n.neighborhood('node').some(function (m) { return (m.data('tipo') === 'rel' || m.data('tipo') === 'cota') && m.style('display') !== 'none'; });
+              n.style('display', mostraS && vivo ? 'element' : 'none');
+            });
+            dlg.querySelectorAll('li.baixada').forEach(function (li) { li.hidden = !mostraB; });
+          }
+          [cb, cs].forEach(function (c) { if (c) c.addEventListener('change', atualizar); });
           g.on('tap', 'node', function (ev) {
             var n = ev.target.data(), t = '';
             if (n.tipo === 'socio') t = '<strong>' + esc(n.razao) + '</strong> · ' + esc(n.qual || 'sócio') + (n.doc ? ' · ' + esc(n.doc) : '');

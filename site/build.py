@@ -1160,6 +1160,8 @@ def main():
     def rf_resumo_empresa(b_):
         ms_ = next((e_ for e_ in rf_est.get(b_, []) if e_["matriz"] == "1"), (rf_est.get(b_) or [None])[0])
         return [b_, (rf_emp.get(b_) or {}).get("razao", ""), (ms_ or {}).get("situacao", ""), (ms_ or {}).get("uf", ""), round(cota_8.get(b_, 0)), (ms_ or {}).get("cnpj", "")]
+    def rf_socios_de(b_):
+        return [[x_["nome"], x_["doc"], x_["qualificacao"], x_["chave"]] for x_ in rf_soc.get(b_, [])[:8]]
     rf_dir = saida / "data" / "rf"
     rf_dir.mkdir(parents=True, exist_ok=True)
     rf_shards = defaultdict(dict)
@@ -1170,11 +1172,11 @@ def main():
         for r_ in rf_rel.get(b_, []):
             if r_["tipo"] == "socio":
                 ent_ = rs_.setdefault(r_["chave"], [int(f(r_["total"])), []])
-                ent_[1].append(rf_resumo_empresa(r_["outro8"]))
+                ent_[1].append(rf_resumo_empresa(r_["outro8"]) + [rf_socios_de(r_["outro8"])])
             else:
                 ent_ = re_.setdefault(r_["chave"], [int(f(r_["total"])), []])
                 oc_ = next((x_ for x_ in rf_est.get(r_["outro8"], []) if x_["cnpj"] == r_["cnpj"]), None) or {}
-                ent_[1].append(rf_resumo_empresa(r_["outro8"]) + [r_["cnpj"], (oc_.get("logradouro") or "")])
+                ent_[1].append(rf_resumo_empresa(r_["outro8"]) + [r_["cnpj"], (oc_.get("logradouro") or ""), rf_socios_de(r_["outro8"])])
         rf_shards[b_[:3]][b_] = dict(
             r=e_["razao"], p=e_["porte"], cap=e_["capital"], cota=round(cota_8.get(b_, 0)),
             e=[[x_["cnpj"], x_["fantasia"], x_["situacao"], x_["abertura"], ", ".join(t_ for t_ in (x_["logradouro"], x_["numero"], x_["complemento"], x_["bairro"]) if t_),

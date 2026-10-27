@@ -35,6 +35,7 @@ MESES_ATRAS = 6
 MIN_TOTAL = 30000      # so empresas que receberam ao menos isso (somando todos os parlamentares)
 MAX_REL_SOCIO = 40     # outras empresas listadas por socio
 MAX_REL_END = 25       # outras empresas listadas por endereco
+MAX_SOC_LIGADA = 12    # socios guardados por empresa ligada
 QUALIFICACAO = {
     "05": "Administrador", "08": "Conselheiro de administração", "10": "Diretor", "16": "Presidente", "17": "Procurador",
     "22": "Sócio", "28": "Sócio-gerente", "31": "Sócio ostensivo", "34": "Tesoureiro", "47": "Sócio pessoa física",
@@ -213,8 +214,6 @@ def processar(con, pasta, alvos):
         rel_cnt[k] += 1
         if len(rel_lista[k]) < MAX_REL_SOCIO and b not in rel_lista[k]:
             rel_lista[k].append(b)
-            if b not in alvos:
-                socios_rel[b].append((l[1], l[2], l[3], l[4], l[5], k))
     rel_b = {b for v in rel_lista.values() for b in v}
     # 3) enderecos das empresas pagas (e matriz delas)
     estab = {}                       # cnpj14 -> tupla
@@ -255,8 +254,16 @@ def processar(con, pasta, alvos):
                 if len(end_lista[k]) < MAX_REL_END:
                     end_lista[k].append(t[0])
                     estab[t[0]] = t
+    # 4b) os outros socios das empresas ligadas (para ligar empresas entre si por mais de um socio)
+    ligadas = ({b for b in rel_b} | {estab[o][1] for v in end_lista.values() for o in v}) - set(alvos)
+    for l in _todas(pasta, "Socios"):
+        if len(l) < 6:
+            continue
+        b = _dig(l[0])[:8]
+        if b in ligadas and len(socios_rel[b]) < MAX_SOC_LIGADA:
+            socios_rel[b].append((l[1], l[2], l[3], l[4], l[5], chave_socio(l[1], l[2], l[3])))
     # 5) razao social
-    precisa = set(alvos) | rel_b | {e[1] for e in estab.values()}
+    precisa = set(alvos) | rel_b | ligadas | {e[1] for e in estab.values()}
     empresas = {}
     for l in _todas(pasta, "Empresas"):
         if len(l) >= 6 and l[0] in precisa:

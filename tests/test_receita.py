@@ -20,6 +20,8 @@ zip_(p, "Socios0.zip", [
     ["11111111", "2", "JOAO DA SILVA", "***123456**", "49", "20100101", "", "", "", "", ""],
     ["44444444", "2", "JOAO DA SILVA", "***123456**", "22", "20150101", "", "", "", "", ""],
     ["55555555", "2", "JOAO DA SILVA", "***999999**", "22", "20150101", "", "", "", "", ""],
+    ["44444444", "2", "PEDRO LIMA", "***777777**", "22", "20150101", "", "", "", "", ""],      # outro socio da empresa ligada
+    ["88888888", "2", "PEDRO LIMA", "***777777**", "22", "20150101", "", "", "", "", ""],      # liga a vizinha de endereco
     ["22222222", "1", "HOLDING X", "99999999000100", "22", "20100101", "", "", "", "", ""],
     ["66666666", "1", "HOLDING X", "99999999000100", "22", "20100101", "", "", "", "", ""],
     ["22222222", "2", "MARIA", "***111111**", "22", "20100101", "", "", "", "", ""],   # um so nome: nao liga
@@ -54,4 +56,7 @@ assert con.execute("SELECT razao FROM rf_empresa WHERE cnpj8='44444444'").fetcho
 assert con.execute("SELECT qualificacao FROM rf_socio WHERE cnpj8='11111111'").fetchone()[0] == "Sócio-administrador"
 # formato novo dos socios (CNPJ completo na primeira coluna) tambem funciona
 assert receita._dig("11111111000191")[:8] == "11111111"
+outros = sorted(r[2] for r in con.execute("SELECT cnpj8, chave, nome FROM rf_socio WHERE cnpj8='44444444'"))
+assert "PEDRO LIMA" in outros, outros
+assert con.execute("SELECT COUNT(*) FROM rf_socio WHERE cnpj8='88888888' AND nome='PEDRO LIMA'").fetchone()[0] == 1
 print("receita ok")
