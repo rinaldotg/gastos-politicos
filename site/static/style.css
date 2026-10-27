@@ -513,3 +513,4 @@ dialog.cg-rel details{margin:.4rem 0}dialog.cg-rel summary{cursor:pointer;font-w
   .fonte-topo{font-size:.8rem}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto !important}.cartao *,.botao,.btn-busca{transition:none !important}}
+.tabela-rolavel+h2,.aviso-triagem+h2{margin-top:2.6rem}

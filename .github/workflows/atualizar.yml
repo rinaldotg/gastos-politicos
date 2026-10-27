@@ -13,6 +13,10 @@ on:
         description: "Baixar o cadastro de CNPJ da Receita (socios e enderecos das empresas pagas). Lento: ~8 GB e ate 2h."
         type: boolean
         default: false
+      parentes:
+        description: "Cruzar socios das empresas com parlamentares e seus parentes (Wikidata). Rapido; usa o cadastro da Receita ja guardado."
+        type: boolean
+        default: false
       rfb_url:
         description: "Opcional: modelo do endereco dos zips da Receita, com {mes} e {arq} (ex.: https://.../2026-10/{arq})."
         type: string
@@ -119,10 +123,16 @@ jobs:
           RFB_URL: ${{ inputs.rfb_url }}
         run: |
           if [ -n "$RFB_URL" ]; then
-            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes --rfb-url "$RFB_URL"
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes parentes --rfb-url "$RFB_URL"
           else
-            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes
+            python -m pipeline.run --db data/gastos.db --pular-cadastro --so receita doacoes parentes
           fi
+
+      - name: Parentes e socios (sem baixar a Receita de novo)
+        if: ${{ inputs.parentes == true && inputs.receita != true }}
+        continue-on-error: true
+        timeout-minutes: 60
+        run: python -m pipeline.run --db data/gastos.db --pular-cadastro --so parentes
 
       - name: Conferir e gerar resumo
         run: python -m pipeline.verificar --db data/gastos.db --saida resumo | tee verificacao.txt
@@ -135,7 +145,7 @@ jobs:
         run: python site/build.py --resumo resumo --saida dist --anterior snapshot_anterior.json --base-url "https://oquepagamos.com.br"
 
       - name: Guardar o banco atualizado
-        if: ${{ inputs.coletar == true || inputs.receita == true }}
+        if: ${{ inputs.coletar == true || inputs.receita == true || inputs.parentes == true }}
         run: |
           gzip -kf data/gastos.db
           gh release view Dados >/dev/null 2>&1 || gh release create Dados --title "Banco de dados" --notes "Banco SQLite usado pela atualizacao mensal. Nao apague."

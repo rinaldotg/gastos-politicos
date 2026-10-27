@@ -190,3 +190,10 @@ CREATE INDEX IF NOT EXISTS ix_rf_socio8 ON rf_socio (cnpj8);
 CREATE INDEX IF NOT EXISTS ix_rf_rel ON rf_relacao (alvo8);
 CREATE TABLE IF NOT EXISTS doacao_campanha (ano INTEGER, tipo TEXT, chave TEXT, doador TEXT, pessoa_id INTEGER, partido TEXT, valor REAL, n INTEGER);
 CREATE INDEX IF NOT EXISTS ix_doacao_chave ON doacao_campanha (chave);
+
+CREATE TABLE IF NOT EXISTS parentesco_socio (
+    pessoa_id INTEGER NOT NULL, relacao TEXT, parente TEXT, qid TEXT, cnpj8 TEXT NOT NULL, socio_nome TEXT, qualificacao TEXT,
+    entrada TEXT, base TEXT, valor_pessoa REAL, valor_total REAL     -- base: 'cpf' | 'nome' | 'wikidata'
+);
+CREATE INDEX IF NOT EXISTS ix_parentesco_pessoa ON parentesco_socio (pessoa_id);
+CREATE INDEX IF NOT EXISTS ix_parentesco_cnpj ON parentesco_socio (cnpj8);

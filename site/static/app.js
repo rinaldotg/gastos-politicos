@@ -1579,6 +1579,10 @@
         var doa = d.doa || {}, dl = [];
         Object.keys(doa).forEach(function (k) { doa[k].forEach(function (x) { dl.push({ k: k, x: x }); }); });
         dl.sort(function (a, b) { return b.x[0] - a.x[0] || b.x[5] - a.x[5]; });
+        var par = d.par || [];
+        if (par.length) h += '<details open><summary>Sócio ligado a parlamentar (' + par.length + ')</summary><ul class="rel-lista">' + par.map(function (x) {
+          return '<li><a href="' + RAIZ + x[1] + '">' + esc(x[0]) + '</a>: ' + (x[2] === 'próprio' ? 'consta como sócio um nome igual ao do parlamentar (' + (x[4] === 'cpf' ? 'nome e CPF parcial conferem' : 'só o nome completo confere') + ')' : esc(x[3]) + ', ' + esc(x[2]) + ' do parlamentar segundo o <a href="https://www.wikidata.org/wiki/' + esc(x[5]) + '" target="_blank" rel="noopener">Wikidata</a>, é sócio(a) com o mesmo nome completo') + (x[6] ? ' · cota paga por ele(a) à empresa: <b>' + brl(x[6]) + '</b>' : '') + '</li>';
+        }).join('') + '</ul><p class="nota">Ter sócio da família não é irregularidade. Parentesco só de fonte pública, nunca por sobrenome. <a href="' + RAIZ + 'parentes/">Como é feito</a>.</p></details>';
         h += '<details open><summary>Doações a campanhas de deputados e senadores (' + dl.length + ')</summary>';
         if (!d.dok) h += '<p class="apoio">As doações de campanha ainda não foram coletadas.</p>';
         else if (!dl.length) h += '<p class="apoio">Nenhuma doação desta empresa, de seus sócios ou das empresas ligadas foi encontrada nas campanhas de 2014, 2018 e 2022.</p>';

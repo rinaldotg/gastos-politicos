@@ -285,6 +285,26 @@ def main():
     def cnpj_fmt(d_):
         d_ = d_.zfill(14)
         return f"{d_[:2]}.{d_[2:5]}.{d_[5:8]}/{d_[8:12]}-{d_[12:]}"
+    # empresas com socio que e o proprio parlamentar ou parente declarado (etapa 'parentes')
+    par_pid, par_8 = defaultdict(list), defaultdict(list)
+    try:
+        par_raw = ler(a.resumo, "parentesco_socio")
+    except FileNotFoundError:
+        par_raw = []
+    if par_raw:
+        need_ = {r_["cnpj8"] for r_ in par_raw}
+        raz_ = {r_["cnpj8"]: r_["razao"] for r_ in ler(a.resumo, "rf_empresa") if r_["cnpj8"] in need_}
+        cnj_, sit_ = {}, {}
+        for r_ in ler(a.resumo, "rf_estab"):
+            if r_["cnpj8"] in need_ and (r_["matriz"] == "1" or r_["cnpj8"] not in cnj_):
+                cnj_[r_["cnpj8"]], sit_[r_["cnpj8"]] = r_["cnpj"], r_["situacao"]
+        for r_ in par_raw:
+            e_ = dict(rel=r_["relacao"], parente=r_["parente"], qid=r_["qid"], b8=r_["cnpj8"], socio=r_["socio_nome"], qual=r_["qualificacao"], entrada=r_["entrada"],
+                      base=r_["base"], vp=f(r_["valor_pessoa"]), vt=f(r_["valor_total"]), razao=raz_.get(r_["cnpj8"], ""), cnpj=cnpj_fmt(cnj_.get(r_["cnpj8"], r_["cnpj8"])), sit=sit_.get(r_["cnpj8"], ""))
+            par_pid[int(f(r_["pessoa_id"]))].append(e_)
+            par_8[r_["cnpj8"]].append((int(f(r_["pessoa_id"])), e_))
+        for l_ in par_pid.values():
+            l_.sort(key=lambda e_: (-e_["vp"], -e_["vt"]))
     emendas = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0, 0.0]))
     emendas_tipo = defaultdict(lambda: defaultdict(float))
     for r in emag:
@@ -610,7 +630,7 @@ def main():
         if tem_mes:
             (saida / "data" / "pm").mkdir(parents=True, exist_ok=True)
             (saida / "data" / "pm" / f"{pid}.json").write_text(json.dumps(pm[pid], ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        html = env.get_template("pessoa.html").render(painel=painel_de(x), destino=destino.get(pid), tem_mes=tem_mes, anos_mes=sorted(pm[pid], reverse=True) if tem_mes else [],
+        html = env.get_template("pessoa.html").render(par=par_pid.get(pid, []), painel=painel_de(x), destino=destino.get(pid), tem_mes=tem_mes, anos_mes=sorted(pm[pid], reverse=True) if tem_mes else [],
             **{**ctx_base, "raiz": "../../"}, titulo=(f"{x['nome']} ({x['partido']}-{x['uf']}): gastos da cota parlamentar, emendas e equipe" if x["cargo"] != "presidente" and x["partido"] and x["uf"] else f"{x['nome']}: gastos da cota parlamentar, emendas e equipe" if x["cargo"] != "presidente" else f"{x['nome']}: gastos da Presidência da República por mandato"), p=x, cargo_rotulo=CARGOS[x["cargo"]][1],
             linhas_ano=linhas_ano, total_geral=total_geral, fornecedores=forn_x, emendas=em, em_tot=em_tot, em_exec=em_exec, custo=CUSTO_MANDATO.get(x["cargo"]), ano_ref_cota=x["anos"].get(ano_ref, 0),
             em_pix=emendas_tipo[pid].get("pix", 0), em_def=emendas_tipo[pid].get("def", 0),
@@ -1200,6 +1220,20 @@ def main():
         rf_shards[b_[:3]][b_]["doa"] = {k_: sorted(doa_por[k_], key=lambda t: (-t[0], -t[5])) for k_ in chd_ if k_ in doa_por}
         rf_shards[b_[:3]][b_]["dok"] = 1 if doa_por else 0
         rf_tem.add(b_)
+    por_pid_par_ = {x_["id"]: x_ for x_ in lista}
+    for b_, ents_ in par_8.items():
+        if b_ in rf_tem:
+            rf_shards[b_[:3]][b_]["par"] = [[por_pid_par_[pid_]["nome"], por_pid_par_[pid_]["url"], e_["rel"], e_["parente"], e_["base"], e_["qid"], round(e_["vp"])] for pid_, e_ in ents_ if pid_ in por_pid_par_]
+    par_pag = []
+    for pid_, ents_ in par_pid.items():
+        x_ = por_pid_par_.get(pid_)
+        if x_:
+            for e_ in ents_:
+                par_pag.append(dict(e_, nome=x_["nome"], url=x_["url"], cargo="Senador" if x_["cargo"] == "senador" else "Deputado federal", uf=x_["uf"] or "", partido=x_["partido"] or ""))
+    par_pag.sort(key=lambda e_: (-e_["vp"], -e_["vt"], e_["nome"]))
+    escrever("parentes", env.get_template("parentes.html").render(**{**ctx_base, "raiz": "../"}, titulo="Empresas com sócio ligado a deputados e senadores",
+             descricao="Empresas pagas com a cota parlamentar em que consta como sócio o próprio parlamentar ou um parente declarado em fonte pública.",
+             linhas=par_pag, n_parl=len({e_["nome"] for e_ in par_pag}), n_emp=len({e_["b8"] for e_ in par_pag}), tem_receita=bool(rf_tem)))
     for k_, d_ in rf_shards.items():
         (rf_dir / f"{k_}.json").write_text(json.dumps(d_, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     por_id_ = {x_["id"]: x_ for x_ in lista}

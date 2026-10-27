@@ -2,7 +2,7 @@
 import argparse
 from datetime import datetime
 
-from . import camara, common as c, emendas, ibge, obras, orcamento, presidencia, senado, tcesp, atuacao, sancoes, gabinete, partidos, remuneracao, candidaturas, receita, doacoes
+from . import camara, common as c, emendas, ibge, obras, orcamento, presidencia, senado, tcesp, atuacao, sancoes, gabinete, partidos, remuneracao, candidaturas, receita, doacoes, parentes
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
     ap.add_argument("--db", default="data/gastos.db")
     ap.add_argument("--desde", type=int, default=c.ANO_INICIAL)
     ap.add_argument("--ate", type=int, default=datetime.now().year)
-    ap.add_argument("--so", nargs="*", choices=["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "remuneracao", "partidos", "candidaturas", "receita", "doacoes"])
+    ap.add_argument("--so", nargs="*", choices=["camara", "senado", "presidencia", "emendas", "orcamento", "obras", "ibge", "tcesp", "atuacao", "sancoes", "gabinete", "remuneracao", "partidos", "candidaturas", "receita", "doacoes", "parentes"])
     ap.add_argument("--rfb-url", default=None, help="modelo do endereco dos zips da Receita, com {mes} e {arq}")
     ap.add_argument("--pular-cadastro", action="store_true", help="nao recarrega listas de deputados/senadores")
     ap.add_argument("--recarregar-desde", type=int, default=None, help="anos do Portal anteriores a este e ja carregados sao pulados (padrao: ano passado)")
@@ -52,6 +52,8 @@ def main():
         receita.rodar(con, url_modelo=a.rfb_url)
     if "doacoes" in etapas:
         doacoes.rodar(con)
+    if "parentes" in etapas:
+        parentes.rodar(con)
     print("Concluido.")
 
 

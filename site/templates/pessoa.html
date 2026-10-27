@@ -45,6 +45,11 @@
       <li><strong>Obras ligadas a cada emenda:</strong> a plataforma de obras não informa de qual emenda veio cada obra.</li>
     </ul>
   </details>{% endif %}
+  {% if par %}<section class="bloco parentes-pessoa" aria-label="Empresas com sócio ligado">
+    <h2>Empresas com sócio ligado a {{ p.nome }}</h2>
+    <p class="apoio">Empresas pagas com a cota em que consta como sócio o próprio parlamentar ou um parente citado em fonte pública. <strong>Isso não indica irregularidade.</strong> <a href="{{ raiz }}parentes/">Como é feito e lista completa</a>.</p>
+    <ul class="lista-texto">{% for e in par %}<li><strong>{{ e.razao | title }}</strong> ({{ e.cnpj }}): {% if e.rel == 'próprio' %}consta como sócio um nome igual ao do parlamentar ({{ 'nome e CPF parcial conferem' if e.base == 'cpf' else 'só o nome completo confere' }}){% else %}{{ e.parente }}, {{ e.rel }} de {{ p.nome }} segundo o <a href="https://www.wikidata.org/wiki/{{ e.qid }}" rel="noopener" target="_blank">Wikidata</a>, tem sócio com o mesmo nome completo{% endif %}. Cota paga por {{ p.nome.split()[0] }} à empresa: <strong>{{ e.vp | brl }}</strong>; total da cota à empresa: {{ e.vt | brl }}.</li>{% endfor %}</ul>
+  </section>{% endif %}
   <div class="faixa-resumo">
     {% if ano_ref_total %}<div><span>Cota em {{ ano_ref }}</span><strong>{{ ano_ref_total | brl }}</strong></div>{% endif %}
     {% if pos %}<div><span>Posição em {{ ano_ref }}</span><strong>{{ pos[0] }}º de {{ pos[1] }}</strong></div>{% endif %}

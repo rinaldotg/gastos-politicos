@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% set fontes = 'Cadastro de CNPJ: Receita Federal · Candidaturas: TSE · Parentesco: Wikidata · Pagamentos: Câmara dos Deputados e Senado Federal' %}
+{% block conteudo %}
+<section class="abertura abertura-curta">
+  <h1>Empresas com sócio ligado a parlamentares</h1>
+  <p class="apoio">Empresas pagas com a cota parlamentar em que consta como sócio <strong>o próprio deputado ou senador</strong> ou <strong>um parente dele declarado em fonte pública</strong>. Mostramos só o fato e a fonte de cada ligação.</p>
+</section>
+<aside class="aviso-triagem"><strong>Ter sócio da família não é irregularidade.</strong> Pode haver empresa legítima de familiar, e a lei trata de cada caso. A lista serve para conferir e fazer perguntas, não para acusar. O parentesco <strong>nunca é deduzido por sobrenome</strong>: só entram parentes que uma fonte pública cita (cônjuge, pai, mãe, filho(a) ou irmão(ã)). Homônimos são possíveis, por isso cada linha diz como a ligação foi feita.</aside>
+{% if linhas %}
+<p class="em-resumo"><strong>{{ n_emp }}</strong> empresa{{ '' if n_emp == 1 else 's' }} e <strong>{{ n_parl }}</strong> parlamentar{{ '' if n_parl == 1 else 'es' }}. Ordenado pelo valor que o parlamentar pagou à empresa com a cota.</p>
+<div class="tabela-rolavel">
+  <table class="tabela tabela-parentes">
+    <thead><tr><th>Parlamentar</th><th>Quem consta como sócio</th><th>Empresa</th><th class="num">Pago por ele(a)</th><th class="num">Total da cota à empresa</th><th>Como foi ligado</th></tr></thead>
+    <tbody>
+    {% for e in linhas %}
+      <tr>
+        <td><a href="{{ raiz }}{{ e.url }}">{{ e.nome }}</a><small>{{ e.cargo }}{% if e.uf %} · {{ e.uf }}{% endif %}{% if e.partido %} · {{ e.partido }}{% endif %}</small></td>
+        <td>{% if e.rel == 'próprio' %}<strong>O próprio parlamentar</strong>{% else %}<strong>{{ e.socio | title }}</strong><small>{{ e.rel }} de {{ e.nome }}</small>{% endif %}<small>{{ e.qual }}{% if e.entrada %} · desde {{ e.entrada[6:8] }}/{{ e.entrada[4:6] }}/{{ e.entrada[:4] }}{% endif %}</small></td>
+        <td>{{ e.razao | title }}<small>{{ e.cnpj }}{% if e.sit == '08' %} · baixada{% endif %}</small></td>
+        <td class="num">{{ e.vp | brl }}</td>
+        <td class="num">{{ e.vt | brl }}</td>
+        <td>{% if e.base == 'cpf' %}Nome civil e dígitos centrais do CPF conferem{% elif e.base == 'nome' %}Só pelo nome civil completo (sem CPF para conferir){% else %}Parentesco citado no <a href="https://www.wikidata.org/wiki/{{ e.qid }}" rel="noopener" target="_blank">Wikidata</a>; sócio com o mesmo nome completo{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif tem_receita %}
+<p class="vazio">Nenhuma ligação encontrada nos dados atuais. Rode a etapa “parentes” no workflow para cruzar sócios, candidaturas e parentes declarados.</p>
+{% else %}
+<p class="vazio">Esta lista depende do cadastro de CNPJ da Receita, que ainda não foi carregado no site.</p>
+{% endif %}
+<h2>Como a lista é feita</h2>
+<ul class="lista-texto">
+  <li><strong>O próprio parlamentar:</strong> o nome civil do parlamentar (registro de candidaturas do TSE) aparece como sócio no cadastro de CNPJ da Receita. Quando o CPF parcial está disponível, ele também precisa bater.</li>
+  <li><strong>Parentes:</strong> relações de cônjuge, pai, mãe, filho(a) e irmão(ã) registradas no Wikidata, uma base pública e editável por qualquer pessoa, com a fonte de cada item. Procuramos esse parente entre os sócios pelo nome completo; nomes muito comuns são descartados.</li>
+  <li><strong>Só empresas pagas com a cota:</strong> a lista cobre empresas que receberam ao menos R$ 30 mil da cota parlamentar. Parentes que não estão em fonte pública não aparecem.</li>
+  <li>Dado errado ou homônimo? Use “Avise sobre esta página” no rodapé e cite a fonte.</li>
+</ul>
+{% endblock %}
