@@ -1400,7 +1400,8 @@
       var dst = painel.querySelector('.dest'); if (dst && dst.scrollIntoView) dst.scrollIntoView({ block: 'nearest' });
     }
     var pag = raiz.querySelector('[data-pag]'), cache = {}, aba = 'c', gen = 0;
-    function carregar(k) { return cache[k] || (cache[k] = get('data/cg/' + k + '.json').catch(function () { return { c: {}, f: {} }; })); }
+    var resolv = {};
+    function carregar(k) { return cache[k] || (cache[k] = get('data/cg/' + k + '.json').catch(function () { return { c: {}, f: {} }; }).then(function (r) { resolv[k] = r; return r; })); }
     var SIT = { '01': 'Nula', '02': 'Ativa', '03': 'Suspensa', '04': 'Inapta', '08': 'Baixada' };
     function cnpjFmt(d) { d = String(d || '').replace(/\D/g, ''); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d.length === 8 ? d.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1.$2.$3') + '/…' : d; }
     function dataBr(d) { return /^\d{8}$/.test(d || '') ? d.slice(6) + '/' + d.slice(4, 6) + '/' + d.slice(0, 4) : (d || ''); }
@@ -1414,6 +1415,116 @@
         var sc = document.createElement('script'); sc.src = RAIZ + 'static/cytoscape.min.js';
         sc.onload = function () { ok(window.cytoscape); }; sc.onerror = function () { no(); }; document.head.appendChild(sc);
       }));
+    }
+    var scriptsP = {};
+    function carregarScript(nome, teste) {
+      if (teste()) return Promise.resolve();
+      return scriptsP[nome] || (scriptsP[nome] = new Promise(function (ok, no) {
+        var sc = document.createElement('script'); sc.src = RAIZ + 'static/' + nome;
+        sc.onload = function () { teste() ? ok() : no(); }; sc.onerror = function () { no(); }; document.head.appendChild(sc);
+      }));
+    }
+    function carregarSankey() { return carregarScript('d3-sankey.bundle.min.js', function () { return !!(window.d3 && window.d3.sankey); }); }
+    function carregarFcose() { return carregarCyto().then(function () { return carregarScript('cytoscape-fcose.bundle.min.js', function () { return !!window.cytoscapeFcose; }); }); }
+    function svgEl(nome, at, pai, txt) { var e = document.createElementNS('http://www.w3.org/2000/svg', nome); Object.keys(at || {}).forEach(function (k) { e.setAttribute(k, at[k]); }); if (txt != null) e.textContent = txt; if (pai) pai.appendChild(e); return e; }
+    function tema(v, f) { return (getComputedStyle(document.documentElement).getPropertyValue(v) || '').trim() || f; }
+    function titulo(el, t) { svgEl('title', {}, el, t); }
+    function anoFrac(d) { d = String(d || ''); return /^\d{8}$/.test(d) ? +d.slice(0, 4) + (+d.slice(4, 6) - 1) / 12 + (+d.slice(6, 8) - 1) / 365 : null; }
+    /* Fluxo de dinheiro: quem doou -> candidato -> partido (Sankey, d3-sankey) */
+    function desenharSankey(box, doa) {
+      var dl = [];
+      Object.keys(doa).forEach(function (k) { doa[k].forEach(function (x) { if (x[5] > 0) dl.push({ t: k.indexOf('e:') === 0 ? 'e' : 's', x: x }); }); });
+      if (!dl.length) { box.innerHTML = '<p class="apoio">Nenhuma doação de campanha encontrada para esta empresa, seus sócios ou as empresas ligadas (2014, 2018 e 2022).</p>'; return; }
+      var totD = {}, totC = {};
+      dl.forEach(function (o) { var kd = o.t + '|' + o.x[6], kc = o.x[2]; totD[kd] = (totD[kd] || 0) + o.x[5]; totC[kc] = (totC[kc] || 0) + o.x[5]; });
+      function manter(tot, n) { var ks = Object.keys(tot).sort(function (a, b) { return tot[b] - tot[a]; }), ok = {}; ks.slice(0, n).forEach(function (k) { ok[k] = 1; }); return { ok: ok, resto: Math.max(0, ks.length - n) }; }
+      var md = manter(totD, 12), mc = manter(totC, 14), nodes = {}, links = {};
+      function no(id, nome, col, ex) { return nodes[id] || (nodes[id] = Object.assign({ id: id, nome: nome, col: col }, ex || {})); }
+      function lig(a, b, v, ano) { var k = a + '>' + b, l = links[k] || (links[k] = { source: a, target: b, value: 0, anos: {} }); l.value += v; l.anos[ano] = 1; }
+      dl.forEach(function (o) {
+        var x = o.x, kd = o.t + '|' + x[6], kc = x[2];
+        var d = md.ok[kd] ? no('D' + kd, x[6], 0, { t: o.t }) : no('Dx', 'Outros doadores (' + md.resto + ')', 0, { t: 'o' });
+        var c = mc.ok[kc] ? no('C' + kc, x[1], 1, { url: x[2], t: 'c' }) : no('Cx', 'Outros candidatos (' + mc.resto + ')', 1, { t: 'o' });
+        var p = no('P' + (x[4] || '-'), x[4] || 'sem partido', 2, { t: 'p' });
+        lig(d.id, c.id, x[5], x[0]); lig(c.id, p.id, x[5], x[0]);
+      });
+      var N = Object.keys(nodes).map(function (k) { return nodes[k]; }), L = Object.keys(links).map(function (k) { return links[k]; });
+      var cont = [0, 0, 0]; N.forEach(function (n) { cont[n.col]++; });
+      var W = Math.max(box.clientWidth || 0, 780), H = Math.max(240, Math.max(cont[0], cont[1], cont[2]) * 26 + 24);
+      var g = window.d3.sankey().nodeId(function (d) { return d.id; }).nodeWidth(12).nodePadding(10).nodeAlign(function (n) { return n.col; }).extent([[250, 8], [W - 130, H - 8]])({ nodes: N, links: L });
+      var tinta = tema('--tinta', '#14213d'), acento = tema('--acento', '#1f4fd8'), papel = tema('--papel', '#fff'), linha = tema('--linha', '#c9d1e0');
+      var cor = { e: acento, s: '#7a4fb0', o: '#8a94a8', c: '#d9822b', p: '#5b6b8c' };
+      box.innerHTML = '';
+      var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', 'aria-label': 'Fluxo de doações de campanha: doador, candidato e partido' }, box);
+      var gl = svgEl('g', { fill: 'none' }, svg);
+      g.links.forEach(function (l) {
+        var pth = svgEl('path', { d: window.d3.sankeyLinkHorizontal()(l), stroke: l.source.col === 0 ? cor[l.source.t] : linha, 'stroke-opacity': l.source.col === 0 ? 0.4 : 0.9, 'stroke-width': Math.max(1, l.width) }, gl);
+        titulo(pth, l.source.nome + ' → ' + l.target.nome + ': ' + brl(l.value) + ' (' + Object.keys(l.anos).sort().join(', ') + ')');
+      });
+      g.nodes.forEach(function (n) {
+        var gr = svgEl('g', {}, svg), r = svgEl('rect', { x: n.x0, y: n.y0, width: n.x1 - n.x0, height: Math.max(2, n.y1 - n.y0), fill: cor[n.t] || cor.p }, gr);
+        titulo(r, n.nome + ': ' + brl(n.value));
+        var esq = n.col === 0, dir = n.col === 2, meio = n.col === 1;
+        var tx = esq ? n.x0 - 6 : n.x1 + 6, ty = (n.y0 + n.y1) / 2;
+        var rot = curtoN(n.nome, esq ? 28 : 22) + ' · ' + brl(n.value);
+        var el = svgEl('text', { x: tx, y: ty, dy: '0.35em', 'text-anchor': esq ? 'end' : 'start', 'font-size': 11, fill: tinta, stroke: papel, 'stroke-width': meio ? 3 : 0, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, null, null);
+        if (n.url) { var a = svgEl('a', { href: RAIZ + n.url }, gr); a.appendChild(el); } else gr.appendChild(el);
+        el.textContent = rot;
+      });
+    }
+    /* Linha do tempo: abertura da empresa, entrada de sócios, doações e cota recebida */
+    function desenharLinha(box, c) {
+      var anoAtual = new Date().getFullYear(), ys = [];
+      var ab = anoFrac(c.abertura); if (ab != null) ys.push(ab);
+      c.socios.forEach(function (s) { var v = anoFrac(s[1]); if (v != null) ys.push(v); });
+      c.doacoes.forEach(function (d) { ys.push(d.ano + 0.8); });
+      Object.keys(c.cota).forEach(function (a) { ys.push(+a); ys.push(+a + 1); });
+      if (!ys.length) { box.innerHTML = '<p class="apoio">Sem datas para montar a linha do tempo.</p>'; return; }
+      var minY = Math.floor(Math.min.apply(null, ys)), maxY = Math.max(Math.ceil(Math.max.apply(null, ys)), anoAtual + 1);
+      if (maxY - minY < 3) minY = maxY - 3;
+      var W = Math.max(box.clientWidth || 0, 640), GU = 120, DIR = 16, TOP = 26, LH = 56, NL = 4, H = TOP + NL * LH + 8;
+      var X = function (v) { return GU + (v - minY) / (maxY - minY) * (W - GU - DIR); };
+      var tinta = tema('--tinta', '#14213d'), tinta2 = tema('--tinta-2', '#5b6b8c'), acento = tema('--acento', '#1f4fd8'), linha = tema('--linha', '#c9d1e0'), papel = tema('--papel', '#fff');
+      box.innerHTML = '';
+      var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', 'aria-label': 'Linha do tempo da empresa' }, box);
+      var passo = Math.max(1, Math.ceil((maxY - minY) / 12));
+      for (var a = minY; a <= maxY; a += passo) {
+        svgEl('line', { x1: X(a), x2: X(a), y1: TOP - 4, y2: H - 6, stroke: linha, 'stroke-width': 1 }, svg);
+        svgEl('text', { x: X(a), y: 14, 'text-anchor': 'middle', 'font-size': 10, fill: tinta2 }, svg, String(a));
+      }
+      ['Abertura', 'Entrada de sócios', 'Doações', 'Cota recebida'].forEach(function (t, i) {
+        var y = TOP + i * LH;
+        if (i % 2 === 0) svgEl('rect', { x: 0, y: y, width: W, height: LH, fill: tinta, 'fill-opacity': 0.035 }, svg);
+        svgEl('text', { x: 6, y: y + LH / 2, dy: '0.35em', 'font-size': 11, fill: tinta }, svg, t);
+      });
+      var mid = function (i) { return TOP + i * LH + LH / 2; };
+      if (ab != null) {
+        svgEl('line', { x1: X(ab), x2: X(ab), y1: TOP, y2: H - 6, stroke: acento, 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svg);
+        var m = svgEl('circle', { cx: X(ab), cy: mid(0), r: 7, fill: acento, stroke: papel, 'stroke-width': 2 }, svg);
+        titulo(m, 'Empresa aberta em ' + dataBr(c.abertura));
+        svgEl('text', { x: X(ab) + 11, y: mid(0), dy: '0.35em', 'font-size': 11, fill: tinta }, svg, dataBr(c.abertura));
+      }
+      var pos = {};
+      c.socios.forEach(function (s) {
+        var v = anoFrac(s[1]); if (v == null) return;
+        var k = Math.round(X(v) / 8), n = pos[k] = (pos[k] || 0) + 1, cx = X(v), cy = mid(1) + ((n - 1) % 3 - 1) * 14;
+        var pl = svgEl('polygon', { points: [cx, cy - 6, cx + 6, cy, cx, cy + 6, cx - 6, cy].join(' '), fill: '#7a4fb0', stroke: papel, 'stroke-width': 1.5 }, svg);
+        titulo(pl, s[0] + ' · ' + (s[2] || 'sócio') + ' · desde ' + dataBr(s[1]));
+      });
+      var maxD = 0; c.doacoes.forEach(function (d) { if (d.valor > maxD) maxD = d.valor; });
+      c.doacoes.forEach(function (d) {
+        var r = 4 + Math.sqrt(d.valor / (maxD || 1)) * 12, cx = X(d.ano + 0.8);
+        var ci = svgEl('circle', { cx: cx, cy: mid(2), r: r, fill: '#e0a800', 'fill-opacity': 0.85, stroke: tinta, 'stroke-width': 1 }, svg);
+        titulo(ci, d.ano + ': ' + brl(d.valor) + ' em doações\n' + d.txt.join('\n'));
+        svgEl('text', { x: cx, y: mid(2) + r + 10, 'text-anchor': 'middle', 'font-size': 9, fill: tinta2 }, svg, brl(d.valor));
+      });
+      var maxC = 0; Object.keys(c.cota).forEach(function (a) { if (c.cota[a] > maxC) maxC = c.cota[a]; });
+      Object.keys(c.cota).forEach(function (a) {
+        var h = Math.max(2, c.cota[a] / maxC * (LH - 18)), x0 = X(+a), x1 = X(+a + 1);
+        var b = svgEl('rect', { x: x0 + 1, y: TOP + 3 * LH + LH - 4 - h, width: Math.max(2, x1 - x0 - 2), height: h, fill: '#d9822b', 'fill-opacity': 0.85 }, svg);
+        titulo(b, a + ': ' + brl(c.cota[a]) + ' recebidos de parlamentares do quadro');
+      });
+      if (!maxC) svgEl('text', { x: GU + 8, y: mid(3), dy: '0.35em', 'font-size': 10, fill: tinta2 }, svg, 'sem pagamentos dos parlamentares do quadro nos dados carregados');
     }
     function semSoc(l) { return l && l.length ? '<br><small class="rel-socs">Sócios: ' + l.map(function (x) { return esc(x[0]); }).join(', ') + '</small>' : ''; }
     function abrirRelacoes(cnpj, b8, voltar) {
@@ -1432,8 +1543,13 @@
         var bxs = {}; Object.keys(d.rs).forEach(function (k) { d.rs[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
         Object.keys(d.re).forEach(function (k) { d.re[k][1].forEach(function (e) { if (e[2] === '08') bxs[e[0]] = 1; }); });
         var nbx = Object.keys(bxs).length;
-        h += '<div class="rel-opcs">' + (nbx ? '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>' : '') + '<label class="rel-opc"><input type="checkbox" data-socios2 checked> Mostrar outros sócios das empresas ligadas</label></div>';
-        h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span> <span><i class="b b-doa"></i>doou a campanha</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div>';
+        var ndoa = 0; Object.keys(d.doa || {}).forEach(function (k) { ndoa += d.doa[k].length; });
+        h += '<div class="mapa-vis" role="group" aria-label="Formato da visualização"><button type="button" data-rel-aba="g" aria-pressed="true">Grafo</button><button type="button" data-rel-aba="f" aria-pressed="false">Fluxo de doações' + (ndoa ? ' (' + ndoa + ')' : '') + '</button><button type="button" data-rel-aba="t" aria-pressed="false">Linha do tempo</button></div>';
+        h += '<div data-rel-pan="g"><div class="rel-opcs">' + (nbx ? '<label class="rel-opc"><input type="checkbox" data-baixadas checked> Mostrar empresas baixadas (' + nbx + ')</label>' : '') + '<label class="rel-opc"><input type="checkbox" data-socios2 checked> Mostrar outros sócios das empresas ligadas</label>' +
+          '<label class="rel-opc">Organização: <select data-layout><option value="fcose">Agrupada</option><option value="concentric">Em círculos</option><option value="breadthfirst">Em árvore</option></select></label></div>';
+        h += '<div class="rel-grafo" data-grafo></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa</span> <span><i class="b b-socio"></i>sócio</span> <span><i class="b b-end"></i>endereço</span> <span><i class="b b-rel"></i>outra empresa</span> <span><i class="b b-cota"></i>também recebeu cota</span> <span><i class="b b-doa"></i>doou a campanha</span></p><div class="rel-info" data-rel-info aria-live="polite">Toque num círculo para ver os detalhes.</div></div>';
+        h += '<div data-rel-pan="f" hidden><p class="apoio">Para onde foi o dinheiro doado a campanhas: <strong>doador</strong> (empresa ou sócio) → <strong>candidato</strong> → <strong>partido</strong>. A largura da faixa é proporcional ao valor.</p><div class="rel-rolar" data-sk></div><p class="rel-leg"><span><i class="b b-alvo"></i>empresa doadora</span> <span><i class="b b-socio"></i>sócio doador</span> <span><i class="b b-cota"></i>candidato</span></p></div>';
+        h += '<div data-rel-pan="t" hidden><p class="apoio">Datas lado a lado: abertura da empresa, entrada de cada sócio, doações a campanhas (marcadas no ano da eleição) e valores recebidos da cota por ano. Passe o dedo ou o mouse nos marcadores.</p><div class="rel-rolar" data-tl></div><p class="nota">Datas em comum são comuns e <strong>não indicam irregularidade</strong>. A cota considera só os maiores fornecedores de cada parlamentar do quadro, por isso pode estar incompleta.</p></div>';
         var socs = {}; d.s.forEach(function (x) { var k = x[5] || ('n:' + x[0]); if (!socs[k]) socs[k] = x; });
         var ks = Object.keys(socs);
         var doa = d.doa || {}, dl = [];
@@ -1459,6 +1575,20 @@
         dlg.querySelector('[data-fechar]').addEventListener('click', function () { dlg.close(); });
         var bv = dlg.querySelector('[data-voltar]'); if (bv) bv.addEventListener('click', function () { abrirRelacoes(voltar[0], voltar[1], voltar[2]); });
         var info = dlg.querySelector('[data-rel-info]'), box = dlg.querySelector('[data-grafo]');
+        var gref = {}, feitos = {};
+        function irAba(a) {
+          dlg.querySelectorAll('[data-rel-aba]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-rel-aba') === a)); });
+          dlg.querySelectorAll('[data-rel-pan]').forEach(function (q) { q.hidden = q.getAttribute('data-rel-pan') !== a; });
+          if (a === 'g' && gref.g) { gref.g.resize(); gref.g.fit(undefined, 24); }
+          if (a === 'f' && !feitos.f) { feitos.f = 1; var bs = dlg.querySelector('[data-sk]'); carregarSankey().then(function () { desenharSankey(bs, doa); }).catch(function () { bs.innerHTML = '<p class="apoio">Não consegui carregar o diagrama; veja a lista de doações abaixo.</p>'; }); }
+          if (a === 't' && !feitos.t) {
+            feitos.t = 1;
+            var cota = {}; Object.keys(resolv).forEach(function (k) { var r = resolv[k]; Object.keys(r.f || {}).forEach(function (y) { r.f[y].forEach(function (t) { var dg = String(t[2] || '').replace(/\D/g, ''); if (dg.length === 14 && dg.slice(0, 8) === b8) cota[y] = (cota[y] || 0) + t[1]; }); }); });
+            var por = {}; dl.forEach(function (o) { var x = o.x, e = por[x[0]] || (por[x[0]] = { ano: x[0], valor: 0, txt: [] }); e.valor += x[5]; e.txt.push(x[6] + ' → ' + x[1] + ' (' + (x[4] || 's/ partido') + '): ' + brl(x[5])); });
+            desenharLinha(dlg.querySelector('[data-tl]'), { abertura: est[3], socios: ks.map(function (k) { return socs[k]; }).map(function (x) { return [x[0], x[3], x[2]]; }), doacoes: Object.keys(por).map(function (a) { return por[a]; }), cota: cota });
+          }
+        }
+        dlg.querySelectorAll('[data-rel-aba]').forEach(function (b) { b.addEventListener('click', function () { irAba(b.getAttribute('data-rel-aba')); }); });
         carregarCyto().then(function (cy) {
           var els = [], vistos = {}, nid = 0;
           function no(id, label, tipo, extra) { if (vistos[id]) return; vistos[id] = 1; var dk = id.charAt(0) === 's' ? id.slice(2) : id.charAt(0) === 'e' ? id : null; if (dk && doa[dk]) { extra = extra || {}; extra.doa = 1; extra.dk = dk; } els.push({ group: 'nodes', data: Object.assign({ id: id, label: curtoN(label, 30), tipo: tipo }, extra || {}) }); }
@@ -1488,6 +1618,7 @@
               { selector: 'node[doa]', style: { 'border-color': '#e0a800', 'border-width': 5 } },
               { selector: ':selected', style: { 'border-color': tinta, 'border-width': 3 } }],
             layout: { name: 'cose', animate: false, nodeRepulsion: 9000, idealEdgeLength: 70, padding: 20 } });
+          gref.g = g;
           var cb = dlg.querySelector('[data-baixadas]'), cs = dlg.querySelector('[data-socios2]');
           function atualizar() {
             var mostraB = !cb || cb.checked, mostraS = !cs || cs.checked;
@@ -1501,7 +1632,18 @@
             });
             dlg.querySelectorAll('li.baixada').forEach(function (li) { li.hidden = !mostraB; });
           }
-          [cb, cs].forEach(function (c) { if (c) c.addEventListener('change', atualizar); });
+          var sel = dlg.querySelector('[data-layout]');
+          var TIPO = { alvo: 4, socio: 3, end: 3, rel: 2, cota: 2, socio2: 1 };
+          function organizar() {
+            var nome = sel ? sel.value : 'fcose', vis = g.elements().filter(function (e) { return e.style('display') !== 'none'; });
+            var op = { fcose: { name: window.cytoscapeFcose ? 'fcose' : 'cose', quality: 'default', randomize: true, animate: false, nodeRepulsion: 9000, idealEdgeLength: 80, nodeSeparation: 90, packComponents: true, padding: 24 },
+              concentric: { name: 'concentric', animate: false, minNodeSpacing: 34, padding: 24, concentric: function (n) { return TIPO[n.data('tipo')] || 1; }, levelWidth: function () { return 1; } },
+              breadthfirst: { name: 'breadthfirst', animate: false, directed: false, spacingFactor: 1.15, padding: 24, roots: g.getElementById('e:' + b8) } }[nome];
+            vis.layout(op).run(); g.fit(vis, 24);
+          }
+          if (sel) sel.addEventListener('change', organizar);
+          carregarFcose().then(organizar, organizar);
+          [cb, cs].forEach(function (c) { if (c) c.addEventListener('change', function () { atualizar(); organizar(); }); });
           g.on('tap', 'node', function (ev) {
             var n = ev.target.data(), t = '';
             if (n.tipo === 'socio') t = '<strong>' + esc(n.razao) + '</strong> · ' + esc(n.qual || 'sócio') + (n.doc ? ' · ' + esc(n.doc) : '');
@@ -1577,7 +1719,7 @@
             L.map(function (t) { return '<tr><td>' + esc(t[0]) + '</td><td class="num">' + brl(t[1]) + '</td><td class="num">' + (tot ? Math.round(t[1] / tot * 100) : 0) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         } else {
           h += L.length ? '<div class="tabela-rolagem"><table class="tabela-pag"><thead><tr><th>Fornecedor</th><th>CNPJ/CPF</th><th class="num">Valor</th><th>Parlamentares que pagaram</th></tr></thead><tbody>' +
-            FL.map(function (e, i) { return '<tr' + (e.rf ? ' class="linha-rel" data-rel-linha="' + esc(String(e.doc).replace(/\\D/g, '')) + '"' : '') + '><td>' + esc(e.nome) + '</td><td class="doc">' + (e.rf ? '<a href="#" class="doc-link" data-rel="' + esc(String(e.doc).replace(/\D/g, '')) + '" title="Ver sócios e empresas ligadas">' + esc(fmtDoc(e.doc)) + '</a>' : esc(fmtDoc(e.doc))) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
+            FL.map(function (e, i) { return '<tr' + (e.rf ? ' class="linha-rel" data-rel-linha="' + esc(String(e.doc).replace(/\D/g, '')) + '"' : '') + '><td>' + esc(e.nome) + '</td><td class="doc">' + (e.rf ? '<a href="#" class="doc-link" data-rel="' + esc(String(e.doc).replace(/\D/g, '')) + '" title="Ver sócios e empresas ligadas">' + esc(fmtDoc(e.doc)) + '</a>' : esc(fmtDoc(e.doc))) + '</td><td class="num">' + brl(e.total) + '</td><td class="quem">' + quem(e, i) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="apoio">Sem pagamentos registrados neste período.</p>';
         }
         h += '<p class="nota">' + (aba === 'f' ? 'Fornecedores: os maiores de cada parlamentar em cada ano (até 15), por isso a lista pode somar menos que o total. ' : '') + 'Cota para o exercício da atividade parlamentar (Câmara) e CEAPS (Senado); gasto não é irregularidade.</p>';
         pag.innerHTML = h;

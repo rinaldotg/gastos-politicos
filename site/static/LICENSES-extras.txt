@@ -1,0 +1,6 @@
+Bibliotecas de terceiros incluidas neste site (copias sem alteracao, apenas minificadas):
+
+d3-sankey 0.12.3 (BSD-3-Clause, Mike Bostock) https://github.com/d3/d3-sankey
+d3-array 3.2.4, d3-path 3.1.0, d3-shape 3.2.0 (ISC, Mike Bostock) https://github.com/d3
+layout-base 2.x, cose-base 2.2.0, cytoscape.js-fcose 2.2.0 (MIT, iVis-at-Bilkent) https://github.com/iVis-at-Bilkent
+Cytoscape.js (MIT): ver cytoscape-LICENSE.txt
