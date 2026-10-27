@@ -791,17 +791,41 @@
 
   /* ---------- tema: automatico -> claro -> escuro ---------- */
   (function () {
-    var b = document.querySelector('[data-tema-btn]'); if (!b) return;
-    var rot = b.querySelector('[data-tema-rot]'), nomes = { '': 'Auto', claro: 'Claro', escuro: 'Escuro' };
+    var bs = document.querySelectorAll('[data-tema-btn]'); if (!bs.length) return;
+    var nomes = { '': 'Auto', claro: 'Claro', escuro: 'Escuro' };
     function atual() { return document.documentElement.getAttribute('data-tema') || ''; }
-    function mostrar() { rot.textContent = nomes[atual()]; }
-    b.addEventListener('click', function () {
-      var prox = { '': 'claro', claro: 'escuro', escuro: '' }[atual()];
-      if (prox) document.documentElement.setAttribute('data-tema', prox); else document.documentElement.removeAttribute('data-tema');
-      try { if (prox) localStorage.setItem('tema', prox); else localStorage.removeItem('tema'); } catch (e) {}
-      mostrar();
+    function mostrar() { Array.prototype.forEach.call(document.querySelectorAll('[data-tema-rot]'), function (r) { r.textContent = nomes[atual()]; }); }
+    Array.prototype.forEach.call(bs, function (b) {
+      b.addEventListener('click', function () {
+        var prox = { '': 'claro', claro: 'escuro', escuro: '' }[atual()];
+        if (prox) document.documentElement.setAttribute('data-tema', prox); else document.documentElement.removeAttribute('data-tema');
+        try { if (prox) localStorage.setItem('tema', prox); else localStorage.removeItem('tema'); } catch (e) {}
+        mostrar();
+      });
     });
     mostrar();
+  })();
+
+  /* ---------- navegacao: item ativo, busca global (/ ou Ctrl+K) e menu ---------- */
+  (function () {
+    var caminho = location.pathname.replace(/index\.html$/, '');
+    document.querySelectorAll('[data-nav] a').forEach(function (a) {
+      var url = new URL(a.getAttribute('href') || '.', location.href), p = url.pathname.replace(/index\.html$/, ''), on = false;
+      if (a.hasAttribute('data-nav-raiz')) { on = p === caminho; }
+      else { on = caminho === p || caminho.indexOf(p) === 0; if (!on && a.getAttribute('data-nav-grupo')) on = a.getAttribute('data-nav-grupo').split(' ').some(function (g) { return caminho.indexOf('/' + g + '/') >= 0; }); }
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    var dlg = document.querySelector('[data-busca-dialog]'), menu = document.querySelector('[data-menu-mais]');
+    function abrir(d) { if (!d) return; if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute('open', ''); }
+    function abrirBusca() { abrir(dlg); var i = dlg && dlg.querySelector('input'); if (i) setTimeout(function () { i.focus(); }, 30); }
+    document.querySelectorAll('[data-abrir-busca]').forEach(function (b) { b.addEventListener('click', function () { if (menu && menu.open) menu.close(); abrirBusca(); }); });
+    document.querySelectorAll('[data-abrir-menu]').forEach(function (b) { b.addEventListener('click', function () { abrir(menu); }); });
+    [dlg, menu].forEach(function (d) { if (d) d.addEventListener('click', function (ev) { if (ev.target === d) d.close(); }); });
+    var fm = document.querySelector('[data-fechar-menu]'); if (fm) fm.addEventListener('click', function () { menu.close(); });
+    document.addEventListener('keydown', function (ev) {
+      var t = ev.target, digitando = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      if ((ev.key === '/' && !digitando && !ev.metaKey && !ev.ctrlKey) || ((ev.key === 'k' || ev.key === 'K') && (ev.metaKey || ev.ctrlKey))) { ev.preventDefault(); abrirBusca(); }
+    });
   })();
 
   /* ---------- tamanho do texto (A- / A+) ---------- */

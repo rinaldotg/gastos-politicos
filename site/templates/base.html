@@ -12,34 +12,86 @@
 {% if base_url %}<meta property="og:image" content="{{ base_url }}/static/og.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">{% endif %}
-<meta name="theme-color" content="#f2c335">
+<meta name="theme-color" content="#F3F4EF" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0A1315" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="{{ raiz }}static/favicon.png">
 <link rel="apple-touch-icon" href="{{ raiz }}static/apple-touch-icon.png">
 {% if base_url %}<link rel="canonical" href="{{ base_url }}/{{ p.url if p is defined else '' }}">{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ raiz }}static/style.css">
 <script>try{var m=localStorage.getItem("tema");if(m==="claro"||m==="escuro")document.documentElement.setAttribute("data-tema",m)}catch(e){}try{var t=localStorage.getItem("tamanho-texto");if(t)document.documentElement.style.fontSize=t+"%"}catch(e){}</script>
+<script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}]}</script>
 {% if base_url %}<link rel="alternate" type="application/rss+xml" title="Atualizações" href="{{ raiz }}feed.xml">{% endif %}
 </head>
 <body data-raiz="{{ raiz }}">
 <a class="pular" href="#conteudo">Ir para o conteúdo</a>
 <header class="topo">
   <a class="marca" href="{{ raiz or './' }}"><img src="{{ raiz }}static/logo.png" alt="" width="36" height="36">Gastos Públicos</a>
-  <nav aria-label="Principal"><a href="{{ raiz }}sobre/">Fontes e método</a><span class="tamanho" role="group" aria-label="Tamanho do texto"><button type="button" data-texto="-" aria-label="Diminuir o texto">A−</button><button type="button" data-texto="+" aria-label="Aumentar o texto">A+</button></span><button type="button" class="tema" data-tema-btn aria-label="Trocar tema: automático, claro ou escuro" title="Tema"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg><span data-tema-rot>Auto</span></button><a class="insta" href="https://www.instagram.com/oquepagamos/" target="_blank" rel="noopener" aria-label="Instagram @oquepagamos" title="Instagram @oquepagamos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a></nav>
+  <nav aria-label="Principal" data-nav>
+    <a href="{{ raiz or './' }}" data-nav-raiz>Congresso</a><a href="{{ raiz }}partidos/">Partidos</a><a href="{{ raiz }}recebedores/" data-nav-grupo="recebedores privados emendas-pix emenda">Emendas</a><a href="{{ raiz }}municipios/" data-nav-grupo="municipios municipio">Cidades</a><a href="{{ raiz }}atencao/">Atenção</a><a href="{{ raiz }}sobre/">Método</a>
+  </nav>
+  <div class="topo-acoes">
+    <button type="button" class="btn-busca" data-abrir-busca aria-haspopup="dialog" aria-label="Buscar deputado, senador ou cidade"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="rot">Buscar</span><kbd>/</kbd></button>
+    <button type="button" class="btn-icone" data-abrir-menu aria-haspopup="dialog" aria-label="Mais opções: tamanho do texto e tema" title="Texto e tema"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
+  </div>
 </header>
-{% if raiz %}<div class="voltar"><a href="{{ raiz }}">← Início</a></div>{% endif %}
 <main id="conteudo">
 {% if fontes %}<p class="fonte-topo">Fontes: {{ fontes }}{{ fontes_foto }}{% if atualizado %} · dados atualizados em {{ atualizado }}{% endif %} · <a href="{{ raiz }}sobre/">método</a></p>{% endif %}
 {% block abas %}{% endblock %}
 {% block conteudo %}{% endblock %}
 </main>
 <footer class="rodape">
-  <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}<strong>Dados atualizados em {{ atualizado }}</strong>; a rotina roda todo mês.{% endif %} Viu algo errado ou faltando? <a href="mailto:oquepagamos@gmail.com" data-reportar>Avise sobre esta página</a>.</p>
-  <p class="rodape-links"><strong>Ajuda e transparência:</strong> <a href="{{ raiz }}sobre/">Fontes e método</a> · <a href="{{ raiz }}glossario/">Glossário</a> · <a href="{{ raiz }}atencao/">Pontos de atenção</a> · <a href="{{ raiz }}sem-autor/">Emendas sem autor identificado</a> · <a href="{{ raiz }}dados/">Dados abertos</a> · <a href="{{ raiz }}novidades/">O que mudou</a>{% if base_url %} · <a href="{{ raiz }}feed.xml">RSS</a>{% endif %}</p>
-  <p>Gasto não é irregularidade: os valores mostram o que foi pago dentro das regras de cada cota. <a href="{{ raiz }}sobre/">Entenda o que está e o que não está nos números.</a></p>
+  <div class="rodape-grade">
+    <div>
+      <h2>Gastos Públicos</h2>
+      <p>Dados oficiais da Câmara dos Deputados, do Senado Federal e do Portal da Transparência (CGU). {% if atualizado %}<strong>Dados atualizados em {{ atualizado }}</strong>; a rotina roda todo mês.{% endif %}</p>
+      <p>Viu algo errado ou faltando? <a href="mailto:oquepagamos@gmail.com" data-reportar>Avise sobre esta página</a>.</p>
+    </div>
+    <div>
+      <h2>Explorar</h2>
+      <ul>
+        <li><a href="{{ raiz or './' }}">Congresso: partido e estado</a></li><li><a href="{{ raiz }}pares/">Comparar parlamentares</a></li><li><a href="{{ raiz }}partidos/">Partidos</a></li><li><a href="{{ raiz }}recebedores/">Quem recebeu emendas</a></li><li><a href="{{ raiz }}municipios/">Cidades</a></li><li><a href="{{ raiz }}presidentes/">Presidência</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Ajuda e transparência</h2>
+      <ul>
+        <li><a href="{{ raiz }}sobre/">Fontes e método</a></li><li><a href="{{ raiz }}glossario/">Glossário</a></li><li><a href="{{ raiz }}atencao/">Pontos de atenção</a></li><li><a href="{{ raiz }}sem-autor/">Emendas sem autor identificado</a></li><li><a href="{{ raiz }}dados/">Dados abertos</a></li><li><a href="{{ raiz }}novidades/">O que mudou</a></li>{% if base_url %}<li><a href="{{ raiz }}feed.xml">RSS</a></li>{% endif %}
+      </ul>
+    </div>
+  </div>
+  <p class="aviso-final">Gasto não é irregularidade: os valores mostram o que foi pago dentro das regras de cada cota. <a href="{{ raiz }}sobre/">Entenda o que está e o que não está nos números.</a></p>
 </footer>
+<nav class="barra-nav" aria-label="Atalhos" data-nav>
+  <a href="{{ raiz or './' }}" data-nav-raiz><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>Início</a>
+  <button type="button" data-abrir-busca aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar</button>
+  <a href="{{ raiz }}partidos/"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10m4 11V10m6 11V10m4 11V10M2 10l10-6 10 6z"/></svg>Partidos</a>
+  <a href="{{ raiz }}recebedores/" data-nav-grupo="recebedores privados emendas-pix emenda"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Emendas</a>
+  <button type="button" data-abrir-menu aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>Mais</button>
+</nav>
+<dialog class="busca-dialog" data-busca-dialog aria-label="Buscar">
+  <form class="busca" role="search" autocomplete="off" data-busca data-com-municipios>
+    <label for="q-global" class="so-leitor">Buscar deputado, senador ou cidade</label>
+    <div class="campo"><input id="q-global" type="search" placeholder="Deputado, senador ou cidade" aria-controls="res-global" aria-expanded="false"><button type="submit">Buscar</button></div>
+    <ul id="res-global" role="listbox" hidden></ul>
+  </form>
+  <p class="busca-dica">Digite ao menos duas letras. Use as setas e Enter, ou toque no nome. Esc fecha.</p>
+</dialog>
+<dialog class="menu-mais" data-menu-mais aria-label="Menu">
+  <div class="miolo">
+    <button type="button" class="botao botao-leve botao-mini fechar" data-fechar-menu>Fechar</button>
+    <h2>Navegar</h2>
+    <ul>
+      <li><a href="{{ raiz or './' }}">Congresso: partido e estado</a></li><li><a href="{{ raiz }}pares/">Comparar parlamentares</a></li><li><a href="{{ raiz }}municipios/">Cidades</a></li><li><a href="{{ raiz }}privados/">Emendas a empresas e ONGs</a></li><li><a href="{{ raiz }}atencao/">Pontos de atenção</a></li><li><a href="{{ raiz }}novidades/">O que mudou</a></li><li><a href="{{ raiz }}sobre/">Fontes e método</a></li><li><a href="{{ raiz }}glossario/">Glossário</a></li>
+    </ul>
+    <div class="pref">
+      <span class="tamanho" role="group" aria-label="Tamanho do texto"><button type="button" data-texto="-" aria-label="Diminuir o texto">A−</button><button type="button" data-texto="+" aria-label="Aumentar o texto">A+</button></span>
+      <button type="button" class="tema" data-tema-btn aria-label="Trocar tema"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg><span data-tema-rot>Auto</span></button>
+      <a class="insta" href="https://www.instagram.com/oquepagamos/" target="_blank" rel="noopener" aria-label="Instagram @oquepagamos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+  </div>
+</dialog>
 <script src="{{ raiz }}static/app.js" defer></script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "88ce2a1b85794ce5b1cfb381ce94546b"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
